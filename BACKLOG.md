@@ -8,7 +8,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 17/07/2026
+Última atualização: 17/07/2026 (estoque Fatia 1 concluído)
 
 ---
 
@@ -31,23 +31,24 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 | v0.3.0 | Lista de compras: adicionar/listar/comprar/editar/remover + log de eventos | Sim — ciclo completo |
 | v0.4.0 | Primeira tela: login com token + lista no navegador | Sim — Mateus e Ghustavo |
 | v0.5.0 | Lista em tempo real (sem F5) | Sim — duas telas simultâneas |
+| v0.6.0 | Estoque Fatia 1: itens contáveis, status, ajuste +/−, abas | Sim — status muda por quantidade |
 | —      | Teste de concorrência (dois usuários na lista) | Sim — passou |
 
 ---
 
 ## 🔨 / 📋 Em foco agora
 
-**Módulo: Estoque** — sendo iniciado, fatiado assim:
+**Módulo: Estoque** — Fatia 1 concluída (v0.6.0). Próximas fatias abaixo.
 
-### 📋 Fatia 1 — Estoque manual e honesto (PRÓXIMA)
+### ✅ Fatia 1 — Estoque manual e honesto (CONCLUÍDA)
 - Tabela de itens controlados: produto, categoria, quantidade atual, mínimo, status.
-- Status calculado de forma simples: suficiente / atenção / baixo / conferir / acabou.
-- Tela para ver e ajustar quantidade.
-- **Apenas o tipo de medição "unidade contável"** nesta fatia.
+- Status calculado: suficiente / atenção / baixo / conferir / acabou.
+- Tela com abas (Compras / Estoque), ajuste +/−, tempo real, log de eventos.
+- Apenas o tipo "unidade contável", conforme planejado.
 
-### 🕒 Fatia 1.5 — Os quatro tipos de medição (ADIADO — vem logo após a Fatia 1)
+### 📋 Fatia 1.5 — Os quatro tipos de medição (PRÓXIMA)
 Registrado explicitamente para NÃO se perder. O Documento Mestre (seção 18.4)
-define quatro tipos; começamos só com o primeiro. Os outros três entram aqui:
+define quatro tipos; a Fatia 1 fez o primeiro. Os outros três entram aqui:
 - **Peso/volume** (ex.: arroz, feijão, frango) — peso aproximado ou embalagem.
 - **Nível visual** (ex.: shampoo, creme) — cheio / 75% / metade / 25% / quase acabando / acabou.
 - **Presença simples** (ex.: itens de baixa relevância) — tem / não tem.

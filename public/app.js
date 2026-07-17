@@ -3,6 +3,8 @@
 // entrega a configuracao publica). O login usa token de sessao - a senha e
 // digitada uma vez e nao se repete a cada acao.
 
+import { calcularStatus, rotuloStatus } from './status-estoque.js';
+
 let supa = null;      // cliente Supabase
 let usuario = null;   // perfil do morador logado (id, nome, casa_id)
 let canalTempoReal = null;  // "escuta" das mudancas da lista em tempo real
@@ -83,9 +85,10 @@ async function aoEntrar() {
   usuario = perfil;
   el('quem').textContent = perfil.nome;
   el('telaLogin').classList.add('oculto');
-  el('telaLista').classList.remove('oculto');
+  el('telaApp').classList.remove('oculto');
   aviso('avisoLogin', '');
   await carregarLista();
+  await carregarEstoque();
   ligarTempoReal();
 }
 
@@ -104,6 +107,13 @@ function ligarTempoReal() {
       () => {
         // Chegou um aviso de mudanca: recarrega a lista.
         carregarLista();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'estoque' },
+      () => {
+        carregarEstoque();
       }
     )
     .subscribe();
@@ -242,9 +252,171 @@ async function sair() {
   await supa.auth.signOut();
   usuario = null;
   el('quem').textContent = '';
-  el('telaLista').classList.add('oculto');
+  el('telaApp').classList.add('oculto');
   el('telaLogin').classList.remove('oculto');
 }
+
+// -------------------------------------------------------------------
+// ESTOQUE (Fatia 1 - unidade contavel)
+// -------------------------------------------------------------------
+async function carregarEstoque() {
+  const { data: itens, error } = await supa
+    .from('estoque')
+    .select('id, nome, categoria, quantidade, unidade, minimo')
+    .eq('casa_id', usuario.casa_id)
+    .order('nome');
+
+  const area = el('itensEstoque');
+  area.innerHTML = '';
+
+  if (error) {
+    area.innerHTML = '<div class="vazio">Erro ao carregar o estoque.</div>';
+    return;
+  }
+  if (!itens || itens.length === 0) {
+    area.innerHTML = '<div class="vazio">Nada no estoque ainda. Adicione um item acima.</div>';
+    return;
+  }
+
+  for (const item of itens) {
+    const status = calcularStatus(item.quantidade, item.minimo);
+    const info = rotuloStatus(status);
+
+    const linha = document.createElement('div');
+    linha.className = 'item';
+
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    const nome = document.createElement('span');
+    nome.className = 'nome';
+    nome.textContent = item.nome;
+    desc.appendChild(nome);
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = `mínimo: ${item.minimo} ${item.unidade || ''}`.trim();
+    desc.appendChild(meta);
+
+    const direita = document.createElement('div');
+    direita.className = 'est-controles';
+
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.style.background = info.cor;
+    badge.textContent = info.texto;
+
+    const btnMenos = document.createElement('button');
+    btnMenos.textContent = '\u2212';   // sinal de menos
+    btnMenos.onclick = () => ajustarEstoque(item, -1);
+
+    const qtd = document.createElement('span');
+    qtd.className = 'est-qtd';
+    qtd.textContent = item.quantidade;
+
+    const btnMais = document.createElement('button');
+    btnMais.textContent = '+';
+    btnMais.onclick = () => ajustarEstoque(item, +1);
+
+    direita.appendChild(badge);
+    direita.appendChild(btnMenos);
+    direita.appendChild(qtd);
+    direita.appendChild(btnMais);
+
+    linha.appendChild(desc);
+    linha.appendChild(direita);
+    area.appendChild(linha);
+  }
+}
+
+async function adicionarEstoque() {
+  const nome = el('estNome').value.trim();
+  const quantidade = Number(el('estQtd').value);
+  const minimo = Number(el('estMin').value);
+
+  if (!nome) {
+    aviso('avisoEstoque', 'Digite o nome do item.', 'erro');
+    return;
+  }
+  if (!isFinite(quantidade) || !isFinite(minimo)) {
+    aviso('avisoEstoque', 'Quantidade e mínimo precisam ser números.', 'erro');
+    return;
+  }
+
+  el('btnAddEstoque').disabled = true;
+
+  const { data, error } = await supa
+    .from('estoque')
+    .insert({
+      casa_id: usuario.casa_id,
+      nome, quantidade, minimo,
+      atualizado_por: usuario.id,
+    })
+    .select()
+    .single();
+
+  if (data) {
+    supa.from('eventos').insert({
+      tipo: 'estoque_item_criado', entidade: 'estoque', entidade_id: data.id,
+      usuario_id: usuario.id, detalhe: usuario.nome + ' adicionou ' + nome + ' ao estoque',
+    });
+  }
+
+  el('btnAddEstoque').disabled = false;
+
+  if (error) {
+    aviso('avisoEstoque', 'Não foi possível adicionar.', 'erro');
+    return;
+  }
+
+  el('estNome').value = '';
+  el('estQtd').value = '0';
+  el('estMin').value = '1';
+  aviso('avisoEstoque', 'Adicionado.', 'ok');
+  setTimeout(() => aviso('avisoEstoque', ''), 1500);
+  await carregarEstoque();
+}
+
+// Ajusta a quantidade de um item (+1 ou -1), sem deixar negativo.
+async function ajustarEstoque(item, delta) {
+  const nova = Math.max(0, Number(item.quantidade) + delta);
+
+  const { error } = await supa
+    .from('estoque')
+    .update({
+      quantidade: nova,
+      atualizado_por: usuario.id,
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq('id', item.id);
+
+  if (!error) {
+    supa.from('eventos').insert({
+      tipo: 'estoque_ajustado', entidade: 'estoque', entidade_id: item.id,
+      usuario_id: usuario.id,
+      valor_anterior: { quantidade: item.quantidade },
+      valor_novo: { quantidade: nova },
+      detalhe: `${usuario.nome} ajustou ${item.nome} para ${nova}`,
+    });
+  }
+  // O tempo real recarrega a lista de estoque sozinho; recarregamos tambem
+  // aqui para resposta imediata a quem clicou.
+  await carregarEstoque();
+}
+
+// -------------------------------------------------------------------
+// NAVEGACAO POR ABAS
+// -------------------------------------------------------------------
+function trocarAba(qual) {
+  const compras = qual === 'compras';
+  el('abaCompras').classList.toggle('oculto', !compras);
+  el('abaEstoque').classList.toggle('oculto', compras);
+  document.querySelectorAll('.aba').forEach((b) => {
+    b.classList.toggle('ativa', b.dataset.aba === qual);
+  });
+}
+
+document.querySelectorAll('.aba').forEach((botao) => {
+  botao.onclick = () => trocarAba(botao.dataset.aba);
+});
 
 // -------------------------------------------------------------------
 // Ligacoes de eventos da tela
@@ -253,6 +425,7 @@ el('btnEntrar').onclick = entrar;
 el('senha').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar(); });
 el('btnAdd').onclick = adicionar;
 el('novoItem').addEventListener('keydown', (e) => { if (e.key === 'Enter') adicionar(); });
+el('btnAddEstoque').onclick = adicionarEstoque;
 el('btnSair').onclick = sair;
 
 iniciar();

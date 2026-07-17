@@ -92,6 +92,22 @@
     .aviso.ok { color: var(--acao); }
     .titulo-secao { font-size: 13px; color: var(--suave); margin: 4px 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }
     .oculto { display: none; }
+    .abas { display: flex; gap: 8px; margin-bottom: 16px; }
+    .aba {
+      flex: 1; background: var(--cartao); color: var(--suave);
+      border: 1px solid var(--linha); font-weight: 600; padding: 10px;
+    }
+    .aba.ativa { background: var(--acao); color: #fff; border-color: var(--acao); }
+    .badge {
+      font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+      color: #fff; white-space: nowrap;
+    }
+    .est-controles { display: flex; align-items: center; gap: 6px; }
+    .est-controles button {
+      width: 30px; height: 30px; padding: 0; font-size: 17px; line-height: 1;
+      background: var(--acao-clara); color: var(--acao);
+    }
+    .est-qtd { min-width: 26px; text-align: center; font-size: 15px; }
     .rodape-sair { text-align: center; margin-top: 8px; }
     .rodape-sair button { background: none; color: var(--suave); font-weight: 400; font-size: 13px; padding: 4px; }
   </style>
@@ -118,20 +134,57 @@
       <div id="avisoLogin" class="aviso"></div>
     </section>
 
-    <!-- TELA DA LISTA -->
-    <section id="telaLista" class="oculto">
-      <div class="cartao">
-        <div class="titulo-secao">Adicionar à lista</div>
-        <div class="linha-add">
-          <input id="novoItem" type="text" placeholder="Ex.: leite" />
-          <button id="btnAdd">Adicionar</button>
+    <!-- AREA LOGADA (abas: Compras e Estoque) -->
+    <section id="telaApp" class="oculto">
+      <nav class="abas">
+        <button class="aba ativa" data-aba="compras">Compras</button>
+        <button class="aba" data-aba="estoque">Estoque</button>
+      </nav>
+
+      <!-- ABA COMPRAS -->
+      <div id="abaCompras">
+        <div class="cartao">
+          <div class="titulo-secao">Adicionar à lista</div>
+          <div class="linha-add">
+            <input id="novoItem" type="text" placeholder="Ex.: leite" />
+            <button id="btnAdd">Adicionar</button>
+          </div>
+          <div id="avisoAdd" class="aviso"></div>
         </div>
-        <div id="avisoAdd" class="aviso"></div>
+
+        <div class="cartao">
+          <div class="titulo-secao">Lista de compras</div>
+          <div id="itens"></div>
+        </div>
       </div>
 
-      <div class="cartao">
-        <div class="titulo-secao">Lista de compras</div>
-        <div id="itens"></div>
+      <!-- ABA ESTOQUE -->
+      <div id="abaEstoque" class="oculto">
+        <div class="cartao">
+          <div class="titulo-secao">Adicionar ao estoque</div>
+          <div class="campo">
+            <input id="estNome" type="text" placeholder="Nome, ex.: papel higiênico" />
+          </div>
+          <div class="linha-add">
+            <div style="flex:1">
+              <label for="estQtd">Quantidade</label>
+              <input id="estQtd" type="number" min="0" step="1" value="0" />
+            </div>
+            <div style="flex:1">
+              <label for="estMin">Mínimo</label>
+              <input id="estMin" type="number" min="0" step="1" value="1" />
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <button id="btnAddEstoque">Adicionar ao estoque</button>
+          </div>
+          <div id="avisoEstoque" class="aviso"></div>
+        </div>
+
+        <div class="cartao">
+          <div class="titulo-secao">Itens em estoque</div>
+          <div id="itensEstoque"></div>
+        </div>
       </div>
 
       <div class="rodape-sair">
@@ -142,6 +195,6 @@
 
   <!-- Biblioteca do Supabase para o navegador -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
