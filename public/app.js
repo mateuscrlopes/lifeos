@@ -4,6 +4,7 @@
 // digitada uma vez e nao se repete a cada acao.
 
 import { calcularStatus, rotuloStatus } from './status-estoque.js';
+import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 
 let supa = null;      // cliente Supabase
 let usuario = null;   // perfil do morador logado (id, nome, casa_id)
@@ -133,7 +134,7 @@ function desligarTempoReal() {
 async function carregarLista() {
   const { data: itens, error } = await supa
     .from('lista_compras')
-    .select('id, nome, quantidade, unidade, categoria, criado_em')
+    .select('id, nome, quantidade, unidade, categoria, criado_em, origem, estoque_id')
     .eq('casa_id', usuario.casa_id)
     .eq('status', 'pendente')
     .order('criado_em', { ascending: false });
@@ -161,6 +162,17 @@ async function carregarLista() {
     nome.textContent = item.nome;
     desc.appendChild(nome);
 
+    // Se veio do estoque, marca visivelmente como sugestao.
+    if (item.origem === 'sugestao_estoque') {
+      const tag = document.createElement('span');
+      tag.className = 'badge';
+      tag.style.background = '#8a6d3b';
+      tag.style.marginLeft = '8px';
+      tag.style.fontSize = '10px';
+      tag.textContent = 'sugestão do estoque';
+      nome.appendChild(tag);
+    }
+
     const partes = [];
     if (item.quantidade) partes.push(item.quantidade + (item.unidade ? ' ' + item.unidade : ''));
     if (item.categoria) partes.push(item.categoria);
@@ -173,7 +185,7 @@ async function carregarLista() {
 
     const botao = document.createElement('button');
     botao.textContent = 'Comprei';
-    botao.onclick = () => comprar(item.id, botao);
+    botao.onclick = () => comprar(item, botao);
 
     linha.appendChild(desc);
     linha.appendChild(botao);
@@ -220,13 +232,34 @@ async function adicionar() {
   await carregarLista();
 }
 
-async function comprar(itemId, botao) {
+async function comprar(item, botao) {
   botao.disabled = true;
+
+  // Se o item esta ligado ao estoque, pergunta quanto realmente veio
+  // (o caso 12 vs 24 do documento) e repoe o estoque.
+  let quantidadeComprada = null;
+  if (item.estoque_id) {
+    const resposta = prompt(
+      `Quantas unidades de "${item.nome}" você comprou?\n(Isso vai repor o estoque)`,
+      '1'
+    );
+    // Se cancelar, aborta a compra.
+    if (resposta === null) {
+      botao.disabled = false;
+      return;
+    }
+    quantidadeComprada = Number(resposta);
+    if (!isFinite(quantidadeComprada) || quantidadeComprada < 0) {
+      alert('Quantidade inválida. Nada foi alterado.');
+      botao.disabled = false;
+      return;
+    }
+  }
 
   const { data, error } = await supa
     .from('lista_compras')
     .update({ status: 'comprado', comprado_por: usuario.id, comprado_em: new Date().toISOString() })
-    .eq('id', itemId)
+    .eq('id', item.id)
     .select()
     .single();
 
@@ -234,7 +267,7 @@ async function comprar(itemId, botao) {
     supa.from('eventos').insert({
       tipo: 'item_comprado',
       entidade: 'lista_compras',
-      entidade_id: itemId,
+      entidade_id: item.id,
       usuario_id: usuario.id,
       detalhe: usuario.nome + ' comprou ' + data.nome,
     });
@@ -244,6 +277,25 @@ async function comprar(itemId, botao) {
     botao.disabled = false;
     return;
   }
+
+  // Ponte 2: repoe o estoque com a quantidade real comprada.
+  if (item.estoque_id && quantidadeComprada !== null) {
+    const rep = await reporEstoque(supa, usuario, item.estoque_id, quantidadeComprada);
+    // Reavalia: se apos repor ainda estiver baixo, mantem/recria sugestao;
+    // se ficou suficiente, remove eventual sugestao pendente.
+    if (rep.ok) {
+      const { data: itemEstoque } = await supa
+        .from('estoque')
+        .select('id, nome, categoria, quantidade, minimo')
+        .eq('id', item.estoque_id)
+        .single();
+      if (itemEstoque) {
+        await sincronizarItem(supa, usuario, itemEstoque);
+      }
+    }
+    await carregarEstoque();
+  }
+
   await carregarLista();
 }
 
@@ -372,6 +424,12 @@ async function adicionarEstoque() {
   el('estMin').value = '1';
   aviso('avisoEstoque', 'Adicionado.', 'ok');
   setTimeout(() => aviso('avisoEstoque', ''), 1500);
+
+  // Se o item ja nasce baixo/acabou, sugere na lista.
+  if (data) {
+    await sincronizarItem(supa, usuario, data);
+    await carregarLista();
+  }
   await carregarEstoque();
 }
 
@@ -397,9 +455,14 @@ async function ajustarEstoque(item, delta) {
       detalhe: `${usuario.nome} ajustou ${item.nome} para ${nova}`,
     });
   }
+  // Ponte 1: apos mudar a quantidade, sincroniza sugestao na lista
+  // (cria se ficou baixo, remove se voltou a suficiente).
+  await sincronizarItem(supa, usuario, { ...item, quantidade: nova });
+
   // O tempo real recarrega a lista de estoque sozinho; recarregamos tambem
   // aqui para resposta imediata a quem clicou.
   await carregarEstoque();
+  await carregarLista();
 }
 
 // -------------------------------------------------------------------
