@@ -18,14 +18,27 @@ import {
 const app = express();
 app.use(express.json());
 
+// Serve a tela (arquivos da pasta public) no mesmo endereco do backend.
+app.use(express.static('public'));
+
+// Config publica que a tela precisa para falar com o Supabase.
+// Sao dados publicos por design (a anon key e feita para o frontend);
+// a protecao real vem do RLS. A senha/segredos NUNCA vem por aqui.
+app.get('/config', (req, res) => {
+  res.json({
+    supabaseUrl: config.supabaseUrl,
+    supabaseAnonKey: config.supabaseAnonKey,
+  });
+});
+
 // ------------------------------------------------------------------
 // Rotas basicas
 // ------------------------------------------------------------------
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({
     sistema: 'LifeOS',
-    versao: '0.3.0',
-    mensagem: 'Backend no ar. Use /saude para verificar a conexao com o banco.',
+    versao: '0.4.0',
+    mensagem: 'Backend no ar. A tela esta na raiz (/). Use /saude para checar o banco.',
   });
 });
 
