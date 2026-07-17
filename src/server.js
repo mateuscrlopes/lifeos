@@ -1,7 +1,8 @@
-// server.js
+// server.js — LifeOS v0.17.0
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
+import { registrarRotasAtalhos } from './atalhos.js';
 
 const app = express();
 app.use(express.json());
@@ -21,10 +22,13 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
-    versao: '0.13.0',
+    versao: '0.17.0',
   });
 });
 
+// Rotas dos Atalhos do iOS.
+registrarRotasAtalhos(app);
+
 app.listen(config.porta, '0.0.0.0', () => {
-  console.log(`\nLifeOS v0.13.0 — porta ${config.porta}\n`);
+  console.log(`\nLifeOS v0.17.0 — porta ${config.porta}\n`);
 });
