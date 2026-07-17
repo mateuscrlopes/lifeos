@@ -133,11 +133,15 @@ app.post('/lista/remover', (req, res) =>
 );
 
 // ------------------------------------------------------------------
-app.listen(config.porta, () => {
+// Escuta em 0.0.0.0 (todas as interfaces) para funcionar tanto localmente
+// quanto em servidores como o Render. A porta vem do ambiente (Render define
+// a sua) ou 3000 no local.
+app.listen(config.porta, '0.0.0.0', () => {
   console.log('\n========================================');
   console.log('  LifeOS - backend iniciado');
   console.log('========================================');
-  console.log(`  Endereco:  http://localhost:${config.porta}`);
+  console.log(`  Porta:     ${config.porta}`);
+  console.log(`  Local:     http://localhost:${config.porta}`);
   console.log(`  Saude:     http://localhost:${config.porta}/saude`);
   console.log('  Para parar: Ctrl + C');
   console.log('========================================\n');

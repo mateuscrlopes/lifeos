@@ -1,0 +1,20 @@
+# render.yaml
+# Configuracao do servico no Render. Com este arquivo, o Render consegue
+# auto-configurar o servico ao conectar o repositorio.
+#
+# As variaveis de ambiente (SUPABASE_URL e SUPABASE_ANON_KEY) NAO ficam aqui
+# por seguranca - elas sao preenchidas no painel do Render (sync: false faz
+# o Render pedir o valor na configuracao, sem grava-lo no repositorio).
+
+services:
+  - type: web
+    name: lifeos
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
