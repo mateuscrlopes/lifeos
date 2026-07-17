@@ -5,6 +5,7 @@
 
 let supa = null;      // cliente Supabase
 let usuario = null;   // perfil do morador logado (id, nome, casa_id)
+let canalTempoReal = null;  // "escuta" das mudancas da lista em tempo real
 
 // Atalhos para pegar elementos da tela.
 const el = (id) => document.getElementById(id);
@@ -85,6 +86,35 @@ async function aoEntrar() {
   el('telaLista').classList.remove('oculto');
   aviso('avisoLogin', '');
   await carregarLista();
+  ligarTempoReal();
+}
+
+// Liga a "escuta" das mudancas na lista da Casa. Sempre que qualquer
+// alteracao acontece na tabela lista_compras (adicao, compra, remocao),
+// o Supabase avisa e nos recarregamos a lista - sem o usuario apertar F5.
+function ligarTempoReal() {
+  // Evita ligar duas vezes.
+  if (canalTempoReal) return;
+
+  canalTempoReal = supa
+    .channel('lista-da-casa')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'lista_compras' },
+      () => {
+        // Chegou um aviso de mudanca: recarrega a lista.
+        carregarLista();
+      }
+    )
+    .subscribe();
+}
+
+// Desliga a escuta (ao sair, para nao deixar conexao pendurada).
+function desligarTempoReal() {
+  if (canalTempoReal) {
+    supa.removeChannel(canalTempoReal);
+    canalTempoReal = null;
+  }
 }
 
 // -------------------------------------------------------------------
@@ -208,6 +238,7 @@ async function comprar(itemId, botao) {
 }
 
 async function sair() {
+  desligarTempoReal();
   await supa.auth.signOut();
   usuario = null;
   el('quem').textContent = '';
