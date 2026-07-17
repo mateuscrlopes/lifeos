@@ -93,6 +93,7 @@ async function aoEntrar() {
   await carregarHoje();
   await carregarLista();
   await carregarEstoque();
+  await carregarTarefas();
   await carregarContas();
   ligarTempoReal();
 }
@@ -128,6 +129,14 @@ function ligarTempoReal() {
       { event: '*', schema: 'public', table: 'contas' },
       () => {
         carregarContas();
+        carregarHoje();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'tarefas' },
+      () => {
+        carregarTarefas();
         carregarHoje();
       }
     )
@@ -703,6 +712,17 @@ async function carregarHoje() {
     area.appendChild(card.cartao);
   }
 
+  // --- Card TAREFAS de hoje/atrasadas ---
+  if (dados.tarefasAtencao && dados.tarefasAtencao.length > 0) {
+    const card = criarCartaoHoje('Tarefas da Casa', 'tarefas');
+    for (const t of dados.tarefasAtencao) {
+      const quem = t.responsavel === 'ambos' ? 'Ambos'
+        : t.responsavel.charAt(0).toUpperCase() + t.responsavel.slice(1);
+      card.corpo.appendChild(miniItem(t.titulo, quem, ''));
+    }
+    area.appendChild(card.cartao);
+  }
+
   // --- Card ESTOQUE em atencao ---
   if (dados.estoqueAtencao.length > 0) {
     const card = criarCartaoHoje('Estoque em atenção', 'estoque');
@@ -781,12 +801,190 @@ function miniItem(nome, meta, valor) {
 }
 
 // -------------------------------------------------------------------
+// TAREFAS (Fatia 1)
+// -------------------------------------------------------------------
+async function carregarTarefas() {
+  const { data: tarefas, error } = await supa
+    .from('tarefas')
+    .select('id, titulo, responsavel, prioridade, data, feita, recorrente, recorrencia')
+    .eq('casa_id', usuario.casa_id)
+    .order('feita')
+    .order('data', { nullsFirst: true });
+
+  const area = el('itensTarefas');
+  area.innerHTML = '';
+
+  if (error) {
+    area.innerHTML = '<div class="vazio">Erro ao carregar as tarefas.</div>';
+    return;
+  }
+  if (!tarefas || tarefas.length === 0) {
+    area.innerHTML = '<div class="vazio">Nenhuma tarefa. Adicione acima.</div>';
+    return;
+  }
+
+  for (const tarefa of tarefas) {
+    const linha = document.createElement('div');
+    linha.className = 'item' + (tarefa.feita ? ' concluida' : '');
+
+    // Checkbox de concluir.
+    const check = document.createElement('div');
+    check.className = 'check-tarefa' + (tarefa.feita ? ' feita' : '');
+    check.textContent = tarefa.feita ? '\u2713' : '';
+    check.onclick = () => alternarTarefa(tarefa);
+
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    desc.style.flex = '1';
+    desc.style.marginLeft = '12px';
+    const nome = document.createElement('span');
+    nome.className = 'nome';
+    nome.textContent = tarefa.titulo;
+    desc.appendChild(nome);
+
+    const metaPartes = [];
+    const quem = tarefa.responsavel === 'ambos' ? 'Ambos'
+      : tarefa.responsavel.charAt(0).toUpperCase() + tarefa.responsavel.slice(1);
+    metaPartes.push(quem);
+    if (tarefa.recorrente && tarefa.recorrencia) metaPartes.push(tarefa.recorrencia);
+    if (tarefa.data) metaPartes.push(tarefa.data.slice(0, 10).split('-').reverse().join('/'));
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = metaPartes.join(' \u00b7 ');
+    desc.appendChild(meta);
+
+    // Botao remover discreto.
+    const btnRemover = document.createElement('button');
+    btnRemover.textContent = '\u00d7';
+    btnRemover.title = 'Remover';
+    btnRemover.style.background = 'none';
+    btnRemover.style.color = 'var(--suave)';
+    btnRemover.style.padding = '4px 8px';
+    btnRemover.onclick = () => removerTarefa(tarefa.id);
+
+    const containerEsq = document.createElement('div');
+    containerEsq.style.display = 'flex';
+    containerEsq.style.alignItems = 'center';
+    containerEsq.style.flex = '1';
+    containerEsq.appendChild(check);
+    containerEsq.appendChild(desc);
+
+    linha.appendChild(containerEsq);
+    linha.appendChild(btnRemover);
+    area.appendChild(linha);
+  }
+}
+
+async function adicionarTarefa() {
+  const titulo = el('tfTitulo').value.trim();
+  const responsavel = el('tfResp').value;
+  const data = el('tfData').value || null;
+  const recorrente = el('tfRecorrente').checked;
+  const recorrencia = recorrente ? (el('tfRecorrencia').value.trim() || null) : null;
+
+  if (!titulo) {
+    aviso('avisoTarefa', 'Digite o título da tarefa.', 'erro');
+    return;
+  }
+
+  el('btnAddTarefa').disabled = true;
+
+  const { data: nova, error } = await supa
+    .from('tarefas')
+    .insert({
+      casa_id: usuario.casa_id,
+      titulo, responsavel, data, recorrente, recorrencia,
+      criada_por: usuario.id,
+    })
+    .select()
+    .single();
+
+  if (nova) {
+    supa.from('eventos').insert({
+      tipo: 'tarefa_criada', entidade: 'tarefas', entidade_id: nova.id,
+      usuario_id: usuario.id, detalhe: usuario.nome + ' criou a tarefa ' + titulo,
+    });
+  }
+
+  el('btnAddTarefa').disabled = false;
+
+  if (error) {
+    aviso('avisoTarefa', 'Não foi possível adicionar.', 'erro');
+    return;
+  }
+
+  el('tfTitulo').value = '';
+  el('tfData').value = '';
+  el('tfRecorrente').checked = false;
+  el('tfRecorrencia').value = '';
+  el('tfRecorrenciaBox').classList.add('oculto');
+  aviso('avisoTarefa', 'Tarefa adicionada.', 'ok');
+  setTimeout(() => aviso('avisoTarefa', ''), 1500);
+  await carregarTarefas();
+}
+
+// Marca/desmarca uma tarefa como feita. Ao concluir uma recorrente,
+// oferece criar a proxima (mesmo padrao das contas).
+async function alternarTarefa(tarefa) {
+  const novoEstado = !tarefa.feita;
+
+  const { error } = await supa
+    .from('tarefas')
+    .update({
+      feita: novoEstado,
+      feita_por: novoEstado ? usuario.id : null,
+      feita_em: novoEstado ? new Date().toISOString() : null,
+    })
+    .eq('id', tarefa.id);
+
+  if (error) return;
+
+  supa.from('eventos').insert({
+    tipo: novoEstado ? 'tarefa_concluida' : 'tarefa_reaberta',
+    entidade: 'tarefas', entidade_id: tarefa.id, usuario_id: usuario.id,
+    detalhe: `${usuario.nome} ${novoEstado ? 'concluiu' : 'reabriu'} ${tarefa.titulo}`,
+  });
+
+  // Se concluiu uma recorrente, oferece criar a proxima.
+  if (novoEstado && tarefa.recorrente) {
+    const querProxima = confirm(
+      `"${tarefa.titulo}" é uma rotina.\nCriar a próxima ocorrência?`
+    );
+    if (querProxima) {
+      await supa.from('tarefas').insert({
+        casa_id: usuario.casa_id,
+        titulo: tarefa.titulo,
+        responsavel: tarefa.responsavel,
+        prioridade: tarefa.prioridade,
+        recorrente: true,
+        recorrencia: tarefa.recorrencia,
+        criada_por: usuario.id,
+      });
+    }
+  }
+
+  await carregarTarefas();
+}
+
+async function removerTarefa(tarefaId) {
+  const { error } = await supa.from('tarefas').delete().eq('id', tarefaId);
+  if (!error) {
+    supa.from('eventos').insert({
+      tipo: 'tarefa_removida', entidade: 'tarefas', entidade_id: tarefaId,
+      usuario_id: usuario.id, detalhe: usuario.nome + ' removeu uma tarefa',
+    });
+    await carregarTarefas();
+  }
+}
+
+// -------------------------------------------------------------------
 // NAVEGACAO POR ABAS
 // -------------------------------------------------------------------
 function trocarAba(qual) {
   el('abaHoje').classList.toggle('oculto', qual !== 'hoje');
   el('abaCompras').classList.toggle('oculto', qual !== 'compras');
   el('abaEstoque').classList.toggle('oculto', qual !== 'estoque');
+  el('abaTarefas').classList.toggle('oculto', qual !== 'tarefas');
   el('abaContas').classList.toggle('oculto', qual !== 'contas');
   document.querySelectorAll('.aba').forEach((b) => {
     b.classList.toggle('ativa', b.dataset.aba === qual);
@@ -807,6 +1005,11 @@ el('btnAdd').onclick = adicionar;
 el('novoItem').addEventListener('keydown', (e) => { if (e.key === 'Enter') adicionar(); });
 el('btnAddEstoque').onclick = adicionarEstoque;
 el('btnAddConta').onclick = adicionarConta;
+el('btnAddTarefa').onclick = adicionarTarefa;
+// Mostra o campo de recorrencia so quando "Repete (rotina)" esta marcado.
+el('tfRecorrente').addEventListener('change', (e) => {
+  el('tfRecorrenciaBox').classList.toggle('oculto', !e.target.checked);
+});
 el('btnSair').onclick = sair;
 
 iniciar();

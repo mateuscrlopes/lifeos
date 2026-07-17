@@ -8,7 +8,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 18/07/2026 (Tela Hoje — painel que reúne os módulos — concluída)
+Última atualização: 18/07/2026 (Tarefas Fatia 1 — divisão de responsabilidades — concluída)
 
 ---
 
@@ -35,6 +35,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 | v0.7.0 | Estoque Fatia 2: ponte com a lista (sugestão + reposição na compra) | Sim — ciclo baixo→sugestão→compra→repõe |
 | v0.8.0 | Contas: cadastro manual, status por vencimento, recorrência | Sim — status por cor + recorrência |
 | v0.9.0 | Tela Hoje: painel que reúne compras/estoque/contas (só o que precisa atenção) | Sim — resumo + tudo em dia + cards clicáveis |
+| v0.10.0 | Tarefas Fatia 1: responsável, conclusão, rotina recorrente, card no Hoje | Sim — cria/conclui/rotina oferece próxima |
 | —      | Teste de concorrência (dois usuários na lista) | Sim — passou |
 
 ---
@@ -76,7 +77,11 @@ define quatro tipos; a Fatia 1 fez o primeiro. Os outros três entram aqui:
 
 Todos fazem parte do produto (estão no Documento Mestre). Ainda não construídos.
 
-- **Tarefas, rotinas e rituais** (seção 21) — divisão de responsabilidades da Casa.
+- **Tarefas, rotinas e rituais** (seção 21) — ✅ Fatia 1 concluída (v0.10.0):
+  tarefas com responsável, conclusão e rotinas recorrentes.
+  🕒 Fatia 2 (adiada): **rituais** (planejamento semanal, revisão financeira,
+  alinhamento do casal) com pauta e histórico — atenção à privacidade do
+  conteúdo do casal (não expor no tablet).
 - **Contas e finanças** (seção 20) — ✅ cadastro manual concluído (v0.8.0).
   Próximos passos deste módulo (adiados): leitura por e-mail/Gmail, histórico e
   variação mês a mês, orçamento disponível, contas pessoais + privacidade.

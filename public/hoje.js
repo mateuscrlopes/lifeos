@@ -24,8 +24,8 @@ export function saudacao(nome, agora = new Date()) {
 export async function montarHoje(supa, usuario) {
   const casaId = usuario.casa_id;
 
-  // Busca as tres fontes em paralelo (mais rapido que uma de cada vez).
-  const [respLista, respEstoque, respContas] = await Promise.all([
+  // Busca as fontes em paralelo (mais rapido que uma de cada vez).
+  const [respLista, respEstoque, respContas, respTarefas] = await Promise.all([
     supa.from('lista_compras')
       .select('id, nome, origem')
       .eq('casa_id', casaId)
@@ -37,6 +37,10 @@ export async function montarHoje(supa, usuario) {
       .select('id, nome, valor, vencimento, paga')
       .eq('casa_id', casaId)
       .eq('paga', false),
+    supa.from('tarefas')
+      .select('id, titulo, responsavel, data, feita')
+      .eq('casa_id', casaId)
+      .eq('feita', false),
   ]);
 
   // --- COMPRAS: quantos pendentes e quantos sao sugestao do estoque ---
@@ -63,9 +67,18 @@ export async function montarHoje(supa, usuario) {
     .filter((c) => c.status === 'vencida' || c.status === 'vence_hoje' || c.status === 'vence_breve')
     .sort((a, b) => a.dias - b.dias);
 
+  // --- TAREFAS: pendentes de hoje, atrasadas, ou sem data ---
+  const hojeStr = new Date().toISOString().slice(0, 10);
+  const tarefasAtencao = (respTarefas.data || [])
+    .filter((t) => !t.data || t.data <= hojeStr)   // sem data, hoje ou atrasada
+    .slice(0, 5);
+
   // Ha algo pedindo atencao em algum lugar?
   const tudoEmDia =
-    compras.total === 0 && estoqueAtencao.length === 0 && contasAtencao.length === 0;
+    compras.total === 0 &&
+    estoqueAtencao.length === 0 &&
+    contasAtencao.length === 0 &&
+    tarefasAtencao.length === 0;
 
-  return { compras, estoqueAtencao, contasAtencao, tudoEmDia };
+  return { compras, estoqueAtencao, contasAtencao, tarefasAtencao, tudoEmDia };
 }
