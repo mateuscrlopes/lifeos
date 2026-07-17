@@ -12,7 +12,7 @@ import { calcularStatus } from './status-estoque.js';
 
 // Decide se um item de estoque "precisa de reposicao" (baixo ou acabou).
 function precisaRepor(item) {
-  const status = calcularStatus(item.quantidade, item.minimo);
+  const status = calcularStatus(item.quantidade, item.minimo, item.tipo, item.nivel, item.minimo_nivel);
   return status === 'baixo' || status === 'acabou';
 }
 
@@ -87,7 +87,7 @@ export async function reporEstoque(supa, usuario, estoqueId, quantidadeComprada)
   // Le o saldo atual.
   const { data: item, error } = await supa
     .from('estoque')
-    .select('id, nome, quantidade')
+    .select('id, nome, quantidade, tipo, nivel, minimo_nivel')
     .eq('id', estoqueId)
     .single();
 

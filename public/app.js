@@ -3,7 +3,7 @@
 // entrega a configuracao publica). O login usa token de sessao - a senha e
 // digitada uma vez e nao se repete a cada acao.
 
-import { calcularStatus, rotuloStatus } from './status-estoque.js';
+import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { saudacao, montarHoje } from './hoje.js';
@@ -337,7 +337,7 @@ async function sair() {
 async function carregarEstoque() {
   const { data: itens, error } = await supa
     .from('estoque')
-    .select('id, nome, categoria, quantidade, unidade, minimo')
+    .select('id, nome, categoria, tipo, quantidade, unidade, minimo, nivel, minimo_nivel')
     .eq('casa_id', usuario.casa_id)
     .order('nome');
 
@@ -354,7 +354,7 @@ async function carregarEstoque() {
   }
 
   for (const item of itens) {
-    const status = calcularStatus(item.quantidade, item.minimo);
+    const status = calcularStatus(item.quantidade, item.minimo, item.tipo, item.nivel, item.minimo_nivel);
     const info = rotuloStatus(status);
 
     const linha = document.createElement('div');
@@ -368,7 +368,7 @@ async function carregarEstoque() {
     desc.appendChild(nome);
     const meta = document.createElement('span');
     meta.className = 'meta';
-    meta.textContent = `mínimo: ${item.minimo} ${item.unidade || ''}`.trim();
+    meta.textContent = descricaoQuantidade(item);
     desc.appendChild(meta);
 
     const direita = document.createElement('div');
@@ -378,23 +378,53 @@ async function carregarEstoque() {
     badge.className = 'badge';
     badge.style.background = info.cor;
     badge.textContent = info.texto;
-
-    const btnMenos = document.createElement('button');
-    btnMenos.textContent = '\u2212';   // sinal de menos
-    btnMenos.onclick = () => ajustarEstoque(item, -1);
-
-    const qtd = document.createElement('span');
-    qtd.className = 'est-qtd';
-    qtd.textContent = item.quantidade;
-
-    const btnMais = document.createElement('button');
-    btnMais.textContent = '+';
-    btnMais.onclick = () => ajustarEstoque(item, +1);
-
     direita.appendChild(badge);
-    direita.appendChild(btnMenos);
-    direita.appendChild(qtd);
-    direita.appendChild(btnMais);
+
+    // Controles adaptados por tipo.
+    if (item.tipo === 'presenca') {
+      // Toggle tem/nao tem.
+      const btnToggle = document.createElement('button');
+      btnToggle.textContent = Number(item.quantidade) > 0 ? 'Tem ✓' : 'Não tem';
+      btnToggle.style.padding = '7px 10px';
+      btnToggle.style.fontSize = '13px';
+      btnToggle.style.background = Number(item.quantidade) > 0 ? 'var(--acao-clara)' : 'var(--linha)';
+      btnToggle.style.color = Number(item.quantidade) > 0 ? 'var(--acao)' : 'var(--suave)';
+      btnToggle.onclick = () => ajustarPresenca(item, btnToggle);
+      direita.appendChild(btnToggle);
+
+    } else if (item.tipo === 'nivel_visual') {
+      // Seletor de nivel.
+      const sel = document.createElement('select');
+      sel.className = 'sel';
+      sel.style.width = 'auto';
+      sel.style.padding = '6px 8px';
+      sel.style.fontSize = '13px';
+      NIVEIS_VISUAL.forEach((n) => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = ROTULO_NIVEL[n];
+        if (n === item.nivel) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = () => ajustarNivel(item, sel.value);
+      direita.appendChild(sel);
+
+    } else {
+      // Contavel e peso_volume: botoes +/-.
+      const btnMenos = document.createElement('button');
+      const passo = item.tipo === 'peso_volume' ? 100 : 1;
+      btnMenos.textContent = '\u2212';
+      btnMenos.onclick = () => ajustarEstoque(item, -passo);
+      const qtd = document.createElement('span');
+      qtd.className = 'est-qtd';
+      qtd.textContent = item.quantidade;
+      const btnMais = document.createElement('button');
+      btnMais.textContent = '+';
+      btnMais.onclick = () => ajustarEstoque(item, passo);
+      direita.appendChild(btnMenos);
+      direita.appendChild(qtd);
+      direita.appendChild(btnMais);
+    }
 
     linha.appendChild(desc);
     linha.appendChild(direita);
@@ -404,29 +434,45 @@ async function carregarEstoque() {
 
 async function adicionarEstoque() {
   const nome = el('estNome').value.trim();
-  const quantidade = Number(el('estQtd').value);
-  const minimo = Number(el('estMin').value);
+  const tipo = el('estTipo').value;
 
   if (!nome) {
     aviso('avisoEstoque', 'Digite o nome do item.', 'erro');
     return;
   }
-  if (!isFinite(quantidade) || !isFinite(minimo)) {
-    aviso('avisoEstoque', 'Quantidade e mínimo precisam ser números.', 'erro');
-    return;
+
+  let payload = { casa_id: usuario.casa_id, nome, tipo, atualizado_por: usuario.id };
+
+  if (tipo === 'contavel' || tipo === 'peso_volume') {
+    const quantidade = Number(el('estQtd').value);
+    const minimo = Number(el('estMin').value);
+    const unidade = el('estUnidade').value.trim() || (tipo === 'peso_volume' ? 'g' : 'unidades');
+    if (!isFinite(quantidade) || !isFinite(minimo)) {
+      aviso('avisoEstoque', 'Quantidade e mínimo precisam ser números.', 'erro');
+      return;
+    }
+    payload = { ...payload, quantidade, minimo, unidade };
+
+  } else if (tipo === 'nivel_visual') {
+    payload = {
+      ...payload,
+      nivel: el('estNivelAtual').value,
+      minimo_nivel: el('estNivelMin').value,
+      quantidade: 0, minimo: 0,
+    };
+
+  } else if (tipo === 'presenca') {
+    payload = {
+      ...payload,
+      quantidade: el('estTemItem').checked ? 1 : 0,
+      minimo: 1,
+    };
   }
 
   el('btnAddEstoque').disabled = true;
 
   const { data, error } = await supa
-    .from('estoque')
-    .insert({
-      casa_id: usuario.casa_id,
-      nome, quantidade, minimo,
-      atualizado_por: usuario.id,
-    })
-    .select()
-    .single();
+    .from('estoque').insert(payload).select().single();
 
   if (data) {
     supa.from('eventos').insert({
@@ -442,13 +488,18 @@ async function adicionarEstoque() {
     return;
   }
 
+  // Resetar formulario.
   el('estNome').value = '';
+  el('estTipo').value = 'contavel';
   el('estQtd').value = '0';
   el('estMin').value = '1';
+  el('estUnidade').value = '';
+  el('estCamposNum').classList.remove('oculto');
+  el('estCamposNivel').classList.add('oculto');
+  el('estCamposPresenca').classList.add('oculto');
   aviso('avisoEstoque', 'Adicionado.', 'ok');
   setTimeout(() => aviso('avisoEstoque', ''), 1500);
 
-  // Se o item ja nasce baixo/acabou, sugere na lista.
   if (data) {
     await sincronizarItem(supa, usuario, data);
     await carregarLista();
@@ -488,6 +539,28 @@ async function ajustarEstoque(item, delta) {
   await carregarLista();
 }
 
+// Ajusta o nivel visual de um item (seletor).
+async function ajustarNivel(item, novoNivel) {
+  const { error } = await supa
+    .from('estoque')
+    .update({ nivel: novoNivel, atualizado_por: usuario.id, atualizado_em: new Date().toISOString() })
+    .eq('id', item.id);
+
+  if (!error) {
+    supa.from('eventos').insert({
+      tipo: 'estoque_ajustado', entidade: 'estoque', entidade_id: item.id,
+      usuario_id: usuario.id,
+      valor_anterior: { nivel: item.nivel },
+      valor_novo: { nivel: novoNivel },
+      detalhe: `${usuario.nome} ajustou ${item.nome} para ${novoNivel}`,
+    });
+    await sincronizarItem(supa, usuario, { ...item, nivel: novoNivel });
+  }
+  await carregarEstoque();
+  await carregarLista();
+}
+
+// Alterna presenca de um item (tem/nao tem).
 // -------------------------------------------------------------------
 // CONTAS (cadastro manual)
 // -------------------------------------------------------------------
@@ -1004,6 +1077,13 @@ el('senha').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar()
 el('btnAdd').onclick = adicionar;
 el('novoItem').addEventListener('keydown', (e) => { if (e.key === 'Enter') adicionar(); });
 el('btnAddEstoque').onclick = adicionarEstoque;
+// Mostra os campos certos conforme o tipo selecionado.
+el('estTipo').addEventListener('change', (e) => {
+  const t = e.target.value;
+  el('estCamposNum').classList.toggle('oculto', t === 'nivel_visual' || t === 'presenca');
+  el('estCamposNivel').classList.toggle('oculto', t !== 'nivel_visual');
+  el('estCamposPresenca').classList.toggle('oculto', t !== 'presenca');
+});
 el('btnAddConta').onclick = adicionarConta;
 el('btnAddTarefa').onclick = adicionarTarefa;
 // Mostra o campo de recorrencia so quando "Repete (rotina)" esta marcado.

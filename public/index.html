@@ -202,18 +202,72 @@
         <div class="cartao">
           <div class="titulo-secao">Adicionar ao estoque</div>
           <div class="campo">
-            <input id="estNome" type="text" placeholder="Nome, ex.: papel higiênico" />
+            <input id="estNome" type="text" placeholder="Nome, ex.: shampoo" />
           </div>
-          <div class="linha-add">
-            <div style="flex:1">
-              <label for="estQtd">Quantidade</label>
-              <input id="estQtd" type="number" min="0" step="1" value="0" />
+          <div class="campo">
+            <label for="estTipo">Tipo de medição</label>
+            <select id="estTipo" class="sel">
+              <option value="contavel">Unidade contável (ex.: rolos, sabonetes)</option>
+              <option value="peso_volume">Peso / Volume (ex.: gramas, litros)</option>
+              <option value="nivel_visual">Nível visual (ex.: shampoo, detergente)</option>
+              <option value="presenca">Presença simples (tem / não tem)</option>
+            </select>
+          </div>
+
+          <!-- Campos para contavel e peso_volume -->
+          <div id="estCamposNum">
+            <div class="linha-add">
+              <div style="flex:1">
+                <label for="estQtd">Quantidade atual</label>
+                <input id="estQtd" type="number" min="0" step="any" value="0" />
+              </div>
+              <div style="flex:1">
+                <label for="estMin">Mínimo</label>
+                <input id="estMin" type="number" min="0" step="any" value="1" />
+              </div>
             </div>
-            <div style="flex:1">
-              <label for="estMin">Mínimo</label>
-              <input id="estMin" type="number" min="0" step="1" value="1" />
+            <div class="campo">
+              <label for="estUnidade">Unidade (ex.: rolos, g, ml)</label>
+              <input id="estUnidade" type="text" placeholder="unidades" />
             </div>
           </div>
+
+          <!-- Campos para nivel_visual -->
+          <div id="estCamposNivel" class="oculto">
+            <div class="linha-add">
+              <div style="flex:1">
+                <label for="estNivelAtual">Nível atual</label>
+                <select id="estNivelAtual" class="sel">
+                  <option value="cheio">Cheio</option>
+                  <option value="75">~75%</option>
+                  <option value="metade">Metade</option>
+                  <option value="25">~25%</option>
+                  <option value="quase_acabando">Quase acabando</option>
+                  <option value="acabou">Acabou</option>
+                </select>
+              </div>
+              <div style="flex:1">
+                <label for="estNivelMin">Alertar quando abaixo de</label>
+                <select id="estNivelMin" class="sel">
+                  <option value="75">~75%</option>
+                  <option value="metade">Metade</option>
+                  <option value="25" selected>~25%</option>
+                  <option value="quase_acabando">Quase acabando</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campos para presenca (sem quantidade, so nome) -->
+          <div id="estCamposPresenca" class="oculto">
+            <div class="campo">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input id="estTemItem" type="checkbox" style="width:auto" checked />
+                Tem agora
+              </label>
+            </div>
+          </div>
+
           <div style="margin-top:12px">
             <button id="btnAddEstoque">Adicionar ao estoque</button>
           </div>

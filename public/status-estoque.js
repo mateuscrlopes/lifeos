@@ -1,29 +1,72 @@
 // status-estoque.js
-// Calcula o STATUS de um item de estoque a partir da quantidade atual e do
-// minimo. Regra simples e honesta (Fatia 1 - unidade contavel).
-//
-// Os cinco status seguem o Documento Mestre (secao 18.3):
-//   suficiente | atencao | baixo | conferir | acabou
-//
-// Nesta fatia trabalhamos so com numero de unidades, entao o calculo e
-// direto. "conferir" (baixa confianca) e estimativa entrarao em fatias
-// futuras, quando houver historico de consumo. Por enquanto, "conferir"
-// nao e gerado automaticamente aqui.
+// Calcula o STATUS de um item de estoque conforme seu TIPO de medicao.
+// Quatro tipos (Documento Mestre, secao 18.4):
+//   contavel     — numero de unidades (ex.: 3 rolos)
+//   peso_volume  — peso ou volume numerico (ex.: 500g, 1.5L)
+//   nivel_visual — nivel em escala (cheio/75/metade/25/quase_acabando/acabou)
+//   presenca     — tem ou nao tem
 
-export function calcularStatus(quantidade, minimo) {
+// Ordem dos niveis visuais (do mais cheio ao mais vazio).
+export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
+
+export const ROTULO_NIVEL = {
+  cheio:          'Cheio',
+  '75':           '~75%',
+  metade:         'Metade',
+  '25':           '~25%',
+  quase_acabando: 'Quase acabando',
+  acabou:         'Acabou',
+};
+
+// Indice do nivel (quanto menor o indice, mais cheio).
+function indiceNivel(nivel) {
+  const i = NIVEIS_VISUAL.indexOf(nivel);
+  return i === -1 ? 0 : i;
+}
+
+// --- CONTAVEL e PESO_VOLUME (mesma logica, base numerica) ---
+function statusNumerico(quantidade, minimo) {
   const q = Number(quantidade);
   const m = Number(minimo);
-
   if (!isFinite(q) || !isFinite(m)) return 'conferir';
-
   if (q <= 0) return 'acabou';
   if (q < m) return 'baixo';
-  if (q === m) return 'atencao';            // no limite: vale repor logo
-  if (q <= m * 1.5) return 'atencao';       // um pouco acima do minimo
+  if (q <= m * 1.5) return 'atencao';
   return 'suficiente';
 }
 
-// Rotulo amigavel e uma cor sugerida (a tela decide como usar).
+// --- NIVEL VISUAL ---
+// minimo e um nivel (ex.: '25'): abaixo dele fica baixo/acabou.
+function statusNivelVisual(nivel, minimoNivel) {
+  if (!nivel) return 'conferir';
+  if (nivel === 'acabou') return 'acabou';
+  const iAtual = indiceNivel(nivel);
+  const iMin = indiceNivel(minimoNivel || '25');
+  // Quanto maior o indice, mais vazio. Se atual >= minimo, esta baixo.
+  if (iAtual > iMin) return 'baixo';
+  if (iAtual === iMin) return 'atencao';
+  // Um nivel acima do minimo = atencao; dois ou mais = suficiente.
+  if (iAtual === iMin - 1) return 'atencao';
+  return 'suficiente';
+}
+
+// --- PRESENCA ---
+function statusPresenca(quantidade) {
+  return Number(quantidade) > 0 ? 'suficiente' : 'acabou';
+}
+
+// Funcao principal: recebe o item completo e devolve o status.
+export function calcularStatus(quantidade, minimo, tipo, nivel, minimoNivel) {
+  switch (tipo) {
+    case 'nivel_visual': return statusNivelVisual(nivel, minimoNivel);
+    case 'presenca':     return statusPresenca(quantidade);
+    case 'peso_volume':
+    case 'contavel':
+    default:             return statusNumerico(quantidade, minimo);
+  }
+}
+
+// Rotulo amigavel e cor para exibir na tela.
 export function rotuloStatus(status) {
   const mapa = {
     suficiente: { texto: 'Suficiente', cor: '#2f6f4f' },
@@ -33,4 +76,20 @@ export function rotuloStatus(status) {
     acabou:     { texto: 'Acabou',     cor: '#b23c3c' },
   };
   return mapa[status] || mapa.conferir;
+}
+
+// Descricao do valor atual para exibir na linha do item.
+export function descricaoQuantidade(item) {
+  switch (item.tipo) {
+    case 'nivel_visual':
+      return ROTULO_NIVEL[item.nivel] || item.nivel || '—';
+    case 'presenca':
+      return Number(item.quantidade) > 0 ? 'Tem' : 'Não tem';
+    case 'peso_volume':
+      return item.quantidade != null
+        ? `${item.quantidade} ${item.unidade || ''}`.trim()
+        : '—';
+    default: // contavel
+      return item.quantidade != null ? String(item.quantidade) : '—';
+  }
 }
