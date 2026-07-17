@@ -5,6 +5,7 @@
 
 import { calcularStatus, rotuloStatus } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
+import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 
 let supa = null;      // cliente Supabase
 let usuario = null;   // perfil do morador logado (id, nome, casa_id)
@@ -90,6 +91,7 @@ async function aoEntrar() {
   aviso('avisoLogin', '');
   await carregarLista();
   await carregarEstoque();
+  await carregarContas();
   ligarTempoReal();
 }
 
@@ -115,6 +117,13 @@ function ligarTempoReal() {
       { event: '*', schema: 'public', table: 'estoque' },
       () => {
         carregarEstoque();
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'contas' },
+      () => {
+        carregarContas();
       }
     )
     .subscribe();
@@ -466,12 +475,204 @@ async function ajustarEstoque(item, delta) {
 }
 
 // -------------------------------------------------------------------
+// CONTAS (cadastro manual)
+// -------------------------------------------------------------------
+async function carregarContas() {
+  const { data: contas, error } = await supa
+    .from('contas')
+    .select('id, nome, categoria, valor, vencimento, paga, recorrente, dia_vencimento')
+    .eq('casa_id', usuario.casa_id)
+    .order('paga')                                  // nao pagas primeiro
+    .order('vencimento');
+
+  const area = el('itensContas');
+  area.innerHTML = '';
+
+  if (error) {
+    area.innerHTML = '<div class="vazio">Erro ao carregar as contas.</div>';
+    return;
+  }
+  if (!contas || contas.length === 0) {
+    area.innerHTML = '<div class="vazio">Nenhuma conta cadastrada. Adicione acima.</div>';
+    return;
+  }
+
+  for (const conta of contas) {
+    const status = calcularStatusConta(conta);
+    const info = rotuloStatusConta(status);
+
+    const linha = document.createElement('div');
+    linha.className = 'item';
+
+    const desc = document.createElement('div');
+    desc.className = 'desc';
+    const nome = document.createElement('span');
+    nome.className = 'nome';
+    nome.textContent = conta.nome;
+    if (conta.recorrente) {
+      const r = document.createElement('span');
+      r.className = 'meta';
+      r.textContent = ' \u21bb';   // simbolo de repeticao
+      r.title = 'Repete todo mês';
+      nome.appendChild(r);
+    }
+    desc.appendChild(nome);
+
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    const venc = conta.vencimento.slice(0, 10).split('-').reverse().join('/');
+    meta.textContent = `${formatarValor(conta.valor)} \u00b7 vence ${venc}`;
+    desc.appendChild(meta);
+
+    const direita = document.createElement('div');
+    direita.className = 'est-controles';
+
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.style.background = info.cor;
+    badge.textContent = info.texto;
+    direita.appendChild(badge);
+
+    if (!conta.paga) {
+      const btnPagar = document.createElement('button');
+      btnPagar.textContent = 'Paguei';
+      btnPagar.style.padding = '7px 12px';
+      btnPagar.style.fontSize = '13px';
+      btnPagar.onclick = () => pagarConta(conta, btnPagar);
+      direita.appendChild(btnPagar);
+    }
+
+    linha.appendChild(desc);
+    linha.appendChild(direita);
+    area.appendChild(linha);
+  }
+}
+
+async function adicionarConta() {
+  const nome = el('ctNome').value.trim();
+  const valorTexto = el('ctValor').value;
+  const vencimento = el('ctVenc').value;   // formato YYYY-MM-DD
+  const recorrente = el('ctRecorrente').checked;
+
+  if (!nome) {
+    aviso('avisoConta', 'Digite o nome da conta.', 'erro');
+    return;
+  }
+  if (!vencimento) {
+    aviso('avisoConta', 'Escolha a data de vencimento.', 'erro');
+    return;
+  }
+
+  const valor = valorTexto === '' ? null : Number(valorTexto);
+  const diaVenc = recorrente ? Number(vencimento.slice(8, 10)) : null;
+
+  el('btnAddConta').disabled = true;
+
+  const { data, error } = await supa
+    .from('contas')
+    .insert({
+      casa_id: usuario.casa_id,
+      nome, valor, vencimento, recorrente,
+      dia_vencimento: diaVenc,
+      criada_por: usuario.id,
+    })
+    .select()
+    .single();
+
+  if (data) {
+    supa.from('eventos').insert({
+      tipo: 'conta_criada', entidade: 'contas', entidade_id: data.id,
+      usuario_id: usuario.id, detalhe: usuario.nome + ' cadastrou a conta ' + nome,
+    });
+  }
+
+  el('btnAddConta').disabled = false;
+
+  if (error) {
+    aviso('avisoConta', 'Não foi possível adicionar.', 'erro');
+    return;
+  }
+
+  el('ctNome').value = '';
+  el('ctValor').value = '';
+  el('ctVenc').value = '';
+  el('ctRecorrente').checked = false;
+  aviso('avisoConta', 'Conta adicionada.', 'ok');
+  setTimeout(() => aviso('avisoConta', ''), 1500);
+  await carregarContas();
+}
+
+async function pagarConta(conta, botao) {
+  botao.disabled = true;
+
+  const { error } = await supa
+    .from('contas')
+    .update({ paga: true, paga_em: new Date().toISOString() })
+    .eq('id', conta.id);
+
+  if (error) {
+    botao.disabled = false;
+    return;
+  }
+
+  supa.from('eventos').insert({
+    tipo: 'conta_paga', entidade: 'contas', entidade_id: conta.id,
+    usuario_id: usuario.id, detalhe: usuario.nome + ' pagou ' + conta.nome,
+  });
+
+  // Se a conta e recorrente, oferece criar a do proximo mes.
+  if (conta.recorrente && conta.dia_vencimento) {
+    const querProxima = confirm(
+      `"${conta.nome}" repete todo mês.\nCriar a conta do próximo mês agora?`
+    );
+    if (querProxima) {
+      await criarProximaRecorrencia(conta);
+    }
+  }
+
+  await carregarContas();
+}
+
+// Cria a proxima ocorrencia de uma conta recorrente, no mes seguinte.
+async function criarProximaRecorrencia(conta) {
+  const base = new Date(conta.vencimento.slice(0, 10) + 'T00:00:00');
+  // Avanca um mes mantendo o dia de vencimento.
+  const prox = new Date(base.getFullYear(), base.getMonth() + 1, conta.dia_vencimento || base.getDate());
+  const ano = prox.getFullYear();
+  const mes = String(prox.getMonth() + 1).padStart(2, '0');
+  const dia = String(prox.getDate()).padStart(2, '0');
+  const novoVenc = `${ano}-${mes}-${dia}`;
+
+  const { data } = await supa
+    .from('contas')
+    .insert({
+      casa_id: usuario.casa_id,
+      nome: conta.nome,
+      categoria: conta.categoria,
+      valor: conta.valor,
+      vencimento: novoVenc,
+      recorrente: true,
+      dia_vencimento: conta.dia_vencimento,
+      criada_por: usuario.id,
+    })
+    .select()
+    .single();
+
+  if (data) {
+    supa.from('eventos').insert({
+      tipo: 'conta_recorrente_criada', entidade: 'contas', entidade_id: data.id,
+      usuario_id: usuario.id, detalhe: `Próxima ${conta.nome} criada para ${novoVenc}`,
+    });
+  }
+}
+
+// -------------------------------------------------------------------
 // NAVEGACAO POR ABAS
 // -------------------------------------------------------------------
 function trocarAba(qual) {
-  const compras = qual === 'compras';
-  el('abaCompras').classList.toggle('oculto', !compras);
-  el('abaEstoque').classList.toggle('oculto', compras);
+  el('abaCompras').classList.toggle('oculto', qual !== 'compras');
+  el('abaEstoque').classList.toggle('oculto', qual !== 'estoque');
+  el('abaContas').classList.toggle('oculto', qual !== 'contas');
   document.querySelectorAll('.aba').forEach((b) => {
     b.classList.toggle('ativa', b.dataset.aba === qual);
   });
@@ -489,6 +690,7 @@ el('senha').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar()
 el('btnAdd').onclick = adicionar;
 el('novoItem').addEventListener('keydown', (e) => { if (e.key === 'Enter') adicionar(); });
 el('btnAddEstoque').onclick = adicionarEstoque;
+el('btnAddConta').onclick = adicionarConta;
 el('btnSair').onclick = sair;
 
 iniciar();

@@ -8,7 +8,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 17/07/2026 (estoque Fatia 2 concluída — ponte com a lista)
+Última atualização: 17/07/2026 (módulo Contas — cadastro manual — concluído)
 
 ---
 
@@ -33,6 +33,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 | v0.5.0 | Lista em tempo real (sem F5) | Sim — duas telas simultâneas |
 | v0.6.0 | Estoque Fatia 1: itens contáveis, status, ajuste +/−, abas | Sim — status muda por quantidade |
 | v0.7.0 | Estoque Fatia 2: ponte com a lista (sugestão + reposição na compra) | Sim — ciclo baixo→sugestão→compra→repõe |
+| v0.8.0 | Contas: cadastro manual, status por vencimento, recorrência | Sim — status por cor + recorrência |
 | —      | Teste de concorrência (dois usuários na lista) | Sim — passou |
 
 ---
@@ -75,7 +76,9 @@ define quatro tipos; a Fatia 1 fez o primeiro. Os outros três entram aqui:
 Todos fazem parte do produto (estão no Documento Mestre). Ainda não construídos.
 
 - **Tarefas, rotinas e rituais** (seção 21) — divisão de responsabilidades da Casa.
-- **Contas e finanças** (seção 20) — começar por cadastro manual de vencimentos.
+- **Contas e finanças** (seção 20) — ✅ cadastro manual concluído (v0.8.0).
+  Próximos passos deste módulo (adiados): leitura por e-mail/Gmail, histórico e
+  variação mês a mês, orçamento disponível, contas pessoais + privacidade.
 - **Alimentação e refeições** (seção 22) — planos e cardápio que geram compras.
 - **Tela Hoje** (seção 10.2) — resumo do que importa agora.
 - **Projetos pessoais** (seção 24).

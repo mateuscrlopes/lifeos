@@ -139,6 +139,7 @@
       <nav class="abas">
         <button class="aba ativa" data-aba="compras">Compras</button>
         <button class="aba" data-aba="estoque">Estoque</button>
+        <button class="aba" data-aba="contas">Contas</button>
       </nav>
 
       <!-- ABA COMPRAS -->
@@ -184,6 +185,41 @@
         <div class="cartao">
           <div class="titulo-secao">Itens em estoque</div>
           <div id="itensEstoque"></div>
+        </div>
+      </div>
+
+      <!-- ABA CONTAS -->
+      <div id="abaContas" class="oculto">
+        <div class="cartao">
+          <div class="titulo-secao">Adicionar conta</div>
+          <div class="campo">
+            <input id="ctNome" type="text" placeholder="Nome, ex.: Energia" />
+          </div>
+          <div class="linha-add">
+            <div style="flex:1">
+              <label for="ctValor">Valor (R$)</label>
+              <input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional" />
+            </div>
+            <div style="flex:1">
+              <label for="ctVenc">Vencimento</label>
+              <input id="ctVenc" type="date" />
+            </div>
+          </div>
+          <div class="campo" style="margin-top:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input id="ctRecorrente" type="checkbox" style="width:auto" />
+              Repete todo mês
+            </label>
+          </div>
+          <div>
+            <button id="btnAddConta">Adicionar conta</button>
+          </div>
+          <div id="avisoConta" class="aviso"></div>
+        </div>
+
+        <div class="cartao">
+          <div class="titulo-secao">Contas</div>
+          <div id="itensContas"></div>
         </div>
       </div>
 
