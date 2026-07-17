@@ -8,7 +8,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 17/07/2026 (módulo Contas — cadastro manual — concluído)
+Última atualização: 18/07/2026 (Tela Hoje — painel que reúne os módulos — concluída)
 
 ---
 
@@ -34,6 +34,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 | v0.6.0 | Estoque Fatia 1: itens contáveis, status, ajuste +/−, abas | Sim — status muda por quantidade |
 | v0.7.0 | Estoque Fatia 2: ponte com a lista (sugestão + reposição na compra) | Sim — ciclo baixo→sugestão→compra→repõe |
 | v0.8.0 | Contas: cadastro manual, status por vencimento, recorrência | Sim — status por cor + recorrência |
+| v0.9.0 | Tela Hoje: painel que reúne compras/estoque/contas (só o que precisa atenção) | Sim — resumo + tudo em dia + cards clicáveis |
 | —      | Teste de concorrência (dois usuários na lista) | Sim — passou |
 
 ---
@@ -80,7 +81,9 @@ Todos fazem parte do produto (estão no Documento Mestre). Ainda não construíd
   Próximos passos deste módulo (adiados): leitura por e-mail/Gmail, histórico e
   variação mês a mês, orçamento disponível, contas pessoais + privacidade.
 - **Alimentação e refeições** (seção 22) — planos e cardápio que geram compras.
-- **Tela Hoje** (seção 10.2) — resumo do que importa agora.
+- **Tela Hoje** (seção 10.2) — ✅ concluída (v0.9.0) com compras, estoque e contas.
+  Cresce conforme novos módulos nascem: cada um (tarefas, refeições, saúde,
+  projetos, agenda) vira um card novo no lugar que o protótipo já prevê.
 - **Projetos pessoais** (seção 24).
 
 ---

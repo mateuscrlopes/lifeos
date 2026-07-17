@@ -6,6 +6,7 @@
 import { calcularStatus, rotuloStatus } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
+import { saudacao, montarHoje } from './hoje.js';
 
 let supa = null;      // cliente Supabase
 let usuario = null;   // perfil do morador logado (id, nome, casa_id)
@@ -89,6 +90,7 @@ async function aoEntrar() {
   el('telaLogin').classList.add('oculto');
   el('telaApp').classList.remove('oculto');
   aviso('avisoLogin', '');
+  await carregarHoje();
   await carregarLista();
   await carregarEstoque();
   await carregarContas();
@@ -110,6 +112,7 @@ function ligarTempoReal() {
       () => {
         // Chegou um aviso de mudanca: recarrega a lista.
         carregarLista();
+        carregarHoje();
       }
     )
     .on(
@@ -117,6 +120,7 @@ function ligarTempoReal() {
       { event: '*', schema: 'public', table: 'estoque' },
       () => {
         carregarEstoque();
+        carregarHoje();
       }
     )
     .on(
@@ -124,6 +128,7 @@ function ligarTempoReal() {
       { event: '*', schema: 'public', table: 'contas' },
       () => {
         carregarContas();
+        carregarHoje();
       }
     )
     .subscribe();
@@ -667,15 +672,126 @@ async function criarProximaRecorrencia(conta) {
 }
 
 // -------------------------------------------------------------------
+// TELA HOJE — o painel que reune os modulos (so o que precisa de atencao)
+// -------------------------------------------------------------------
+async function carregarHoje() {
+  el('saudacao').textContent = saudacao(usuario.nome);
+
+  const dados = await montarHoje(supa, usuario);
+  const area = el('cardsHoje');
+  area.innerHTML = '';
+
+  // Se esta tudo em ordem, uma mensagem tranquila em vez de cards vazios.
+  if (dados.tudoEmDia) {
+    const card = document.createElement('div');
+    card.className = 'cartao';
+    card.innerHTML = '<div class="tudo-em-dia">Tudo em dia por aqui. \u2728</div>';
+    area.appendChild(card);
+    return;
+  }
+
+  // --- Card CONTAS (o mais urgente primeiro) ---
+  if (dados.contasAtencao.length > 0) {
+    const card = criarCartaoHoje('Contas próximas', 'contas');
+    for (const c of dados.contasAtencao) {
+      const quando =
+        c.status === 'vencida' ? 'venceu' :
+        c.status === 'vence_hoje' ? 'vence hoje' :
+        `vence em ${c.dias} ${c.dias === 1 ? 'dia' : 'dias'}`;
+      card.corpo.appendChild(miniItem(c.nome, quando, formatarValor(c.valor)));
+    }
+    area.appendChild(card.cartao);
+  }
+
+  // --- Card ESTOQUE em atencao ---
+  if (dados.estoqueAtencao.length > 0) {
+    const card = criarCartaoHoje('Estoque em atenção', 'estoque');
+    for (const item of dados.estoqueAtencao) {
+      const rotulo = item.status === 'acabou' ? 'acabou' : 'baixo';
+      card.corpo.appendChild(miniItem(item.nome, `${item.quantidade} \u00b7 ${rotulo}`, ''));
+    }
+    area.appendChild(card.cartao);
+  }
+
+  // --- Card COMPRAS pendentes ---
+  if (dados.compras.total > 0) {
+    const card = criarCartaoHoje('Compras', 'compras');
+    for (const nome of dados.compras.primeiros) {
+      card.corpo.appendChild(miniItem(nome, '', ''));
+    }
+    if (dados.compras.total > dados.compras.primeiros.length) {
+      const resto = document.createElement('div');
+      resto.className = 'mini-item';
+      resto.style.color = 'var(--suave)';
+      resto.textContent = `+ mais ${dados.compras.total - dados.compras.primeiros.length} na lista`;
+      card.corpo.appendChild(resto);
+    }
+    if (dados.compras.sugestoes > 0) {
+      const sug = document.createElement('div');
+      sug.className = 'mini-item';
+      sug.style.color = 'var(--acao)';
+      sug.style.fontSize = '12px';
+      sug.textContent = `${dados.compras.sugestoes} ${dados.compras.sugestoes === 1 ? 'sugestão' : 'sugestões'} do estoque`;
+      card.corpo.appendChild(sug);
+    }
+    area.appendChild(card.cartao);
+  }
+}
+
+// Cria um cartao do Hoje com titulo e um link "Abrir" que troca de aba.
+function criarCartaoHoje(titulo, abaDestino) {
+  const cartao = document.createElement('div');
+  cartao.className = 'cartao card-clicavel';
+
+  const cab = document.createElement('div');
+  cab.className = 'card-hoje-titulo';
+  const t = document.createElement('div');
+  t.className = 'titulo-secao';
+  t.textContent = titulo;
+  const abrir = document.createElement('span');
+  abrir.className = 'abrir';
+  abrir.textContent = 'Abrir';
+  cab.appendChild(t);
+  cab.appendChild(abrir);
+
+  const corpo = document.createElement('div');
+
+  cartao.appendChild(cab);
+  cartao.appendChild(corpo);
+  cartao.onclick = () => trocarAba(abaDestino);
+
+  return { cartao, corpo };
+}
+
+// Uma linha compacta: nome a esquerda, meta e valor a direita.
+function miniItem(nome, meta, valor) {
+  const linha = document.createElement('div');
+  linha.className = 'mini-item';
+
+  const esq = document.createElement('span');
+  esq.textContent = nome;
+
+  const dir = document.createElement('span');
+  dir.className = 'm-meta';
+  dir.textContent = [meta, valor].filter(Boolean).join('  ');
+
+  linha.appendChild(esq);
+  linha.appendChild(dir);
+  return linha;
+}
+
+// -------------------------------------------------------------------
 // NAVEGACAO POR ABAS
 // -------------------------------------------------------------------
 function trocarAba(qual) {
+  el('abaHoje').classList.toggle('oculto', qual !== 'hoje');
   el('abaCompras').classList.toggle('oculto', qual !== 'compras');
   el('abaEstoque').classList.toggle('oculto', qual !== 'estoque');
   el('abaContas').classList.toggle('oculto', qual !== 'contas');
   document.querySelectorAll('.aba').forEach((b) => {
     b.classList.toggle('ativa', b.dataset.aba === qual);
   });
+  if (qual === 'hoje' && usuario) carregarHoje();
 }
 
 document.querySelectorAll('.aba').forEach((botao) => {

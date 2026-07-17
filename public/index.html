@@ -108,6 +108,21 @@
       background: var(--acao-clara); color: var(--acao);
     }
     .est-qtd { min-width: 26px; text-align: center; font-size: 15px; }
+    .saudacao { font-size: 22px; font-weight: 700; margin: 4px 0 4px; letter-spacing: -0.02em; }
+    .card-hoje-titulo {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .card-hoje-titulo .abrir { font-size: 12px; color: var(--acao); cursor: pointer; font-weight: 600; }
+    .mini-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 2px; border-bottom: 1px solid var(--linha); font-size: 14px;
+    }
+    .mini-item:last-child { border-bottom: none; }
+    .mini-item .m-meta { font-size: 12px; color: var(--suave); }
+    .tudo-em-dia { text-align: center; padding: 28px 0; color: var(--acao); font-size: 15px; }
+    .card-clicavel { cursor: pointer; }
+    .card-clicavel:hover { border-color: var(--acao); }
     .rodape-sair { text-align: center; margin-top: 8px; }
     .rodape-sair button { background: none; color: var(--suave); font-weight: 400; font-size: 13px; padding: 4px; }
   </style>
@@ -137,13 +152,20 @@
     <!-- AREA LOGADA (abas: Compras e Estoque) -->
     <section id="telaApp" class="oculto">
       <nav class="abas">
-        <button class="aba ativa" data-aba="compras">Compras</button>
+        <button class="aba ativa" data-aba="hoje">Hoje</button>
+        <button class="aba" data-aba="compras">Compras</button>
         <button class="aba" data-aba="estoque">Estoque</button>
         <button class="aba" data-aba="contas">Contas</button>
       </nav>
 
+      <!-- ABA HOJE -->
+      <div id="abaHoje">
+        <div id="saudacao" class="saudacao"></div>
+        <div id="cardsHoje"></div>
+      </div>
+
       <!-- ABA COMPRAS -->
-      <div id="abaCompras">
+      <div id="abaCompras" class="oculto">
         <div class="cartao">
           <div class="titulo-secao">Adicionar à lista</div>
           <div class="linha-add">
