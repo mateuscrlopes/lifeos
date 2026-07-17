@@ -332,8 +332,19 @@ async function sair() {
 }
 
 // -------------------------------------------------------------------
-// ESTOQUE (Fatia 1 - unidade contavel)
+// ESTOQUE (Fatia 1 + 1.5)
 // -------------------------------------------------------------------
+
+// Normaliza um nome para comparacao: minusculas, sem acento, sem espacos extras.
+// Assim "Papel Higiênico" e "papel higienico" sao tratados como iguais.
+function normalizarNome(nome) {
+  return nome
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // remove acentos
+    .trim()
+    .replace(/\s+/g, ' ');            // colapsa espacos multiplos
+}
 async function carregarEstoque() {
   const { data: itens, error } = await supa
     .from('estoque')
@@ -381,18 +392,7 @@ async function carregarEstoque() {
     direita.appendChild(badge);
 
     // Controles adaptados por tipo.
-    if (item.tipo === 'presenca') {
-      // Toggle tem/nao tem.
-      const btnToggle = document.createElement('button');
-      btnToggle.textContent = Number(item.quantidade) > 0 ? 'Tem ✓' : 'Não tem';
-      btnToggle.style.padding = '7px 10px';
-      btnToggle.style.fontSize = '13px';
-      btnToggle.style.background = Number(item.quantidade) > 0 ? 'var(--acao-clara)' : 'var(--linha)';
-      btnToggle.style.color = Number(item.quantidade) > 0 ? 'var(--acao)' : 'var(--suave)';
-      btnToggle.onclick = () => ajustarPresenca(item, btnToggle);
-      direita.appendChild(btnToggle);
-
-    } else if (item.tipo === 'nivel_visual') {
+    if (item.tipo === 'nivel_visual') {
       // Seletor de nivel.
       const sel = document.createElement('select');
       sel.className = 'sel';
@@ -441,6 +441,21 @@ async function adicionarEstoque() {
     return;
   }
 
+  // Verifica duplicata com normalizacao: compara sem acento e sem caixa.
+  const { data: existentes } = await supa
+    .from('estoque')
+    .select('nome')
+    .eq('casa_id', usuario.casa_id);
+
+  const nomeNorm = normalizarNome(nome);
+  const duplicata = (existentes || []).find(
+    (i) => normalizarNome(i.nome) === nomeNorm
+  );
+  if (duplicata) {
+    aviso('avisoEstoque', `Já existe "${duplicata.nome}" no estoque. Verifique antes de adicionar.`, 'erro');
+    return;
+  }
+
   let payload = { casa_id: usuario.casa_id, nome, tipo, atualizado_por: usuario.id };
 
   if (tipo === 'contavel' || tipo === 'peso_volume') {
@@ -459,13 +474,6 @@ async function adicionarEstoque() {
       nivel: el('estNivelAtual').value,
       minimo_nivel: el('estNivelMin').value,
       quantidade: 0, minimo: 0,
-    };
-
-  } else if (tipo === 'presenca') {
-    payload = {
-      ...payload,
-      quantidade: el('estTemItem').checked ? 1 : 0,
-      minimo: 1,
     };
   }
 
@@ -496,7 +504,6 @@ async function adicionarEstoque() {
   el('estUnidade').value = '';
   el('estCamposNum').classList.remove('oculto');
   el('estCamposNivel').classList.add('oculto');
-  el('estCamposPresenca').classList.add('oculto');
   aviso('avisoEstoque', 'Adicionado.', 'ok');
   setTimeout(() => aviso('avisoEstoque', ''), 1500);
 
@@ -560,7 +567,6 @@ async function ajustarNivel(item, novoNivel) {
   await carregarLista();
 }
 
-// Alterna presenca de um item (tem/nao tem).
 // -------------------------------------------------------------------
 // CONTAS (cadastro manual)
 // -------------------------------------------------------------------
@@ -1080,9 +1086,8 @@ el('btnAddEstoque').onclick = adicionarEstoque;
 // Mostra os campos certos conforme o tipo selecionado.
 el('estTipo').addEventListener('change', (e) => {
   const t = e.target.value;
-  el('estCamposNum').classList.toggle('oculto', t === 'nivel_visual' || t === 'presenca');
+  el('estCamposNum').classList.toggle('oculto', t === 'nivel_visual');
   el('estCamposNivel').classList.toggle('oculto', t !== 'nivel_visual');
-  el('estCamposPresenca').classList.toggle('oculto', t !== 'presenca');
 });
 el('btnAddConta').onclick = adicionarConta;
 el('btnAddTarefa').onclick = adicionarTarefa;

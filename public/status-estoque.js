@@ -1,10 +1,10 @@
 // status-estoque.js
 // Calcula o STATUS de um item de estoque conforme seu TIPO de medicao.
-// Quatro tipos (Documento Mestre, secao 18.4):
+// Tres tipos ativos (Documento Mestre, secao 18.4):
 //   contavel     — numero de unidades (ex.: 3 rolos)
 //   peso_volume  — peso ou volume numerico (ex.: 500g, 1.5L)
 //   nivel_visual — nivel em escala (cheio/75/metade/25/quase_acabando/acabou)
-//   presenca     — tem ou nao tem
+// Nota: tipo "presenca" foi removido da interface (tudo e contavel).
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
