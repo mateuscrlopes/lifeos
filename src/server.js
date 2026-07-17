@@ -6,7 +6,7 @@
 
 import express from 'express';
 import { config } from './config.js';
-import { testarConexao } from './supabase.js';
+import { testarConexao, lerNucleoComLogin } from './supabase.js';
 
 const app = express();
 app.use(express.json());
@@ -32,6 +32,39 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
+  });
+});
+
+// Rota de teste do nucleo - a "porta de teste" desta entrega.
+// Recebe email e senha de um morador (no corpo da requisicao), faz login
+// e devolve a Casa e a lista de moradores. Prova que perfis, login e RLS
+// estao todos funcionando juntos.
+//
+// A senha vai no corpo da requisicao, NUNCA no codigo nem na URL.
+app.post('/nucleo', async (req, res) => {
+  const { email, senha } = req.body ?? {};
+
+  if (!email || !senha) {
+    return res.status(400).json({
+      ok: false,
+      mensagem: 'Envie email e senha no corpo da requisicao.',
+    });
+  }
+
+  const resultado = await lerNucleoComLogin(email, senha);
+
+  if (!resultado.ok) {
+    return res.status(401).json({
+      ok: false,
+      etapa: resultado.etapa,
+      motivo: resultado.motivo,
+    });
+  }
+
+  res.json({
+    ok: true,
+    casa: resultado.casa,
+    moradores: resultado.moradores,
   });
 });
 
