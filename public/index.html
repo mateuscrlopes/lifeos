@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LifeOS</title>
   <style>
-    :root { --fundo:#f5f6f8;--cartao:#ffffff;--texto:#1f2430;--suave:#6b7280;--linha:#e5e7eb;--acao:#2f6f4f;--acao-clara:#e7f1eb;--perigo:#b23c3c; }
+    :root{--fundo:#f5f6f8;--cartao:#ffffff;--texto:#1f2430;--suave:#6b7280;--linha:#e5e7eb;--acao:#2f6f4f;--acao-clara:#e7f1eb;--perigo:#b23c3c;}
     *{box-sizing:border-box;}
     body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--fundo);color:var(--texto);-webkit-font-smoothing:antialiased;}
     .envolto{max-width:560px;margin:0 auto;padding:24px 16px 64px;}
@@ -16,6 +16,7 @@
     label{display:block;font-size:13px;color:var(--suave);margin-bottom:6px;}
     input,textarea{width:100%;padding:11px 12px;border:1px solid var(--linha);border-radius:10px;font-size:15px;background:#fff;color:var(--texto);}
     input:focus,textarea:focus{outline:2px solid var(--acao-clara);border-color:var(--acao);}
+    textarea{resize:vertical;min-height:80px;}
     .campo{margin-bottom:12px;}
     button{font-size:15px;font-weight:600;border:none;border-radius:10px;padding:11px 16px;cursor:pointer;background:var(--acao);color:#fff;}
     button.secundario{background:var(--acao-clara);color:var(--acao);}
@@ -34,8 +35,8 @@
     .aviso.ok{color:var(--acao);}
     .titulo-secao{font-size:13px;color:var(--suave);margin:4px 0 10px;text-transform:uppercase;letter-spacing:.04em;}
     .oculto{display:none;}
-    .abas{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
-    .aba{flex:1;min-width:55px;background:var(--cartao);color:var(--suave);border:1px solid var(--linha);font-weight:600;padding:9px 6px;font-size:12px;white-space:nowrap;}
+    .abas{display:flex;gap:5px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
+    .aba{flex:1;min-width:50px;background:var(--cartao);color:var(--suave);border:1px solid var(--linha);font-weight:600;padding:8px 5px;font-size:11px;white-space:nowrap;}
     .aba.ativa{background:var(--acao);color:#fff;border-color:var(--acao);}
     .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;color:#fff;white-space:nowrap;}
     .est-controles{display:flex;align-items:center;gap:6px;}
@@ -55,19 +56,23 @@
     .check-tarefa.feita{background:var(--acao);border-color:var(--acao);color:#fff;}
     .item.concluida .nome{text-decoration:line-through;color:var(--suave);}
     .modal-aberto{display:flex!important;}
-    #modalInventario.oculto{pointer-events:none;}
-    /* Cardapio */
-    .grade-semana{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;}
-    .dia-col{display:flex;flex-direction:column;gap:4px;}
-    .dia-label{font-size:11px;font-weight:600;color:var(--suave);text-align:center;text-transform:uppercase;}
+    #modalInventario.oculto,#modalRefeicao.oculto,#modalRitual.oculto{pointer-events:none;}
     .dia-slot{background:var(--fundo);border:1px dashed var(--linha);border-radius:8px;padding:6px;font-size:11px;min-height:48px;cursor:pointer;text-align:center;color:var(--suave);}
     .dia-slot.preenchido{background:var(--acao-clara);border-color:var(--acao);color:var(--acao);font-weight:600;}
-    .card-refeicao{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--linha);}
-    .card-refeicao:last-child{border-bottom:none;}
     .card-cardapio-hoje{display:flex;gap:12px;}
     .slot-hoje{flex:1;background:var(--fundo);border-radius:10px;padding:12px;text-align:center;}
     .slot-hoje .rotulo{font-size:11px;color:var(--suave);text-transform:uppercase;margin-bottom:4px;}
     .slot-hoje .prato{font-size:14px;font-weight:600;color:var(--texto);}
+    .card-refeicao{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--linha);}
+    .card-refeicao:last-child{border-bottom:none;}
+    /* Rituais */
+    .ritual-card{padding:12px 4px;border-bottom:1px solid var(--linha);}
+    .ritual-card:last-child{border-bottom:none;}
+    .ritual-topo{display:flex;align-items:center;justify-content:space-between;}
+    .ritual-meta{font-size:12px;color:var(--suave);margin-top:2px;}
+    .freq-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--acao-clara);color:var(--acao);font-weight:600;}
+    .historico-item{padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px;}
+    .historico-item:last-child{border-bottom:none;}
   </style>
 </head>
 <body>
@@ -88,6 +93,7 @@
       <button class="aba" data-aba="compras">Compras</button>
       <button class="aba" data-aba="estoque">Estoque</button>
       <button class="aba" data-aba="cardapio">Cardápio</button>
+      <button class="aba" data-aba="rituais">Rituais</button>
       <button class="aba" data-aba="tarefas">Tarefas</button>
       <button class="aba" data-aba="contas">Contas</button>
     </nav>
@@ -121,7 +127,7 @@
             <option>Casa - Utilitários</option><option>Farmácia / Remédios</option>
           </select>
         </div>
-        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="estCritico" type="checkbox" style="width:auto"/>Item crítico (sempre entra no inventário)</label></div>
+        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="estCritico" type="checkbox" style="width:auto"/>Item crítico</label></div>
         <div class="campo"><label for="estTipo">Tipo de medição</label>
           <select id="estTipo" class="sel">
             <option value="contavel">Unidade contável</option>
@@ -160,7 +166,6 @@
 
     <!-- CARDAPIO -->
     <div id="abaCardapio" class="oculto">
-      <!-- Cadastro de refeicoes -->
       <div class="cartao">
         <div class="titulo-secao">Nova refeição</div>
         <div class="campo"><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div>
@@ -174,9 +179,7 @@
         <button id="btnSalvarRefeicao">Salvar refeição</button>
         <div id="avisoRefeicao" class="aviso"></div>
       </div>
-      <!-- Lista de refeicoes -->
       <div class="cartao"><div class="titulo-secao">Refeições cadastradas</div><div id="listaRefeicoes"></div></div>
-      <!-- Planejamento da semana -->
       <div class="cartao">
         <div class="card-hoje-titulo">
           <div class="titulo-secao">Cardápio da semana</div>
@@ -184,21 +187,35 @@
             <option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option>
           </select>
         </div>
-        <div style="margin-bottom:6px">
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin-bottom:4px">
-            <div class="dia-label">Seg</div><div class="dia-label">Ter</div><div class="dia-label">Qua</div><div class="dia-label">Qui</div><div class="dia-label">Sex</div>
-          </div>
-          <div style="font-size:11px;color:var(--suave);margin-bottom:4px">Almoço</div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsAlmoco"></div>
-          <div style="font-size:11px;color:var(--suave);margin:8px 0 4px">Janta</div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsJanta"></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin-bottom:4px">
+          <div style="font-size:11px;font-weight:600;color:var(--suave)">Seg</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Ter</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qua</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qui</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Sex</div>
         </div>
+        <div style="font-size:11px;color:var(--suave);margin-bottom:4px">Almoço</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsAlmoco"></div>
+        <div style="font-size:11px;color:var(--suave);margin:8px 0 4px">Janta</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsJanta"></div>
         <div style="margin-top:12px;display:flex;gap:8px">
           <button id="btnSalvarPlan">Salvar cardápio</button>
-          <button id="btnGerarLista" class="secundario">Gerar lista de compras</button>
+          <button id="btnGerarLista" class="secundario">Gerar lista</button>
         </div>
         <div id="avisoPlan" class="aviso"></div>
       </div>
+    </div>
+
+    <!-- RITUAIS -->
+    <div id="abaRituais" class="oculto">
+      <div class="cartao">
+        <div class="titulo-secao">Novo ritual</div>
+        <div class="campo"><input id="ritNome" type="text" placeholder="Ex.: Planejamento semanal"/></div>
+        <div class="campo"><label for="ritFreq">Frequência</label>
+          <select id="ritFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select>
+        </div>
+        <div class="campo"><label for="ritPauta">Pauta padrão (tópicos, um por linha)</label><textarea id="ritPauta" placeholder="O que ficou pendente da semana passada?&#10;Qual o foco da semana?&#10;Compras e estoque&#10;Tarefas e divisão"></textarea></div>
+        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="ritPrivado" type="checkbox" style="width:auto"/>Conteúdo privado (não exibir no tablet)</label></div>
+        <button id="btnSalvarRitual">Salvar ritual</button>
+        <div id="avisoRitual" class="aviso"></div>
+      </div>
+      <div class="cartao"><div class="titulo-secao">Rituais</div><div id="listaRituais"></div></div>
     </div>
 
     <!-- TAREFAS -->
@@ -236,8 +253,27 @@
 
     <div style="text-align:center;margin-top:8px"><button id="btnSair" style="background:none;color:var(--suave);font-weight:400;font-size:13px;padding:4px">Sair</button></div>
 
-    <!-- Modal seletor de refeição para o cardápio -->
-    <div id="modalRefeicao" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center" class="oculto">
+    <!-- Modal ritual (sessao) -->
+    <div id="modalRitual" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
+      <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong id="modalRitNome">Ritual</strong>
+          <button id="btnFecharModalRitual" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="titulo-secao">Pauta de hoje</div>
+        <div id="modalRitPauta" style="background:var(--fundo);border-radius:10px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap"></div>
+        <div class="campo"><label for="modalRitNotas">Decisões e anotações</label><textarea id="modalRitNotas" placeholder="O que foi decidido? Quais pendências ficaram?"></textarea></div>
+        <div class="campo"><label for="modalRitProxima">Próxima sessão (opcional)</label><input id="modalRitProxima" type="date"/></div>
+        <div style="display:flex;gap:8px">
+          <button id="btnConcluirRitual">Concluir sessão</button>
+          <button id="btnCriarTarefaRitual" class="secundario">+ Criar tarefa</button>
+        </div>
+        <div id="avisoSessao" class="aviso"></div>
+      </div>
+    </div>
+
+    <!-- Modal seletor de refeicao -->
+    <div id="modalRefeicao" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:80vh;overflow-y:auto;padding:20px">
         <div style="display:flex;justify-content:space-between;margin-bottom:16px">
           <strong id="modalRefTitulo">Escolha a refeição</strong>
@@ -252,7 +288,7 @@
       </div>
     </div>
 
-    <!-- Modal inventário -->
+    <!-- Modal inventario -->
     <div id="modalInventario" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">

@@ -1,22 +1,21 @@
-// app.js — LifeOS v0.15.0
+// app.js — LifeOS v0.16.0
 import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 
-let supa = null, usuario = null, canalTempoReal = null;
-const el = (id) => document.getElementById(id);
-function aviso(id, t, tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
+let supa=null,usuario=null,canalTempoReal=null;
+const el=(id)=>document.getElementById(id);
+function aviso(id,t,tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
 
-async function iniciar() {
-  try { const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey); }
+async function iniciar(){
+  try{const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
   catch(e){aviso('avisoLogin','Não foi possível carregar a configuração.','erro');return;}
-  const {data}=await supa.auth.getSession();
-  if(data.session) await aoEntrar();
+  const{data}=await supa.auth.getSession();if(data.session)await aoEntrar();
 }
 
-async function entrar() {
+async function entrar(){
   const email=el('email').value.trim(),senha=el('senha').value;
   if(!email||!senha){aviso('avisoLogin','Preencha e-mail e senha.','erro');return;}
   el('btnEntrar').disabled=true;aviso('avisoLogin','Entrando...');
@@ -26,18 +25,17 @@ async function entrar() {
   el('senha').value='';await aoEntrar();
 }
 
-async function aoEntrar() {
+async function aoEntrar(){
   const{data:s}=await supa.auth.getSession();
   const{data:p,error}=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',s.session.user.id).single();
   if(error||!p){aviso('avisoLogin','Login ok, mas perfil não encontrado.','erro');return;}
   usuario=p;el('quem').textContent=p.nome;
-  el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');
-  aviso('avisoLogin','');
-  await Promise.all([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento()]);
+  el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');aviso('avisoLogin','');
+  await Promise.all([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais()]);
   ligarTempoReal();
 }
 
-function ligarTempoReal() {
+function ligarTempoReal(){
   if(canalTempoReal)return;
   canalTempoReal=supa.channel('lifeos-casa')
     .on('postgres_changes',{event:'*',schema:'public',table:'lista_compras'},()=>{carregarLista();carregarHoje();})
@@ -45,24 +43,24 @@ function ligarTempoReal() {
     .on('postgres_changes',{event:'*',schema:'public',table:'contas'},()=>{carregarContas();carregarHoje();})
     .on('postgres_changes',{event:'*',schema:'public',table:'tarefas'},()=>{carregarTarefas();carregarHoje();})
     .on('postgres_changes',{event:'*',schema:'public',table:'planejamento_dias'},()=>{carregarPlanejamento();carregarHoje();})
+    .on('postgres_changes',{event:'*',schema:'public',table:'ritual_sessoes'},()=>{carregarRituais();})
     .subscribe();
 }
 
-async function sair() {
+async function sair(){
   if(canalTempoReal){supa.removeChannel(canalTempoReal);canalTempoReal=null;}
   await supa.auth.signOut();usuario=null;
   el('quem').textContent='';el('telaApp').classList.add('oculto');el('telaLogin').classList.remove('oculto');
 }
 
-// --- NAVEGACAO ---
-function trocarAba(qual) {
-  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaTarefas','abaContas'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
+function trocarAba(qual){
+  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
   document.querySelectorAll('.aba').forEach(b=>b.classList.toggle('ativa',b.dataset.aba===qual));
   if(qual==='hoje'&&usuario)carregarHoje();
 }
 
 // --- LISTA ---
-async function carregarLista() {
+async function carregarLista(){
   const{data:itens,error}=await supa.from('lista_compras').select('id,nome,quantidade,unidade,categoria,criado_em,origem,estoque_id').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
   const area=el('itens');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
@@ -72,10 +70,7 @@ async function carregarLista() {
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome;
     if(item.origem==='sugestao_estoque'||item.origem==='cardapio'){
-      const t=document.createElement('span');t.className='badge';
-      t.style.background=item.origem==='cardapio'?'#5b6e9e':'#8a6d3b';
-      t.style.cssText+='margin-left:8px;font-size:10px';
-      t.textContent=item.origem==='cardapio'?'cardápio':'sugestão estoque';n.appendChild(t);
+      const t=document.createElement('span');t.className='badge';t.style.background=item.origem==='cardapio'?'#5b6e9e':'#8a6d3b';t.style.cssText+='margin-left:8px;font-size:10px';t.textContent=item.origem==='cardapio'?'cardápio':'sugestão estoque';n.appendChild(t);
     }
     d.appendChild(n);
     const ps=[];if(item.quantidade)ps.push(item.quantidade+(item.unidade?' '+item.unidade:''));if(item.categoria)ps.push(item.categoria);
@@ -85,48 +80,36 @@ async function carregarLista() {
   }
 }
 
-async function adicionar() {
-  const nome=el('novoItem').value.trim();
-  if(!nome){aviso('avisoAdd','Digite o nome do item.','erro');return;}
+async function adicionar(){
+  const nome=el('novoItem').value.trim();if(!nome){aviso('avisoAdd','Digite o nome.','erro');return;}
   el('btnAdd').disabled=true;
   const{data,error}=await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id}).select().single();
   if(data)supa.from('eventos').insert({tipo:'item_adicionado',entidade:'lista_compras',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome});
   el('btnAdd').disabled=false;
   if(error){aviso('avisoAdd','Não foi possível adicionar.','erro');return;}
-  el('novoItem').value='';aviso('avisoAdd','Adicionado.','ok');setTimeout(()=>aviso('avisoAdd',''),1500);
-  await carregarLista();
+  el('novoItem').value='';aviso('avisoAdd','Adicionado.','ok');setTimeout(()=>aviso('avisoAdd',''),1500);await carregarLista();
 }
 
-async function comprar(item,botao) {
-  botao.disabled=true;
-  let qc=null;
-  if(item.estoque_id){
-    const r=prompt(`Quantas unidades de "${item.nome}" você comprou?`,'1');
-    if(r===null){botao.disabled=false;return;}
-    qc=Number(r);if(!isFinite(qc)||qc<0){alert('Quantidade inválida.');botao.disabled=false;return;}
-  }
+async function comprar(item,botao){
+  botao.disabled=true;let qc=null;
+  if(item.estoque_id){const r=prompt(`Quantas unidades de "${item.nome}" você comprou?`,'1');if(r===null){botao.disabled=false;return;}qc=Number(r);if(!isFinite(qc)||qc<0){alert('Quantidade inválida.');botao.disabled=false;return;}}
   const{data,error}=await supa.from('lista_compras').update({status:'comprado',comprado_por:usuario.id,comprado_em:new Date().toISOString()}).eq('id',item.id).select().single();
   if(data)supa.from('eventos').insert({tipo:'item_comprado',entidade:'lista_compras',entidade_id:item.id,usuario_id:usuario.id,detalhe:usuario.nome+' comprou '+data.nome});
   if(error){botao.disabled=false;return;}
-  if(item.estoque_id&&qc!==null){
-    const rep=await reporEstoque(supa,usuario,item.estoque_id,qc);
-    if(rep.ok){const{data:ie}=await supa.from('estoque').select('id,nome,categoria,quantidade,minimo,tipo,nivel,minimo_nivel').eq('id',item.estoque_id).single();if(ie)await sincronizarItem(supa,usuario,ie);}
-    await carregarEstoque();
-  }
+  if(item.estoque_id&&qc!==null){const rep=await reporEstoque(supa,usuario,item.estoque_id,qc);if(rep.ok){const{data:ie}=await supa.from('estoque').select('id,nome,categoria,quantidade,minimo,tipo,nivel,minimo_nivel').eq('id',item.estoque_id).single();if(ie)await sincronizarItem(supa,usuario,ie);}await carregarEstoque();}
   await carregarLista();
 }
 
 // --- ESTOQUE ---
 function normalizarNome(n){return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ');}
 
-async function carregarEstoque() {
+async function carregarEstoque(){
   const{data:itens,error}=await supa.from('estoque').select('id,nome,categoria,tipo,quantidade,unidade,minimo,nivel,minimo_nivel,local,critico').eq('casa_id',usuario.casa_id).order('nome');
   const area=el('itensEstoque');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
   if(!itens||!itens.length){area.innerHTML='<div class="vazio">Nada no estoque ainda.</div>';return;}
   for(const item of itens){
-    const status=calcularStatus(item.quantidade,item.minimo,item.tipo,item.nivel,item.minimo_nivel);
-    const info=rotuloStatus(status);
+    const status=calcularStatus(item.quantidade,item.minimo,item.tipo,item.nivel,item.minimo_nivel);const info=rotuloStatus(status);
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome+(item.critico?' ⭐':'');d.appendChild(n);
@@ -148,7 +131,7 @@ async function carregarEstoque() {
   }
 }
 
-async function adicionarEstoque() {
+async function adicionarEstoque(){
   const nome=el('estNome').value.trim(),tipo=el('estTipo').value;
   if(!nome){aviso('avisoEstoque','Digite o nome do item.','erro');return;}
   const{data:ex}=await supa.from('estoque').select('nome').eq('casa_id',usuario.casa_id);
@@ -159,9 +142,7 @@ async function adicionarEstoque() {
     const quantidade=Number(el('estQtd').value),minimo=Number(el('estMin').value);
     if(!isFinite(quantidade)||!isFinite(minimo)){aviso('avisoEstoque','Quantidade e mínimo precisam ser números.','erro');return;}
     payload={...payload,quantidade,minimo,unidade:el('estUnidade').value.trim()||(tipo==='peso_volume'?'g':'unidades')};
-  }else if(tipo==='nivel_visual'){
-    payload={...payload,nivel:el('estNivelAtual').value,minimo_nivel:el('estNivelMin').value,quantidade:0,minimo:0};
-  }
+  }else if(tipo==='nivel_visual'){payload={...payload,nivel:el('estNivelAtual').value,minimo_nivel:el('estNivelMin').value,quantidade:0,minimo:0};}
   el('btnAddEstoque').disabled=true;
   const{data,error}=await supa.from('estoque').insert(payload).select().single();
   if(data)supa.from('eventos').insert({tipo:'estoque_item_criado',entidade:'estoque',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome+' ao estoque'});
@@ -170,18 +151,17 @@ async function adicionarEstoque() {
   el('estNome').value='';el('estTipo').value='contavel';el('estQtd').value='0';el('estMin').value='1';el('estUnidade').value='';el('estLocal').value='';el('estCritico').checked=false;
   el('estCamposNum').classList.remove('oculto');el('estCamposNivel').classList.add('oculto');
   aviso('avisoEstoque','Adicionado.','ok');setTimeout(()=>aviso('avisoEstoque',''),1500);
-  if(data){await sincronizarItem(supa,usuario,data);await carregarLista();}
-  await carregarEstoque();
+  if(data){await sincronizarItem(supa,usuario,data);await carregarLista();}await carregarEstoque();
 }
 
-async function ajustarEstoque(item,delta) {
+async function ajustarEstoque(item,delta){
   const nova=Math.max(0,Number(item.quantidade)+delta);
   const{error}=await supa.from('estoque').update({quantidade:nova,atualizado_por:usuario.id,atualizado_em:new Date().toISOString()}).eq('id',item.id);
   if(!error){supa.from('eventos').insert({tipo:'estoque_ajustado',entidade:'estoque',entidade_id:item.id,usuario_id:usuario.id,valor_anterior:{quantidade:item.quantidade},valor_novo:{quantidade:nova},detalhe:`${usuario.nome} ajustou ${item.nome} para ${nova}`});await sincronizarItem(supa,usuario,{...item,quantidade:nova});}
   await carregarEstoque();await carregarLista();
 }
 
-async function ajustarNivel(item,novoNivel) {
+async function ajustarNivel(item,novoNivel){
   const{error}=await supa.from('estoque').update({nivel:novoNivel,atualizado_por:usuario.id,atualizado_em:new Date().toISOString()}).eq('id',item.id);
   if(!error){supa.from('eventos').insert({tipo:'estoque_ajustado',entidade:'estoque',entidade_id:item.id,usuario_id:usuario.id,valor_anterior:{nivel:item.nivel},valor_novo:{nivel:novoNivel},detalhe:`${usuario.nome} ajustou ${item.nome} para ${novoNivel}`});await sincronizarItem(supa,usuario,{...item,nivel:novoNivel});}
   await carregarEstoque();await carregarLista();
@@ -219,8 +199,7 @@ async function iniciarInventario(){
 async function concluirInventario(){
   el('btnConcluirInventario').disabled=true;
   for(const item of _invItens){
-    let v;
-    if(item.tipo==='nivel_visual'){const s=el('invItens').querySelector(`select[data-item-id="${item.id}"]`);v=s?s.value:item.nivel;}
+    let v;if(item.tipo==='nivel_visual'){const s=el('invItens').querySelector(`select[data-item-id="${item.id}"]`);v=s?s.value:item.nivel;}
     else{const i=el('invItens').querySelector(`input[data-item-id="${item.id}"]`);v=i?i.value:item.quantidade;}
     await confirmarItemInventario(supa,usuario,item,v);
   }
@@ -230,12 +209,104 @@ async function concluirInventario(){
   await carregarEstoque();await carregarLista();
 }
 
-// --- CARDAPIO ---
-let _refeicoes=[];     // cache de refeicoes cadastradas
-let _planDias={};      // {`${dia}-${tipo}`: {refeicaoId, nome}}
-let _slotAtual=null;   // {dia, tipo} do slot sendo editado
+// --- RITUAIS ---
+let _ritualAtual=null;
 
-async function carregarRefeicoes() {
+async function carregarRituais(){
+  const{data:rituais,error}=await supa.from('rituais').select('id,nome,frequencia,pauta,privado,ritual_sessoes(id,realizado_em,proxima_em)').eq('casa_id',usuario.casa_id).order('nome');
+  const area=el('listaRituais');area.innerHTML='';
+  if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
+  if(!rituais||!rituais.length){area.innerHTML='<div class="vazio">Nenhum ritual cadastrado ainda.</div>';return;}
+  const freqLabel={semanal:'Semanal',mensal:'Mensal',bimestral:'Bimestral',livre:'Livre'};
+  for(const r of rituais){
+    const sessoes=r.ritual_sessoes||[];
+    const ultima=sessoes.sort((a,b)=>new Date(b.realizado_em)-new Date(a.realizado_em))[0];
+    const proxima=ultima?.proxima_em;
+    const div=document.createElement('div');div.className='ritual-card';
+    const topo=document.createElement('div');topo.className='ritual-topo';
+    const esq=document.createElement('div');
+    const n=document.createElement('span');n.className='nome';n.textContent=r.nome+(r.privado?' 🔒':'');esq.appendChild(n);
+    const m=document.createElement('div');m.className='ritual-meta';
+    const partes=[freqLabel[r.frequencia]||r.frequencia];
+    if(ultima)partes.push(`última: ${new Date(ultima.realizado_em).toLocaleDateString('pt-BR')}`);
+    if(proxima)partes.push(`próxima: ${proxima.split('-').reverse().join('/')}`);
+    m.textContent=partes.join(' · ');esq.appendChild(m);
+    const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;align-items:center';
+    const btnAb=document.createElement('button');btnAb.textContent='Iniciar';btnAb.style.cssText='padding:7px 12px;font-size:13px';btnAb.onclick=()=>abrirModalRitual(r);
+    const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r.id);
+    btns.appendChild(btnAb);btns.appendChild(btnRem);
+    topo.appendChild(esq);topo.appendChild(btns);div.appendChild(topo);
+    // historico resumido
+    if(sessoes.length){
+      const hist=document.createElement('div');hist.style.marginTop='8px';
+      sessoes.slice(0,3).forEach(s=>{
+        const h=document.createElement('div');h.className='historico-item';
+        h.textContent=new Date(s.realizado_em).toLocaleDateString('pt-BR');
+        hist.appendChild(h);
+      });
+      div.appendChild(hist);
+    }
+    area.appendChild(div);
+  }
+}
+
+async function salvarRitual(){
+  const nome=el('ritNome').value.trim();if(!nome){aviso('avisoRitual','Digite o nome do ritual.','erro');return;}
+  el('btnSalvarRitual').disabled=true;
+  const{data,error}=await supa.from('rituais').insert({casa_id:usuario.casa_id,nome,frequencia:el('ritFreq').value,pauta:el('ritPauta').value.trim()||null,privado:el('ritPrivado').checked}).select().single();
+  if(data)supa.from('eventos').insert({tipo:'ritual_criado',entidade:'rituais',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' criou o ritual '+nome});
+  el('btnSalvarRitual').disabled=false;
+  if(error){aviso('avisoRitual','Não foi possível salvar.','erro');return;}
+  el('ritNome').value='';el('ritPauta').value='';el('ritPrivado').checked=false;
+  aviso('avisoRitual','Ritual salvo.','ok');setTimeout(()=>aviso('avisoRitual',''),1500);
+  await carregarRituais();
+}
+
+async function removerRitual(id){
+  await supa.from('rituais').delete().eq('id',id);await carregarRituais();
+}
+
+function abrirModalRitual(ritual){
+  _ritualAtual=ritual;
+  el('modalRitNome').textContent=ritual.nome;
+  el('modalRitPauta').textContent=ritual.pauta||'Sem pauta definida para este ritual.';
+  el('modalRitNotas').value='';
+  // sugere proxima data conforme frequencia
+  const hoje=new Date();
+  let prox=new Date(hoje);
+  if(ritual.frequencia==='semanal')prox.setDate(hoje.getDate()+7);
+  else if(ritual.frequencia==='mensal')prox.setMonth(hoje.getMonth()+1);
+  else if(ritual.frequencia==='bimestral')prox.setMonth(hoje.getMonth()+2);
+  el('modalRitProxima').value=ritual.frequencia==='livre'?'':formatarDataISO(prox);
+  aviso('avisoSessao','');
+  el('modalRitual').classList.remove('oculto');el('modalRitual').classList.add('modal-aberto');
+}
+
+async function concluirRitual(){
+  if(!_ritualAtual)return;
+  el('btnConcluirRitual').disabled=true;
+  const notas=el('modalRitNotas').value.trim();
+  const proxima=el('modalRitProxima').value||null;
+  const{data,error}=await supa.from('ritual_sessoes').insert({ritual_id:_ritualAtual.id,notas:notas||null,proxima_em:proxima,criado_por:usuario.id}).select().single();
+  if(data)supa.from('eventos').insert({tipo:'ritual_concluido',entidade:'rituais',entidade_id:_ritualAtual.id,usuario_id:usuario.id,detalhe:`${usuario.nome} concluiu ${_ritualAtual.nome}`});
+  el('btnConcluirRitual').disabled=false;
+  if(error){aviso('avisoSessao','Erro ao salvar sessão.','erro');return;}
+  aviso('avisoSessao','Sessão registrada.','ok');
+  setTimeout(()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;carregarRituais();},1200);
+}
+
+function criarTarefaDoRitual(){
+  // Fecha o modal e abre a aba de tarefas com o titulo pre-preenchido
+  el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');
+  trocarAba('tarefas');
+  el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');
+  el('tfTitulo').focus();
+}
+
+// --- CARDAPIO ---
+let _refeicoes=[],_planDias={},_slotAtual=null;
+
+async function carregarRefeicoes(){
   const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
   const area=el('listaRefeicoes');area.innerHTML='';
@@ -244,42 +315,28 @@ async function carregarRefeicoes() {
     const linha=document.createElement('div');linha.className='card-refeicao';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);
-    const m=document.createElement('span');m.className='meta';
-    const tipoLabel={almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo;
-    m.textContent=`${tipoLabel} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes`;d.appendChild(m);
-    const btn=document.createElement('button');btn.textContent='×';btn.title='Remover';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';
-    btn.onclick=()=>removerRefeicao(r.id);
+    const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes`;d.appendChild(m);
+    const btn=document.createElement('button');btn.textContent='×';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';btn.onclick=()=>removerRefeicao(r.id);
     linha.appendChild(d);linha.appendChild(btn);area.appendChild(linha);
   }
   renderizarSlotsCardapio();
 }
 
-async function salvarRefeicao() {
-  const nome=el('refNome').value.trim();
-  if(!nome){aviso('avisoRefeicao','Digite o nome da refeição.','erro');return;}
+async function salvarRefeicao(){
+  const nome=el('refNome').value.trim();if(!nome){aviso('avisoRefeicao','Digite o nome da refeição.','erro');return;}
   el('btnSalvarRefeicao').disabled=true;
   const{data:ref,error}=await supa.from('refeicoes').insert({casa_id:usuario.casa_id,nome,tipo:el('refTipo').value,porcoes:Number(el('refPorcoes').value)||2,criada_por:usuario.id}).select().single();
   if(error){aviso('avisoRefeicao','Não foi possível salvar.','erro');el('btnSalvarRefeicao').disabled=false;return;}
-  // salvar ingredientes
   const linhas=el('refIngredientes').querySelectorAll('.linha-ingrediente');
-  for(const l of linhas){
-    const n=l.querySelector('.ing-nome').value.trim();
-    const q=l.querySelector('.ing-qtd').value;
-    const u=l.querySelector('.ing-un').value.trim();
-    if(n)await supa.from('refeicao_ingredientes').insert({refeicao_id:ref.id,nome:n,quantidade:q?Number(q):null,unidade:u||null});
-  }
+  for(const l of linhas){const n=l.querySelector('.ing-nome').value.trim();const q=l.querySelector('.ing-qtd').value;const u=l.querySelector('.ing-un').value.trim();if(n)await supa.from('refeicao_ingredientes').insert({refeicao_id:ref.id,nome:n,quantidade:q?Number(q):null,unidade:u||null});}
   el('refNome').value='';el('refPorcoes').value='2';el('refIngredientes').innerHTML='';
   aviso('avisoRefeicao','Refeição salva.','ok');setTimeout(()=>aviso('avisoRefeicao',''),1500);
-  el('btnSalvarRefeicao').disabled=false;
-  await carregarRefeicoes();
+  el('btnSalvarRefeicao').disabled=false;await carregarRefeicoes();
 }
 
-async function removerRefeicao(id) {
-  await supa.from('refeicoes').delete().eq('id',id);
-  await carregarRefeicoes();
-}
+async function removerRefeicao(id){await supa.from('refeicoes').delete().eq('id',id);await carregarRefeicoes();}
 
-function adicionarLinhaIngrediente() {
+function adicionarLinhaIngrediente(){
   const div=document.createElement('div');div.className='linha-ingrediente';div.style.cssText='display:flex;gap:6px;margin-bottom:8px;align-items:center';
   const n=document.createElement('input');n.type='text';n.className='ing-nome';n.placeholder='Ingrediente';n.style.flex='2';
   const q=document.createElement('input');q.type='number';q.className='ing-qtd';q.placeholder='Qtd';q.style.flex='1';q.min='0';
@@ -289,127 +346,61 @@ function adicionarLinhaIngrediente() {
   el('refIngredientes').appendChild(div);n.focus();
 }
 
-// Slots do cardapio semanal
-function renderizarSlotsCardapio() {
+function renderizarSlotsCardapio(){
   ['almoco','janta'].forEach(tipo=>{
-    const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);
-    if(!grid)return;
-    grid.innerHTML='';
-    for(let d=1;d<=5;d++){
-      const chave=`${d}-${tipo}`;
-      const slot=_planDias[chave];
-      const btn=document.createElement('div');
-      btn.className='dia-slot'+(slot?' preenchido':'');
-      btn.textContent=slot?slot.nome:'+ adicionar';
-      btn.onclick=()=>abrirModalRefeicao(d,tipo);
-      grid.appendChild(btn);
-    }
+    const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);if(!grid)return;grid.innerHTML='';
+    for(let d=1;d<=5;d++){const chave=`${d}-${tipo}`;const slot=_planDias[chave];const btn=document.createElement('div');btn.className='dia-slot'+(slot?' preenchido':'');btn.textContent=slot?slot.nome:'+ add';btn.onclick=()=>abrirModalRefeicao(d,tipo);grid.appendChild(btn);}
   });
 }
 
-function abrirModalRefeicao(dia,tipo) {
-  _slotAtual={dia,tipo};
-  el('modalRefTitulo').textContent=`${['','Seg','Ter','Qua','Qui','Sex'][dia]} — ${tipo==='almoco'?'Almoço':'Janta'}`;
-  const chave=`${dia}-${tipo}`;
-  el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
-  // lista filtrada por tipo
+function abrirModalRefeicao(dia,tipo){
+  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${['','Seg','Ter','Qua','Qui','Sex'][dia]} — ${tipo==='almoco'?'Almoço':'Janta'}`;
+  const chave=`${dia}-${tipo}`;el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
   const lista=el('modalRefLista');lista.innerHTML='';
-  const filtradas=_refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos');
-  for(const r of filtradas){
-    const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';
-    btn.innerHTML=`<span class="nome">${r.nome}</span>`;
-    btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};
-    lista.appendChild(btn);
-  }
+  _refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos').forEach(r=>{const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';btn.innerHTML=`<span class="nome">${r.nome}</span>`;btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};lista.appendChild(btn);});
   el('modalRefeicao').classList.remove('oculto');el('modalRefeicao').classList.add('modal-aberto');
 }
 
-function confirmarSlot() {
-  if(!_slotAtual)return;
-  const nome=el('modalRefNomeAvulso').value.trim();
-  const chave=`${_slotAtual.dia}-${_slotAtual.tipo}`;
-  if(nome){_planDias[chave]={nome,refeicaoId:_slotAtual.refeicaoId||null};}
-  fecharModalRefeicao();renderizarSlotsCardapio();
-}
-
-function limparSlot() {
-  if(!_slotAtual)return;
-  delete _planDias[`${_slotAtual.dia}-${_slotAtual.tipo}`];
-  fecharModalRefeicao();renderizarSlotsCardapio();
-}
-
+function confirmarSlot(){if(!_slotAtual)return;const nome=el('modalRefNomeAvulso').value.trim();const chave=`${_slotAtual.dia}-${_slotAtual.tipo}`;if(nome)_planDias[chave]={nome,refeicaoId:_slotAtual.refeicaoId||null};fecharModalRefeicao();renderizarSlotsCardapio();}
+function limparSlot(){if(!_slotAtual)return;delete _planDias[`${_slotAtual.dia}-${_slotAtual.tipo}`];fecharModalRefeicao();renderizarSlotsCardapio();}
 function fecharModalRefeicao(){el('modalRefeicao').classList.add('oculto');el('modalRefeicao').classList.remove('modal-aberto');_slotAtual=null;}
 
-async function carregarPlanejamento() {
+async function carregarPlanejamento(){
   const seg=formatarDataISO(inicioSemana());
   const{data:plan}=await supa.from('planejamento_semana').select('id,responsavel').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
   if(!plan){_planDias={};renderizarSlotsCardapio();return;}
   if(plan.responsavel)el('planResp').value=plan.responsavel;
   const{data:dias}=await supa.from('planejamento_dias').select('dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome)').eq('planejamento_id',plan.id);
-  _planDias={};
-  for(const d of(dias||[])){
-    const nome=d.refeicoes?.nome||d.refeicao_nome||'';
-    _planDias[`${d.dia_semana}-${d.tipo}`]={nome,refeicaoId:d.refeicao_id};
-  }
+  _planDias={};for(const d of(dias||[])){_planDias[`${d.dia_semana}-${d.tipo}`]={nome:d.refeicoes?.nome||d.refeicao_nome||'',refeicaoId:d.refeicao_id};}
   renderizarSlotsCardapio();
 }
 
-async function salvarPlanejamento() {
-  el('btnSalvarPlan').disabled=true;
-  const seg=formatarDataISO(inicioSemana());
-  const resp=el('planResp').value;
-  // upsert do planejamento_semana
-  let planId;
-  const{data:ex}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
+async function salvarPlanejamento(){
+  el('btnSalvarPlan').disabled=true;const seg=formatarDataISO(inicioSemana());const resp=el('planResp').value;
+  let planId;const{data:ex}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
   if(ex){planId=ex.id;await supa.from('planejamento_semana').update({responsavel:resp}).eq('id',planId);}
   else{const{data:n}=await supa.from('planejamento_semana').insert({casa_id:usuario.casa_id,semana_inicio:seg,responsavel:resp,criado_por:usuario.id}).select().single();planId=n?.id;}
   if(!planId){aviso('avisoPlan','Erro ao salvar.','erro');el('btnSalvarPlan').disabled=false;return;}
-  // limpa dias e reinseere
   await supa.from('planejamento_dias').delete().eq('planejamento_id',planId);
-  const inserir=Object.entries(_planDias).map(([chave,val])=>{
-    const[dia,tipo]=chave.split('-');
-    return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};
-  });
+  const inserir=Object.entries(_planDias).map(([chave,val])=>{const[dia,tipo]=chave.split('-');return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};});
   if(inserir.length)await supa.from('planejamento_dias').insert(inserir);
-  aviso('avisoPlan','Cardápio salvo.','ok');setTimeout(()=>aviso('avisoPlan',''),2000);
-  el('btnSalvarPlan').disabled=false;
-  supa.from('eventos').insert({tipo:'cardapio_salvo',entidade:'planejamento_semana',entidade_id:planId,usuario_id:usuario.id,detalhe:`${usuario.nome} salvou o cardápio da semana`});
+  aviso('avisoPlan','Cardápio salvo.','ok');setTimeout(()=>aviso('avisoPlan',''),2000);el('btnSalvarPlan').disabled=false;
 }
 
-async function gerarListaCardapio() {
+async function gerarListaCardapio(){
   el('btnGerarLista').disabled=true;
-  // Coleta todos os ingredientes dos slots preenchidos com refeicao cadastrada
   const ingredientes=[];
-  for(const[,val] of Object.entries(_planDias)){
-    if(!val.refeicaoId)continue;
-    const ref=_refeicoes.find(r=>r.id===val.refeicaoId);
-    if(!ref)continue;
-    for(const ing of(ref.refeicao_ingredientes||[])){
-      // multiplica por 5 (dias da semana) e divide por porcoes para ajustar
-      const qtdBase=ing.quantidade?ing.quantidade*(5/ref.porcoes):null;
-      ingredientes.push({nome:ing.nome,quantidade:qtdBase?Math.ceil(qtdBase):null,unidade:ing.unidade||null});
-    }
-  }
-  // Remove duplicatas por nome (soma quantidades)
-  const mapa={};
-  for(const ing of ingredientes){
-    const k=normalizarNome(ing.nome);
-    if(mapa[k]){if(mapa[k].quantidade&&ing.quantidade)mapa[k].quantidade+=ing.quantidade;}
-    else{mapa[k]={...ing};}
-  }
+  for(const[,val]of Object.entries(_planDias)){if(!val.refeicaoId)continue;const ref=_refeicoes.find(r=>r.id===val.refeicaoId);if(!ref)continue;for(const ing of(ref.refeicao_ingredientes||[])){const qtdBase=ing.quantidade?ing.quantidade*(5/ref.porcoes):null;ingredientes.push({nome:ing.nome,quantidade:qtdBase?Math.ceil(qtdBase):null,unidade:ing.unidade||null});}}
+  const mapa={};for(const ing of ingredientes){const k=normalizarNome(ing.nome);if(mapa[k]){if(mapa[k].quantidade&&ing.quantidade)mapa[k].quantidade+=ing.quantidade;}else{mapa[k]={...ing};}}
   const itens=Object.values(mapa);
-  if(!itens.length){aviso('avisoPlan','Nenhum ingrediente encontrado. Adicione refeições cadastradas aos slots.','erro');el('btnGerarLista').disabled=false;return;}
-  // Insere na lista de compras
-  const inserir=itens.map(i=>({casa_id:usuario.casa_id,nome:i.nome,quantidade:i.quantidade,unidade:i.unidade,status:'pendente',origem:'cardapio',criado_por:usuario.id}));
-  await supa.from('lista_compras').insert(inserir);
-  aviso('avisoPlan',`${itens.length} ingredientes adicionados à lista de compras.`,'ok');setTimeout(()=>aviso('avisoPlan',''),3000);
-  el('btnGerarLista').disabled=false;
-  await carregarLista();
-  supa.from('eventos').insert({tipo:'lista_gerada_cardapio',entidade:'lista_compras',usuario_id:usuario.id,detalhe:`${usuario.nome} gerou a lista do cardápio (${itens.length} itens)`});
+  if(!itens.length){aviso('avisoPlan','Nenhum ingrediente encontrado.','erro');el('btnGerarLista').disabled=false;return;}
+  await supa.from('lista_compras').insert(itens.map(i=>({casa_id:usuario.casa_id,nome:i.nome,quantidade:i.quantidade,unidade:i.unidade,status:'pendente',origem:'cardapio',criado_por:usuario.id})));
+  aviso('avisoPlan',`${itens.length} ingredientes adicionados à lista.`,'ok');setTimeout(()=>aviso('avisoPlan',''),3000);
+  el('btnGerarLista').disabled=false;await carregarLista();
 }
 
 // --- CONTAS ---
-async function carregarContas() {
+async function carregarContas(){
   const{data:contas,error}=await supa.from('contas').select('id,nome,categoria,valor,vencimento,paga,recorrente,dia_vencimento').eq('casa_id',usuario.casa_id).order('paga').order('vencimento');
   const area=el('itensContas');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
@@ -428,10 +419,9 @@ async function carregarContas() {
   }
 }
 
-async function adicionarConta() {
+async function adicionarConta(){
   const nome=el('ctNome').value.trim(),vencimento=el('ctVenc').value,recorrente=el('ctRecorrente').checked;
-  if(!nome){aviso('avisoConta','Digite o nome da conta.','erro');return;}
-  if(!vencimento){aviso('avisoConta','Escolha o vencimento.','erro');return;}
+  if(!nome){aviso('avisoConta','Digite o nome.','erro');return;}if(!vencimento){aviso('avisoConta','Escolha o vencimento.','erro');return;}
   const valor=el('ctValor').value===''?null:Number(el('ctValor').value);
   el('btnAddConta').disabled=true;
   const{data,error}=await supa.from('contas').insert({casa_id:usuario.casa_id,nome,valor,vencimento,recorrente,dia_vencimento:recorrente?Number(vencimento.slice(8,10)):null,criada_por:usuario.id}).select().single();
@@ -442,20 +432,17 @@ async function adicionarConta() {
   aviso('avisoConta','Conta adicionada.','ok');setTimeout(()=>aviso('avisoConta',''),1500);await carregarContas();
 }
 
-async function pagarConta(conta,botao) {
+async function pagarConta(conta,botao){
   botao.disabled=true;
   const{error}=await supa.from('contas').update({paga:true,paga_em:new Date().toISOString()}).eq('id',conta.id);
   if(error){botao.disabled=false;return;}
   supa.from('eventos').insert({tipo:'conta_paga',entidade:'contas',entidade_id:conta.id,usuario_id:usuario.id,detalhe:usuario.nome+' pagou '+conta.nome});
-  if(conta.recorrente&&conta.dia_vencimento){
-    const quer=confirm(`"${conta.nome}" repete todo mês.\nCriar a do próximo mês?`);
-    if(quer){const base=new Date(conta.vencimento.slice(0,10)+'T00:00:00');const prox=new Date(base.getFullYear(),base.getMonth()+1,conta.dia_vencimento||base.getDate());await supa.from('contas').insert({casa_id:usuario.casa_id,nome:conta.nome,categoria:conta.categoria,valor:conta.valor,vencimento:`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}-${String(prox.getDate()).padStart(2,'0')}`,recorrente:true,dia_vencimento:conta.dia_vencimento,criada_por:usuario.id});}
-  }
+  if(conta.recorrente&&conta.dia_vencimento){const q=confirm(`"${conta.nome}" repete todo mês.\nCriar a do próximo mês?`);if(q){const base=new Date(conta.vencimento.slice(0,10)+'T00:00:00');const prox=new Date(base.getFullYear(),base.getMonth()+1,conta.dia_vencimento||base.getDate());await supa.from('contas').insert({casa_id:usuario.casa_id,nome:conta.nome,categoria:conta.categoria,valor:conta.valor,vencimento:`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}-${String(prox.getDate()).padStart(2,'0')}`,recorrente:true,dia_vencimento:conta.dia_vencimento,criada_por:usuario.id});}}
   await carregarContas();
 }
 
 // --- TAREFAS ---
-async function carregarTarefas() {
+async function carregarTarefas(){
   const{data:tarefas,error}=await supa.from('tarefas').select('id,titulo,responsavel,prioridade,data,feita,recorrente,recorrencia').eq('casa_id',usuario.casa_id).order('feita').order('data',{nullsFirst:true});
   const area=el('itensTarefas');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
@@ -474,10 +461,9 @@ async function carregarTarefas() {
   }
 }
 
-async function adicionarTarefa() {
+async function adicionarTarefa(){
   const titulo=el('tfTitulo').value.trim();if(!titulo){aviso('avisoTarefa','Digite o título.','erro');return;}
-  const recorrente=el('tfRecorrente').checked;
-  el('btnAddTarefa').disabled=true;
+  const recorrente=el('tfRecorrente').checked;el('btnAddTarefa').disabled=true;
   const{data,error}=await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo,responsavel:el('tfResp').value,data:el('tfData').value||null,recorrente,recorrencia:recorrente?el('tfRecorrencia').value.trim()||null:null,criada_por:usuario.id}).select().single();
   if(data)supa.from('eventos').insert({tipo:'tarefa_criada',entidade:'tarefas',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' criou '+titulo});
   el('btnAddTarefa').disabled=false;
@@ -486,38 +472,35 @@ async function adicionarTarefa() {
   aviso('avisoTarefa','Tarefa adicionada.','ok');setTimeout(()=>aviso('avisoTarefa',''),1500);await carregarTarefas();
 }
 
-async function alternarTarefa(t) {
+async function alternarTarefa(t){
   const novo=!t.feita;
   const{error}=await supa.from('tarefas').update({feita:novo,feita_por:novo?usuario.id:null,feita_em:novo?new Date().toISOString():null}).eq('id',t.id);
   if(error)return;
   supa.from('eventos').insert({tipo:novo?'tarefa_concluida':'tarefa_reaberta',entidade:'tarefas',entidade_id:t.id,usuario_id:usuario.id,detalhe:`${usuario.nome} ${novo?'concluiu':'reabriu'} ${t.titulo}`});
-  if(novo&&t.recorrente){const q=confirm(`"${t.titulo}" é uma rotina.\nCriar a próxima ocorrência?`);if(q)await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo:t.titulo,responsavel:t.responsavel,prioridade:t.prioridade,recorrente:true,recorrencia:t.recorrencia,criada_por:usuario.id});}
+  if(novo&&t.recorrente){const q=confirm(`"${t.titulo}" é uma rotina.\nCriar a próxima?`);if(q)await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo:t.titulo,responsavel:t.responsavel,prioridade:t.prioridade,recorrente:true,recorrencia:t.recorrencia,criada_por:usuario.id});}
   await carregarTarefas();
 }
 
-async function removerTarefa(id) {
+async function removerTarefa(id){
   const{error}=await supa.from('tarefas').delete().eq('id',id);
   if(!error){supa.from('eventos').insert({tipo:'tarefa_removida',entidade:'tarefas',entidade_id:id,usuario_id:usuario.id,detalhe:usuario.nome+' removeu uma tarefa'});await carregarTarefas();}
 }
 
 // --- HOJE ---
-async function carregarHoje() {
+async function carregarHoje(){
   el('saudacao').textContent=saudacao(usuario.nome);
   const dados=await montarHoje(supa,usuario);
   const area=el('cardsHoje');area.innerHTML='';
-  // Card cardapio
   if(dados.cardapioHoje){
     const card=document.createElement('div');card.className='cartao card-clicavel';card.onclick=()=>trocarAba('cardapio');
     const cab=document.createElement('div');cab.className='card-hoje-titulo';
     const t=document.createElement('div');t.className='titulo-secao';t.textContent='Cardápio de hoje';
-    const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';
-    cab.appendChild(t);cab.appendChild(ab);card.appendChild(cab);
+    const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';cab.appendChild(t);cab.appendChild(ab);card.appendChild(cab);
     const slots=document.createElement('div');slots.className='card-cardapio-hoje';
     const ch=dados.cardapioHoje;
     if(ch.almoco){const s=document.createElement('div');s.className='slot-hoje';s.innerHTML=`<div class="rotulo">🍱 Almoço</div><div class="prato">${ch.almoco}</div>`;slots.appendChild(s);}
     if(ch.janta){const s=document.createElement('div');s.className='slot-hoje';s.innerHTML=`<div class="rotulo">🍽️ Janta</div><div class="prato">${ch.janta}</div>`;slots.appendChild(s);}
-    if(ch.responsavel){const r=document.createElement('div');r.className='meta';r.style.marginTop='8px';const q=ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1);r.textContent=`Responsável: ${q}`;card.appendChild(slots);card.appendChild(r);}
-    else{card.appendChild(slots);}
+    card.appendChild(slots);if(ch.responsavel){const r=document.createElement('div');r.className='meta';r.style.marginTop='8px';r.textContent=`Responsável: ${ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1)}`;card.appendChild(r);}
     area.appendChild(card);
   }
   if(dados.tudoEmDia&&!dados.cardapioHoje){const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui. ✨</div>';area.appendChild(c);return;}
@@ -532,9 +515,7 @@ function criarCartaoHoje(titulo,dest){
   const cab=document.createElement('div');cab.className='card-hoje-titulo';
   const t=document.createElement('div');t.className='titulo-secao';t.textContent=titulo;
   const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';
-  cab.appendChild(t);cab.appendChild(ab);
-  const corpo=document.createElement('div');c.appendChild(cab);c.appendChild(corpo);c.onclick=()=>trocarAba(dest);
-  return{cartao:c,corpo};
+  cab.appendChild(t);cab.appendChild(ab);const corpo=document.createElement('div');c.appendChild(cab);c.appendChild(corpo);c.onclick=()=>trocarAba(dest);return{cartao:c,corpo};
 }
 
 function miniItem(nome,meta,valor){
@@ -563,6 +544,10 @@ el('btnLimparSlot').onclick=limparSlot;
 el('btnFecharModalRef').onclick=fecharModalRefeicao;
 el('btnSalvarPlan').onclick=salvarPlanejamento;
 el('btnGerarLista').onclick=gerarListaCardapio;
+el('btnSalvarRitual').onclick=salvarRitual;
+el('btnConcluirRitual').onclick=concluirRitual;
+el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
+el('btnFecharModalRitual').onclick=()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;};
 el('btnAddTarefa').onclick=adicionarTarefa;
 el('tfRecorrente').addEventListener('change',e=>el('tfRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
 el('btnAddConta').onclick=adicionarConta;
