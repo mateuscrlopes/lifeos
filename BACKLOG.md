@@ -8,7 +8,7 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 18/07/2026 (Tarefas Fatia 1 — divisão de responsabilidades — concluída)
+Última atualização: 18/07/2026 (Estoque Fatia 1.5 concluída + correções)
 
 ---
 
@@ -36,6 +36,8 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 | v0.8.0 | Contas: cadastro manual, status por vencimento, recorrência | Sim — status por cor + recorrência |
 | v0.9.0 | Tela Hoje: painel que reúne compras/estoque/contas (só o que precisa atenção) | Sim — resumo + tudo em dia + cards clicáveis |
 | v0.10.0 | Tarefas Fatia 1: responsável, conclusão, rotina recorrente, card no Hoje | Sim — cria/conclui/rotina oferece próxima |
+| v0.11.0 | Deploy no Render: LifeOS publicado e acessível nos dois iPhones | Sim — Mateus e Ghustavo abriram no celular |
+| v0.12.0 | Estoque Fatia 1.5: três tipos (contável, peso/volume, nível visual); anti-duplicata normalizada | Sim — três tipos + aviso de duplicata |
 | —      | Teste de concorrência (dois usuários na lista) | Sim — passou |
 
 ---
@@ -50,12 +52,11 @@ na conversa, ela é registrada AQUI antes ou junto da implementação.
 - Tela com abas (Compras / Estoque), ajuste +/−, tempo real, log de eventos.
 - Apenas o tipo "unidade contável", conforme planejado.
 
-### 📋 Fatia 1.5 — Os quatro tipos de medição (PRÓXIMA)
-Registrado explicitamente para NÃO se perder. O Documento Mestre (seção 18.4)
-define quatro tipos; a Fatia 1 fez o primeiro. Os outros três entram aqui:
-- **Peso/volume** (ex.: arroz, feijão, frango) — peso aproximado ou embalagem.
-- **Nível visual** (ex.: shampoo, creme) — cheio / 75% / metade / 25% / quase acabando / acabou.
-- **Presença simples** (ex.: itens de baixa relevância) — tem / não tem.
+### ✅ Fatia 1.5 — Três tipos de medição (CONCLUÍDA — v0.12.0)
+- Contável (unidades), Peso/Volume (numérico com unidade), Nível visual (escala).
+- Controles adaptados por tipo: +/− para contável/peso, seletor para nível.
+- Verificação anti-duplicata com normalização (sem acento, sem caixa).
+- Tipo "presença simples" removido (tudo é contável).
 
 ### ✅ Fatia 2 — Conexão estoque ↔ lista (CONCLUÍDA)
 - Item baixo/acabou vira sugestão na lista, marcada como "sugestão do estoque".
