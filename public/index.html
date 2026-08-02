@@ -161,6 +161,10 @@
 
     <!-- PLANTAS -->
     <div id="abaPlantas" class="oculto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;color:var(--suave)" id="plantasContador"></span>
+        <button id="btnNovaPlanta" style="font-size:13px;padding:7px 14px">+ Nova planta</button>
+      </div>
       <div class="filtros-plantas">
         <button class="filtro-btn ativo" data-filtro="todas">Todas</button>
         <button class="filtro-btn" data-filtro="vencida">Vencidas</button>
@@ -223,6 +227,69 @@
         <div id="mpRotinas" style="margin-bottom:16px"></div>
         <div class="titulo-secao">Linha do tempo</div>
         <div id="mpEventos"></div>
+      </div>
+    </div>
+
+    <!-- Modal nova planta -->
+    <div id="modalNovaPlanta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+      <div style="background:var(--cartao);border-radius:14px;width:100%;max-width:520px;margin:0 auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong>Nova planta</strong>
+          <button id="btnFecharNovaPlanta" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div id="npCodigoPreview" style="font-size:13px;color:var(--suave);margin-bottom:12px"></div>
+        <div class="campo">
+          <label for="npEspecie">Espécie</label>
+          <select id="npEspecie" class="sel"></select>
+        </div>
+        <div class="campo" id="npNovaEspecieBox" style="display:none">
+          <label for="npNovaEspecie">Nome da espécie nova</label>
+          <input id="npNovaEspecie" type="text" placeholder="Ex.: Maranta"/>
+        </div>
+        <div class="campo"><label for="npApelido">Apelido (opcional)</label><input id="npApelido" type="text" placeholder="Ex.: Jiboia da janela"/></div>
+        <div class="linha-add">
+          <div style="flex:1"><label for="npComodo">Cômodo</label>
+            <select id="npComodo" class="sel">
+              <option value="Sala">Sala</option>
+              <option value="Cozinha">Cozinha</option>
+              <option value="Banheiro">Banheiro</option>
+              <option value="Escritório">Escritório</option>
+              <option value="Varanda">Varanda</option>
+              <option value="Quarto">Quarto</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="npPosicao">Posição</label><input id="npPosicao" type="text" placeholder="Ex.: Mesa, Chão"/></div>
+        </div>
+        <div class="linha-add">
+          <div style="flex:1"><label for="npMetodo">Método</label>
+            <select id="npMetodo" class="sel">
+              <option value="substrato">Substrato</option>
+              <option value="agua">Água</option>
+              <option value="kokedama">Kokedama</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="npPerfil">Perfil hídrico</label>
+            <select id="npPerfil" class="sel">
+              <option value="alto">Alto (Verde)</option>
+              <option value="medio" selected>Médio (Laranja)</option>
+              <option value="baixo">Baixo (Azul)</option>
+            </select>
+          </div>
+        </div>
+        <div class="titulo-secao" style="margin-top:8px">Rotina principal</div>
+        <div class="linha-add">
+          <div style="flex:2"><label for="npRotinaT">Tipo</label>
+            <select id="npRotinaT" class="sel">
+              <option>Verificar e regar</option>
+              <option>Trocar a água</option>
+              <option>Fazer imersão</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="npRotinaI">A cada (dias)</label><input id="npRotinaI" type="number" min="1" value="7"/></div>
+        </div>
+        <div class="campo"><label for="npObs">Observações</label><input id="npObs" type="text" placeholder="Opcional"/></div>
+        <div style="margin-top:12px"><button id="btnSalvarNovaPlanta">Salvar planta</button></div>
+        <div id="avisoNovaPlanta" class="aviso"></div>
       </div>
     </div>
 

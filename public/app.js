@@ -4,11 +4,12 @@ import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
-import { carregarPlantas, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, contarUrgentes } from './plantas.js';
+import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, contarUrgentes } from './plantas.js';
 
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
 let _filtroAtual='todas';
+let _especies=[];
 const el=(id)=>document.getElementById(id);
 function aviso(id,t,tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
 
@@ -190,8 +191,11 @@ async function concluirInventario(){
 
 // --- PLANTAS ---
 async function atualizarPlantas(){
-  const res=await carregarPlantas(supa,usuario);
+  const [res, esp] = await Promise.all([carregarPlantas(supa,usuario), carregarEspecies(supa,usuario)]);
   if(res.ok)_plantasCache=res.plantas;
+  _especies=esp;
+  const contador=el('plantasContador');
+  if(contador)contador.textContent=`${_plantasCache.length} plantas ativas`;
   renderizarPlantas();
 }
 
@@ -285,16 +289,27 @@ async function abrirFichaPlanta(planta){
   ];
   for(const[k,v]of info){const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linha);font-size:13px';linha.innerHTML=`<span style="color:var(--suave)">${k}</span><span>${v}</span>`;dados.appendChild(linha);}
 
-  // Rotinas com botao de cuidar
+  // Rotinas com botao de cuidar e editar intervalo
   const rotDiv=el('mpRotinas');rotDiv.innerHTML='<div class="titulo-secao">Rotinas</div>';
   const rotinas=(planta.planta_rotinas||[]).filter(r=>r.ativa);
   for(const r of rotinas){
-    const div=document.createElement('div');div.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha)';
+    const div=document.createElement('div');div.style.cssText='padding:10px 0;border-bottom:1px solid var(--linha)';
     const hoje=new Date().toISOString().slice(0,10);
     const dias=r.proxima_realizacao?Math.round((new Date(r.proxima_realizacao)-new Date(hoje))/86400000):null;
     const quando=dias===null?'—':dias<0?`${Math.abs(dias)}d atrás`:dias===0?'hoje':`em ${dias}d`;
-    div.innerHTML=`<span style="font-size:13px">${r.tipo} · a cada ${r.intervalo_dias}d · <strong>${quando}</strong></span>`;
-    if(dias===null||dias<=0){const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';btn.onclick=async()=>{btn.disabled=true;await registrarCuidado(supa,usuario,planta,r);await atualizarPlantas();btn.textContent='✓';};div.appendChild(btn);}
+    // Linha principal
+    const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
+    topo.innerHTML=`<span style="font-size:13px">${r.tipo} · <strong>${quando}</strong></span>`;
+    if(dias===null||dias<=0){const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';btn.onclick=async()=>{btn.disabled=true;await registrarCuidado(supa,usuario,planta,r);await atualizarPlantas();btn.textContent='✓';};topo.appendChild(btn);}
+    div.appendChild(topo);
+    // Linha de edição do intervalo
+    const edit=document.createElement('div');edit.style.cssText='display:flex;align-items:center;gap:8px;font-size:12px;color:var(--suave)';
+    const inp=document.createElement('input');inp.type='number';inp.min='1';inp.value=r.intervalo_dias;inp.style.cssText='width:56px;padding:4px 8px;font-size:12px';
+    const lbl=document.createElement('span');lbl.textContent='dias entre cuidados';
+    const btnSalvar=document.createElement('button');btnSalvar.textContent='Salvar';btnSalvar.style.cssText='padding:4px 10px;font-size:12px';
+    btnSalvar.onclick=async()=>{btnSalvar.disabled=true;const ok=await editarRotina(supa,r,inp.value);if(ok){await atualizarPlantas();btnSalvar.textContent='✓';}else{btnSalvar.disabled=false;}};
+    edit.appendChild(inp);edit.appendChild(lbl);edit.appendChild(btnSalvar);
+    div.appendChild(edit);
     rotDiv.appendChild(div);
   }
 
@@ -567,6 +582,75 @@ async function carregarHoje(){
 function criarCartaoHoje(titulo,dest){const c=document.createElement('div');c.className='cartao card-clicavel';const cab=document.createElement('div');cab.className='card-hoje-titulo';const t=document.createElement('div');t.className='titulo-secao';t.textContent=titulo;const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';cab.appendChild(t);cab.appendChild(ab);const corpo=document.createElement('div');c.appendChild(cab);c.appendChild(corpo);c.onclick=()=>trocarAba(dest);return{cartao:c,corpo};}
 function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='m-meta';d.textContent=[meta,valor].filter(Boolean).join('  ');l.appendChild(e);l.appendChild(d);return l;}
 
+// --- NOVA PLANTA ---
+async function abrirModalNovaPlanta(){
+  const{codigo,numero_etiqueta}=await import('./plantas.js').then(m=>m.proximoCodigo(supa,usuario));
+  el('npCodigoPreview').textContent=`Próximo código: ${codigo} · Etiqueta ${numero_etiqueta}`;
+  // Preencher select de especies
+  const sel=el('npEspecie');sel.innerHTML='<option value="">— Selecionar espécie —</option><option value="__nova__">+ Nova espécie</option>';
+  for(const e of _especies){const o=document.createElement('option');o.value=e.id;o.textContent=e.nome_popular;sel.appendChild(o);}
+  // Reset campos
+  el('npApelido').value='';el('npPosicao').value='';el('npObs').value='';
+  el('npNovaEspecieBox').style.display='none';el('npNovaEspecie').value='';
+  el('npRotinaI').value='7';aviso('avisoNovaPlanta','');
+  el('modalNovaPlanta').classList.remove('oculto');el('modalNovaPlanta').classList.add('modal-aberto');
+}
+
+async function salvarNovaPlanta(){
+  const especieId=el('npEspecie').value;
+  const novaEspecie=el('npNovaEspecie').value.trim();
+  if(!especieId&&!novaEspecie){aviso('avisoNovaPlanta','Escolha ou crie uma espécie.','erro');return;}
+  const comodo=el('npComodo').value;
+  if(!comodo){aviso('avisoNovaPlanta','Escolha o cômodo.','erro');return;}
+  el('btnSalvarNovaPlanta').disabled=true;
+  let espId=especieId==='__nova__'?null:especieId||null;
+  // Se for especie nova, cadastra primeiro
+  if(especieId==='__nova__'&&novaEspecie){
+    const metodo=el('npMetodo').value;
+    const perfil=el('npPerfil').value;
+    const{data:esp}=await supa.from('especies').insert({
+      casa_id:usuario.casa_id,nome_popular:novaEspecie,
+      perfil_hidrico:perfil,metodo_cultivo:metodo,
+      rotina_principal:el('npRotinaT').value,
+      intervalo_dias:Number(el('npRotinaI').value),
+    }).select().single();
+    if(esp)espId=esp.id;
+  }
+  const perfil=el('npPerfil').value;
+  const corMap={alto:'verde',medio:'laranja',baixo:'azul'};
+  const res=await cadastrarPlanta(supa,usuario,{
+    especie_id:espId,
+    nome_personalizado:el('npApelido').value.trim()||null,
+    comodo,posicao:el('npPosicao').value.trim()||null,
+    metodo_cultivo:el('npMetodo').value,
+    perfil_hidrico:perfil,
+    cor_etiqueta:corMap[perfil]||null,
+    observacoes:el('npObs').value.trim()||null,
+    rotina_tipo:el('npRotinaT').value,
+    rotina_intervalo:el('npRotinaI').value,
+  });
+  el('btnSalvarNovaPlanta').disabled=false;
+  if(!res.ok){aviso('avisoNovaPlanta','Erro ao salvar: '+res.motivo,'erro');return;}
+  aviso('avisoNovaPlanta',`${res.codigo} cadastrada com sucesso!`,'ok');
+  await atualizarPlantas();
+  setTimeout(()=>{el('modalNovaPlanta').classList.add('oculto');el('modalNovaPlanta').classList.remove('modal-aberto');},1500);
+}
+
+// Quando muda a especie no select, preenche metodo/perfil/rotina automaticamente
+function aoEscolherEspecie(){
+  const val=el('npEspecie').value;
+  el('npNovaEspecieBox').style.display=val==='__nova__'?'block':'none';
+  if(val&&val!=='__nova__'){
+    const esp=_especies.find(e=>e.id===val);
+    if(esp){
+      el('npMetodo').value=esp.metodo_cultivo||'substrato';
+      el('npPerfil').value=esp.perfil_hidrico||'medio';
+      if(esp.rotina_principal)el('npRotinaT').value=esp.rotina_principal;
+      if(esp.intervalo_dias)el('npRotinaI').value=esp.intervalo_dias;
+    }
+  }
+}
+
 // --- EVENTOS ---
 el('btnEntrar').onclick=entrar;
 el('senha').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
@@ -591,6 +675,10 @@ el('btnConcluirRitual').onclick=concluirRitual;
 el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
 el('btnFecharModalRitual').onclick=()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;};
 el('btnFecharPlanta').onclick=()=>{el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');};
+el('btnNovaPlanta').onclick=abrirModalNovaPlanta;
+el('btnFecharNovaPlanta').onclick=()=>{el('modalNovaPlanta').classList.add('oculto');el('modalNovaPlanta').classList.remove('modal-aberto');};
+el('btnSalvarNovaPlanta').onclick=salvarNovaPlanta;
+el('npEspecie').addEventListener('change',aoEscolherEspecie);
 el('btnAddTarefa').onclick=adicionarTarefa;
 el('tfRecorrente').addEventListener('change',e=>el('tfRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
 el('btnAddConta').onclick=adicionarConta;

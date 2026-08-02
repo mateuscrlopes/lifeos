@@ -1,4 +1,4 @@
-// plantas.js — Modulo Plantas do LifeOS
+// plantas.js — Modulo Plantas do LifeOS v0.19
 
 export async function carregarPlantas(supa, usuario) {
   const { data, error } = await supa
@@ -14,6 +14,87 @@ export async function carregarPlantas(supa, usuario) {
     .order('numero_etiqueta');
   if (error) return { ok: false, motivo: error.message };
   return { ok: true, plantas: data || [] };
+}
+
+export async function carregarEspecies(supa, usuario) {
+  const { data, error } = await supa
+    .from('especies')
+    .select('id, nome_popular, nome_cientifico, perfil_hidrico, metodo_cultivo, rotina_principal, intervalo_dias')
+    .eq('casa_id', usuario.casa_id)
+    .order('nome_popular');
+  if (error) return [];
+  return data || [];
+}
+
+// Retorna o proximo codigo e etiqueta disponíveis (PL-041, 41, etc.)
+export async function proximoCodigo(supa, usuario) {
+  const { data } = await supa
+    .from('plantas')
+    .select('numero_etiqueta')
+    .eq('casa_id', usuario.casa_id)
+    .order('numero_etiqueta', { ascending: false })
+    .limit(1);
+  const proximo = data?.[0]?.numero_etiqueta ? data[0].numero_etiqueta + 1 : 1;
+  const codigo = 'PL-' + String(proximo).padStart(3, '0');
+  return { codigo, numero_etiqueta: proximo };
+}
+
+// Cadastra uma nova planta com sua rotina principal.
+export async function cadastrarPlanta(supa, usuario, dados) {
+  const { especie_id, nome_personalizado, comodo, posicao, metodo_cultivo,
+    perfil_hidrico, cor_etiqueta, observacoes,
+    rotina_tipo, rotina_intervalo } = dados;
+
+  const { codigo, numero_etiqueta } = await proximoCodigo(supa, usuario);
+
+  const { data: planta, error } = await supa.from('plantas').insert({
+    casa_id: usuario.casa_id,
+    codigo, numero_etiqueta,
+    especie_id: especie_id || null,
+    nome_personalizado: nome_personalizado || null,
+    status: 'ativa',
+    comodo, posicao: posicao || null,
+    metodo_cultivo, perfil_hidrico,
+    cor_etiqueta: cor_etiqueta || null,
+    observacoes: observacoes || null,
+    criado_por: usuario.id,
+  }).select().single();
+
+  if (error) return { ok: false, motivo: error.message };
+
+  // Cria a rotina principal
+  if (rotina_tipo && rotina_intervalo) {
+    const proxima = new Date();
+    proxima.setDate(proxima.getDate() + Number(rotina_intervalo));
+    await supa.from('planta_rotinas').insert({
+      planta_id: planta.id,
+      tipo: rotina_tipo,
+      intervalo_dias: Number(rotina_intervalo),
+      proxima_realizacao: proxima.toISOString().slice(0, 10),
+      ativa: true,
+    });
+  }
+
+  // Evento de cadastro
+  await supa.from('planta_eventos').insert({
+    planta_id: planta.id,
+    tipo: 'cadastro',
+    notas: 'Planta cadastrada via LifeOS',
+    usuario_id: usuario.id,
+  });
+
+  return { ok: true, planta, codigo };
+}
+
+// Atualiza o intervalo de uma rotina e recalcula a proxima data.
+export async function editarRotina(supa, rotina, novoIntervalo) {
+  const proxima = new Date();
+  proxima.setDate(proxima.getDate() + Number(novoIntervalo));
+  const { error } = await supa.from('planta_rotinas').update({
+    intervalo_dias: Number(novoIntervalo),
+    proxima_realizacao: proxima.toISOString().slice(0, 10),
+  }).eq('id', rotina.id);
+  return !error;
 }
 
 export function urgenciaPlanta(planta) {
