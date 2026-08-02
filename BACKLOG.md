@@ -3,7 +3,7 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Módulo Plantas v0.18.0 concluído
+Última atualização: 02/08/2026 — Plantas v0.19.0 (cadastro + edição de rotinas)
 
 ---
 
@@ -24,6 +24,7 @@
 | v0.16 | Rituais (pauta + sessões + histórico) — Onda 1 fechada | Sim |
 | v0.17 | Atalhos Siri: /atalho/lista + /atalho/tarefa + /atalho/estoque | Sim |
 | v0.18 | Módulo Plantas (40 plantas, rotinas, ficha, histórico, card no Hoje) | Sim |
+| v0.19 | Plantas: cadastro de novas plantas + edição de rotinas | Sim |
 | — | UptimeRobot configurado (cold start resolvido) | Sim |
 | — | Teste de concorrência | Sim |
 
@@ -51,12 +52,10 @@
 ## 🕒 Próximos passos sugeridos
 
 ### Módulo Plantas — fatias futuras
-- **Upload de fotos** — interface para adicionar foto principal via Supabase Storage
-- **Cadastro de novas plantas** — formulário para adicionar PL-041 em diante
-- **Edição de rotinas** — alterar intervalo direto pela ficha
+- ✅ **Cadastro de novas plantas** — v0.19.0
+- ✅ **Edição de rotinas** — v0.19.0
 - **Registro manual de cuidado** — sem precisar abrir a ficha, registrar qualquer evento
 - **Status falecida/doada** — fluxo de encerramento com histórico preservado
-- **Mapa da Casa** — camada visual sobre o módulo Plantas (decisão: após Plantas estável)
 
 ### Onda 2 — restante
 - **Estoque Fatia 4** — estimativa por consumo e confiança
@@ -75,7 +74,6 @@
 - **Notificações** (seção 14)
 - **Tablet da Casa** (seção 11)
 - **Refinamento de privacidade** — "pessoal protegido" (seção 8)
-- **Mapa da Casa** — camada visual sobre módulo Plantas
 
 ---
 

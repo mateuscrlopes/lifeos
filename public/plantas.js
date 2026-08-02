@@ -146,6 +146,50 @@ export async function registrarCuidado(supa, usuario, planta, rotina) {
   return { ok: true, proxima: proximaStr };
 }
 
+// Registra um cuidado manual (sem rotina vinculada) e atualiza a rotina principal se existir.
+export async function registrarCuidadoManual(supa, usuario, planta, tipo) {
+  const agora = new Date().toISOString();
+  const hoje = agora.slice(0, 10);
+
+  // Evento no historico
+  await supa.from('planta_eventos').insert({
+    planta_id: planta.id, tipo, data: agora,
+    notas: 'Cuidado registrado manualmente via LifeOS',
+    usuario_id: usuario.id,
+  });
+
+  // Se existir rotina ativa do mesmo tipo, atualiza a proxima data
+  const tipoRotina = tipo === 'troca_agua' ? 'Trocar a água'
+    : tipo === 'imersao' ? 'Fazer imersão' : 'Verificar e regar';
+  const rotina = (planta.planta_rotinas || []).find(r => r.ativa && r.tipo === tipoRotina);
+  if (rotina) {
+    const proxima = new Date(hoje);
+    proxima.setDate(proxima.getDate() + rotina.intervalo_dias);
+    await supa.from('planta_rotinas').update({
+      ultima_realizacao: hoje,
+      proxima_realizacao: proxima.toISOString().slice(0, 10),
+    }).eq('id', rotina.id);
+  }
+
+  return { ok: true };
+}
+
+// Remove a planta da listagem ativa sem apagar nenhum dado.
+// Registra evento de remoção e marca status como 'removida'.
+export async function removerPlanta(supa, usuario, planta) {
+  const { error } = await supa.from('plantas')
+    .update({ status: 'removida' })
+    .eq('id', planta.id);
+  if (error) return { ok: false };
+  await supa.from('planta_eventos').insert({
+    planta_id: planta.id,
+    tipo: 'alteracao_status',
+    notas: 'Planta removida da listagem ativa. Histórico preservado.',
+    usuario_id: usuario.id,
+  });
+  return { ok: true };
+}
+
 export function contarUrgentes(plantas) {
   return plantas.filter(p => {
     const u = urgenciaPlanta(p);

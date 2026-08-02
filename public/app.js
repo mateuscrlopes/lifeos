@@ -4,11 +4,12 @@ import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
-import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, contarUrgentes } from './plantas.js';
+import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
 
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
 let _filtroAtual='todas';
+let _plantaAberta=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
 function aviso(id,t,tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
@@ -274,6 +275,7 @@ async function cuidarPlanta(planta,botao){
 async function abrirFichaPlanta(planta){
   const nomeEspecie=planta.especies?.nome_popular||'';
   const cientifico=planta.especies?.nome_cientifico||'';
+  _plantaAberta=planta;
   el('mpCodigo').textContent=`${planta.codigo} · Etiqueta ${planta.numero_etiqueta}`;
   el('mpNome').textContent=planta.nome_personalizado?`${nomeEspecie} (${planta.nome_personalizado})`:nomeEspecie;
 
@@ -288,6 +290,29 @@ async function abrirFichaPlanta(planta){
     ['Observações',planta.observacoes||'—'],
   ];
   for(const[k,v]of info){const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linha);font-size:13px';linha.innerHTML=`<span style="color:var(--suave)">${k}</span><span>${v}</span>`;dados.appendChild(linha);}
+
+  // Botoes de cuidado manual
+  const acoes=el('mpAcoes');acoes.innerHTML='';
+  const metodo=planta.metodo_cultivo;
+  const tiposManual = metodo==='agua'
+    ? [['troca_agua','🔄 Trocar água']]
+    : metodo==='kokedama'
+    ? [['imersao','🪣 Imersão']]
+    : [['rega','💧 Regar agora'],['adubacao','🌱 Adubar'],['poda','✂️ Podar'],['observacao','📝 Observação']];
+  for(const[tipo,label] of tiposManual){
+    const btn=document.createElement('button');btn.textContent=label;btn.className='secundario';btn.style.cssText='font-size:13px;padding:7px 12px';
+    btn.onclick=async()=>{
+      if(tipo==='observacao'){const nota=prompt('Observação:');if(!nota)return;await supa.from('planta_eventos').insert({planta_id:planta.id,tipo:'observacao',notas:nota,usuario_id:usuario.id,data:new Date().toISOString()});}
+      else{await registrarCuidadoManual(supa,usuario,planta,tipo);}
+      await atualizarPlantas();
+      // Recarrega eventos na ficha
+      const{data:evs}=await supa.from('planta_eventos').select('tipo,data,notas').eq('planta_id',planta.id).order('data',{ascending:false}).limit(20);
+      const evArea=el('mpEventos');evArea.innerHTML='';
+      const TIPO_LABEL={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.',alteracao_status:'🔁 Status'};
+      for(const ev of(evs||[])){const div=document.createElement('div');div.className='evento-linha';div.innerHTML=`<span class="evento-data">${new Date(ev.data).toLocaleDateString('pt-BR')}</span><span>${TIPO_LABEL[ev.tipo]||ev.tipo}${ev.notas?' — '+ev.notas:''}</span>`;evArea.appendChild(div);}
+    };
+    acoes.appendChild(btn);
+  }
 
   // Rotinas com botao de cuidar e editar intervalo
   const rotDiv=el('mpRotinas');rotDiv.innerHTML='<div class="titulo-secao">Rotinas</div>';
@@ -674,7 +699,22 @@ el('btnSalvarRitual').onclick=salvarRitual;
 el('btnConcluirRitual').onclick=concluirRitual;
 el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
 el('btnFecharModalRitual').onclick=()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;};
-el('btnFecharPlanta').onclick=()=>{el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');};
+el('btnFecharPlanta').onclick=()=>{el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');_plantaAberta=null;};
+el('btnRemoverPlanta').onclick=async()=>{
+  if(!_plantaAberta)return;
+  const nome=_plantaAberta.especies?.nome_popular||_plantaAberta.codigo;
+  if(!confirm(`Remover "${nome}" da listagem ativa?
+
+O histórico e o cadastro serão preservados.`))return;
+  el('btnRemoverPlanta').disabled=true;
+  const res=await removerPlanta(supa,usuario,_plantaAberta);
+  el('btnRemoverPlanta').disabled=false;
+  if(res.ok){
+    el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');
+    _plantaAberta=null;
+    await atualizarPlantas();
+  }
+};
 el('btnNovaPlanta').onclick=abrirModalNovaPlanta;
 el('btnFecharNovaPlanta').onclick=()=>{el('modalNovaPlanta').classList.add('oculto');el('modalNovaPlanta').classList.remove('modal-aberto');};
 el('btnSalvarNovaPlanta').onclick=salvarNovaPlanta;
