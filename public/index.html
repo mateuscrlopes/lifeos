@@ -36,7 +36,7 @@
     .titulo-secao{font-size:13px;color:var(--suave);margin:4px 0 10px;text-transform:uppercase;letter-spacing:.04em;}
     .oculto{display:none;}
     .abas{display:flex;gap:5px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
-    .aba{flex:1;min-width:50px;background:var(--cartao);color:var(--suave);border:1px solid var(--linha);font-weight:600;padding:8px 5px;font-size:11px;white-space:nowrap;}
+    .aba{flex:1;min-width:48px;background:var(--cartao);color:var(--suave);border:1px solid var(--linha);font-weight:600;padding:8px 4px;font-size:11px;white-space:nowrap;}
     .aba.ativa{background:var(--acao);color:#fff;border-color:var(--acao);}
     .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;color:#fff;white-space:nowrap;}
     .est-controles{display:flex;align-items:center;gap:6px;}
@@ -56,7 +56,7 @@
     .check-tarefa.feita{background:var(--acao);border-color:var(--acao);color:#fff;}
     .item.concluida .nome{text-decoration:line-through;color:var(--suave);}
     .modal-aberto{display:flex!important;}
-    #modalInventario.oculto,#modalRefeicao.oculto,#modalRitual.oculto{pointer-events:none;}
+    #modalInventario.oculto,#modalRefeicao.oculto,#modalRitual.oculto,#modalPlanta.oculto{pointer-events:none;}
     .dia-slot{background:var(--fundo);border:1px dashed var(--linha);border-radius:8px;padding:6px;font-size:11px;min-height:48px;cursor:pointer;text-align:center;color:var(--suave);}
     .dia-slot.preenchido{background:var(--acao-clara);border-color:var(--acao);color:var(--acao);font-weight:600;}
     .card-cardapio-hoje{display:flex;gap:12px;}
@@ -65,14 +65,27 @@
     .slot-hoje .prato{font-size:14px;font-weight:600;color:var(--texto);}
     .card-refeicao{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--linha);}
     .card-refeicao:last-child{border-bottom:none;}
-    /* Rituais */
     .ritual-card{padding:12px 4px;border-bottom:1px solid var(--linha);}
     .ritual-card:last-child{border-bottom:none;}
     .ritual-topo{display:flex;align-items:center;justify-content:space-between;}
     .ritual-meta{font-size:12px;color:var(--suave);margin-top:2px;}
-    .freq-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--acao-clara);color:var(--acao);font-weight:600;}
     .historico-item{padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px;}
     .historico-item:last-child{border-bottom:none;}
+    /* Plantas */
+    .planta-card{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--linha);cursor:pointer;}
+    .planta-card:last-child{border-bottom:none;}
+    .planta-card:hover{background:var(--fundo);}
+    .planta-codigo{font-size:11px;color:var(--suave);margin-bottom:2px;}
+    .planta-nome{font-size:14px;font-weight:600;}
+    .planta-meta{font-size:12px;color:var(--suave);margin-top:2px;}
+    .dot-perfil{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;}
+    .filtros-plantas{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;}
+    .filtro-btn{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid var(--linha);background:var(--cartao);color:var(--suave);cursor:pointer;white-space:nowrap;font-weight:500;}
+    .filtro-btn.ativo{background:var(--acao);color:#fff;border-color:var(--acao);}
+    .comodo-titulo{font-size:12px;font-weight:700;color:var(--suave);text-transform:uppercase;letter-spacing:.05em;padding:10px 4px 4px;border-bottom:1px solid var(--linha);margin-bottom:4px;}
+    .evento-linha{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px;}
+    .evento-linha:last-child{border-bottom:none;}
+    .evento-data{color:var(--suave);font-size:11px;min-width:70px;}
   </style>
 </head>
 <body>
@@ -93,85 +106,39 @@
       <button class="aba" data-aba="compras">Compras</button>
       <button class="aba" data-aba="estoque">Estoque</button>
       <button class="aba" data-aba="cardapio">Cardápio</button>
+      <button class="aba" data-aba="plantas">🌿</button>
       <button class="aba" data-aba="rituais">Rituais</button>
       <button class="aba" data-aba="tarefas">Tarefas</button>
       <button class="aba" data-aba="contas">Contas</button>
     </nav>
 
-    <!-- HOJE -->
     <div id="abaHoje"><div id="saudacao" class="saudacao"></div><div id="cardsHoje"></div></div>
 
-    <!-- COMPRAS -->
     <div id="abaCompras" class="oculto">
-      <div class="cartao">
-        <div class="titulo-secao">Adicionar à lista</div>
-        <div class="linha-add"><input id="novoItem" type="text" placeholder="Ex.: leite"/><button id="btnAdd">Adicionar</button></div>
-        <div id="avisoAdd" class="aviso"></div>
-      </div>
+      <div class="cartao"><div class="titulo-secao">Adicionar à lista</div><div class="linha-add"><input id="novoItem" type="text" placeholder="Ex.: leite"/><button id="btnAdd">Adicionar</button></div><div id="avisoAdd" class="aviso"></div></div>
       <div class="cartao"><div class="titulo-secao">Lista de compras</div><div id="itens"></div></div>
     </div>
 
-    <!-- ESTOQUE -->
     <div id="abaEstoque" class="oculto">
       <div class="cartao">
         <div class="titulo-secao">Adicionar ao estoque</div>
-        <div class="campo"><input id="estNome" type="text" placeholder="Nome, ex.: shampoo"/></div>
-        <div class="campo"><label for="estLocal">Local</label>
-          <select id="estLocal" class="sel">
-            <option value="">— Sem local —</option>
-            <option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option>
-            <option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option>
-            <option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option>
-            <option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option>
-            <option>Lavanderia</option><option>Casa - Limpeza</option>
-            <option>Casa - Utilitários</option><option>Farmácia / Remédios</option>
-          </select>
-        </div>
+        <div class="campo"><input id="estNome" type="text" placeholder="Nome"/></div>
+        <div class="campo"><label for="estLocal">Local</label><select id="estLocal" class="sel"><option value="">— Sem local —</option><option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option><option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option><option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option><option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option><option>Lavanderia</option><option>Casa - Limpeza</option><option>Casa - Utilitários</option><option>Farmácia / Remédios</option></select></div>
         <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="estCritico" type="checkbox" style="width:auto"/>Item crítico</label></div>
-        <div class="campo"><label for="estTipo">Tipo de medição</label>
-          <select id="estTipo" class="sel">
-            <option value="contavel">Unidade contável</option>
-            <option value="peso_volume">Peso / Volume</option>
-            <option value="nivel_visual">Nível visual</option>
-          </select>
-        </div>
-        <div id="estCamposNum">
-          <div class="linha-add">
-            <div style="flex:1"><label for="estQtd">Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div>
-            <div style="flex:1"><label for="estMin">Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div>
-          </div>
-          <div class="campo"><label for="estUnidade">Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div>
-        </div>
-        <div id="estCamposNivel" class="oculto">
-          <div class="linha-add">
-            <div style="flex:1"><label for="estNivelAtual">Nível atual</label>
-              <select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select>
-            </div>
-            <div style="flex:1"><label for="estNivelMin">Alertar abaixo de</label>
-              <select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:12px"><button id="btnAddEstoque">Adicionar ao estoque</button></div>
+        <div class="campo"><label for="estTipo">Tipo</label><select id="estTipo" class="sel"><option value="contavel">Unidade contável</option><option value="peso_volume">Peso / Volume</option><option value="nivel_visual">Nível visual</option></select></div>
+        <div id="estCamposNum"><div class="linha-add"><div style="flex:1"><label for="estQtd">Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div><div style="flex:1"><label for="estMin">Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div></div><div class="campo"><label for="estUnidade">Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div></div>
+        <div id="estCamposNivel" class="oculto"><div class="linha-add"><div style="flex:1"><label for="estNivelAtual">Nível atual</label><select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select></div><div style="flex:1"><label for="estNivelMin">Alertar abaixo de</label><select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select></div></div></div>
+        <div style="margin-top:12px"><button id="btnAddEstoque">Adicionar</button></div>
         <div id="avisoEstoque" class="aviso"></div>
       </div>
-      <div class="cartao">
-        <div class="card-hoje-titulo">
-          <div class="titulo-secao">Itens em estoque</div>
-          <button id="btnInventario" class="secundario" style="font-size:13px;padding:6px 12px">Fazer inventário</button>
-        </div>
-        <div id="itensEstoque"></div>
-      </div>
+      <div class="cartao"><div class="card-hoje-titulo"><div class="titulo-secao">Itens em estoque</div><button id="btnInventario" class="secundario" style="font-size:13px;padding:6px 12px">Fazer inventário</button></div><div id="itensEstoque"></div></div>
     </div>
 
-    <!-- CARDAPIO -->
     <div id="abaCardapio" class="oculto">
       <div class="cartao">
         <div class="titulo-secao">Nova refeição</div>
         <div class="campo"><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div>
-        <div class="campo"><label for="refTipo">Serve para</label>
-          <select id="refTipo" class="sel"><option value="almoco">Almoço (marmita)</option><option value="janta">Janta</option><option value="ambos">Ambos</option></select>
-        </div>
+        <div class="campo"><label for="refTipo">Serve para</label><select id="refTipo" class="sel"><option value="almoco">Almoço (marmita)</option><option value="janta">Janta</option><option value="ambos">Ambos</option></select></div>
         <div class="campo"><label for="refPorcoes">Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div>
         <div class="titulo-secao" style="margin-top:8px">Ingredientes</div>
         <div id="refIngredientes"></div>
@@ -181,52 +148,48 @@
       </div>
       <div class="cartao"><div class="titulo-secao">Refeições cadastradas</div><div id="listaRefeicoes"></div></div>
       <div class="cartao">
-        <div class="card-hoje-titulo">
-          <div class="titulo-secao">Cardápio da semana</div>
-          <select id="planResp" class="sel" style="width:auto;padding:6px 10px;font-size:13px">
-            <option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin-bottom:4px">
-          <div style="font-size:11px;font-weight:600;color:var(--suave)">Seg</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Ter</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qua</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qui</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Sex</div>
-        </div>
+        <div class="card-hoje-titulo"><div class="titulo-secao">Cardápio da semana</div><select id="planResp" class="sel" style="width:auto;padding:6px 10px;font-size:13px"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center;margin-bottom:4px"><div style="font-size:11px;font-weight:600;color:var(--suave)">Seg</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Ter</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qua</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Qui</div><div style="font-size:11px;font-weight:600;color:var(--suave)">Sex</div></div>
         <div style="font-size:11px;color:var(--suave);margin-bottom:4px">Almoço</div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsAlmoco"></div>
         <div style="font-size:11px;color:var(--suave);margin:8px 0 4px">Janta</div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="slotsJanta"></div>
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button id="btnSalvarPlan">Salvar cardápio</button>
-          <button id="btnGerarLista" class="secundario">Gerar lista</button>
-        </div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button id="btnSalvarPlan">Salvar cardápio</button><button id="btnGerarLista" class="secundario">Gerar lista</button></div>
         <div id="avisoPlan" class="aviso"></div>
       </div>
     </div>
 
-    <!-- RITUAIS -->
+    <!-- PLANTAS -->
+    <div id="abaPlantas" class="oculto">
+      <div class="filtros-plantas">
+        <button class="filtro-btn ativo" data-filtro="todas">Todas</button>
+        <button class="filtro-btn" data-filtro="vencida">Vencidas</button>
+        <button class="filtro-btn" data-filtro="hoje">Hoje</button>
+        <button class="filtro-btn" data-filtro="breve">Em breve</button>
+        <button class="filtro-btn" data-filtro="sala">Sala</button>
+        <button class="filtro-btn" data-filtro="outros">Outros</button>
+      </div>
+      <div id="listaPlantas"></div>
+    </div>
+
     <div id="abaRituais" class="oculto">
       <div class="cartao">
         <div class="titulo-secao">Novo ritual</div>
         <div class="campo"><input id="ritNome" type="text" placeholder="Ex.: Planejamento semanal"/></div>
-        <div class="campo"><label for="ritFreq">Frequência</label>
-          <select id="ritFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select>
-        </div>
-        <div class="campo"><label for="ritPauta">Pauta padrão (tópicos, um por linha)</label><textarea id="ritPauta" placeholder="O que ficou pendente da semana passada?&#10;Qual o foco da semana?&#10;Compras e estoque&#10;Tarefas e divisão"></textarea></div>
-        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="ritPrivado" type="checkbox" style="width:auto"/>Conteúdo privado (não exibir no tablet)</label></div>
+        <div class="campo"><label for="ritFreq">Frequência</label><select id="ritFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select></div>
+        <div class="campo"><label for="ritPauta">Pauta padrão</label><textarea id="ritPauta" placeholder="Tópicos, um por linha"></textarea></div>
+        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="ritPrivado" type="checkbox" style="width:auto"/>Conteúdo privado</label></div>
         <button id="btnSalvarRitual">Salvar ritual</button>
         <div id="avisoRitual" class="aviso"></div>
       </div>
       <div class="cartao"><div class="titulo-secao">Rituais</div><div id="listaRituais"></div></div>
     </div>
 
-    <!-- TAREFAS -->
     <div id="abaTarefas" class="oculto">
       <div class="cartao">
         <div class="titulo-secao">Adicionar tarefa</div>
         <div class="campo"><input id="tfTitulo" type="text" placeholder="Ex.: Lavar roupa"/></div>
-        <div class="linha-add">
-          <div style="flex:1"><label for="tfResp">Responsável</label><select id="tfResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div>
-          <div style="flex:1"><label for="tfData">Data (opcional)</label><input id="tfData" type="date"/></div>
-        </div>
+        <div class="linha-add"><div style="flex:1"><label for="tfResp">Responsável</label><select id="tfResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div><div style="flex:1"><label for="tfData">Data (opcional)</label><input id="tfData" type="date"/></div></div>
         <div class="campo" style="margin-top:12px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="tfRecorrente" type="checkbox" style="width:auto"/>Repete (rotina)</label></div>
         <div id="tfRecorrenciaBox" class="campo oculto"><input id="tfRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div>
         <div><button id="btnAddTarefa">Adicionar tarefa</button></div>
@@ -235,15 +198,11 @@
       <div class="cartao"><div class="titulo-secao">Tarefas</div><div id="itensTarefas"></div></div>
     </div>
 
-    <!-- CONTAS -->
     <div id="abaContas" class="oculto">
       <div class="cartao">
         <div class="titulo-secao">Adicionar conta</div>
         <div class="campo"><input id="ctNome" type="text" placeholder="Nome, ex.: Energia"/></div>
-        <div class="linha-add">
-          <div style="flex:1"><label for="ctValor">Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div>
-          <div style="flex:1"><label for="ctVenc">Vencimento</label><input id="ctVenc" type="date"/></div>
-        </div>
+        <div class="linha-add"><div style="flex:1"><label for="ctValor">Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div><div style="flex:1"><label for="ctVenc">Vencimento</label><input id="ctVenc" type="date"/></div></div>
         <div class="campo" style="margin-top:12px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="ctRecorrente" type="checkbox" style="width:auto"/>Repete todo mês</label></div>
         <div><button id="btnAddConta">Adicionar conta</button></div>
         <div id="avisoConta" class="aviso"></div>
@@ -253,70 +212,49 @@
 
     <div style="text-align:center;margin-top:8px"><button id="btnSair" style="background:none;color:var(--suave);font-weight:400;font-size:13px;padding:4px">Sair</button></div>
 
-    <!-- Modal ritual (sessao) -->
+    <!-- Modal ficha da planta -->
+    <div id="modalPlanta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+      <div style="background:var(--cartao);border-radius:14px;width:100%;max-width:520px;margin:0 auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div><div id="mpCodigo" style="font-size:11px;color:var(--suave)"></div><strong id="mpNome" style="font-size:18px"></strong></div>
+          <button id="btnFecharPlanta" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div id="mpDados" style="margin-bottom:16px"></div>
+        <div id="mpRotinas" style="margin-bottom:16px"></div>
+        <div class="titulo-secao">Linha do tempo</div>
+        <div id="mpEventos"></div>
+      </div>
+    </div>
+
+    <!-- Modal ritual -->
     <div id="modalRitual" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <strong id="modalRitNome">Ritual</strong>
-          <button id="btnFecharModalRitual" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
-        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong id="modalRitNome">Ritual</strong><button id="btnFecharModalRitual" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button></div>
         <div class="titulo-secao">Pauta de hoje</div>
         <div id="modalRitPauta" style="background:var(--fundo);border-radius:10px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap"></div>
-        <div class="campo"><label for="modalRitNotas">Decisões e anotações</label><textarea id="modalRitNotas" placeholder="O que foi decidido? Quais pendências ficaram?"></textarea></div>
-        <div class="campo"><label for="modalRitProxima">Próxima sessão (opcional)</label><input id="modalRitProxima" type="date"/></div>
-        <div style="display:flex;gap:8px">
-          <button id="btnConcluirRitual">Concluir sessão</button>
-          <button id="btnCriarTarefaRitual" class="secundario">+ Criar tarefa</button>
-        </div>
+        <div class="campo"><label for="modalRitNotas">Decisões e anotações</label><textarea id="modalRitNotas" placeholder="O que foi decidido?"></textarea></div>
+        <div class="campo"><label for="modalRitProxima">Próxima sessão</label><input id="modalRitProxima" type="date"/></div>
+        <div style="display:flex;gap:8px"><button id="btnConcluirRitual">Concluir sessão</button><button id="btnCriarTarefaRitual" class="secundario">+ Criar tarefa</button></div>
         <div id="avisoSessao" class="aviso"></div>
       </div>
     </div>
 
-    <!-- Modal seletor de refeicao -->
+    <!-- Modal refeição -->
     <div id="modalRefeicao" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:80vh;overflow-y:auto;padding:20px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-          <strong id="modalRefTitulo">Escolha a refeição</strong>
-          <button id="btnFecharModalRef" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
-        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px"><strong id="modalRefTitulo">Escolha a refeição</strong><button id="btnFecharModalRef" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button></div>
         <div class="campo"><input id="modalRefNomeAvulso" type="text" placeholder="Ou digite um nome avulso…"/></div>
         <div id="modalRefLista"></div>
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button id="btnConfirmarRef">Confirmar</button>
-          <button id="btnLimparSlot" class="secundario">Limpar slot</button>
-        </div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button id="btnConfirmarRef">Confirmar</button><button id="btnLimparSlot" class="secundario">Limpar slot</button></div>
       </div>
     </div>
 
-    <!-- Modal inventario -->
+    <!-- Modal inventário -->
     <div id="modalInventario" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <strong>Inventário rotativo</strong>
-          <button id="btnFecharInventario" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
-        </div>
-        <div id="invPassoLocal">
-          <div class="titulo-secao">Escolha o ambiente</div>
-          <select id="invLocal" class="sel" style="margin-bottom:12px">
-            <option value="">— Selecione —</option>
-            <option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option>
-            <option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option>
-            <option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option>
-            <option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option>
-            <option>Lavanderia</option><option>Casa - Limpeza</option>
-            <option>Casa - Utilitários</option><option>Farmácia / Remédios</option>
-          </select>
-          <button id="btnIniciarInventario">Iniciar inventário</button>
-          <div id="avisoInventario" class="aviso"></div>
-        </div>
-        <div id="invPassoItens" class="oculto">
-          <div class="titulo-secao" id="invSubtitulo"></div>
-          <div id="invItens"></div>
-          <div style="margin-top:16px;display:flex;gap:8px">
-            <button id="btnConcluirInventario">Concluir inventário</button>
-            <button id="btnVoltarLocal" class="secundario">Voltar</button>
-          </div>
-        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong>Inventário rotativo</strong><button id="btnFecharInventario" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button></div>
+        <div id="invPassoLocal"><div class="titulo-secao">Escolha o ambiente</div><select id="invLocal" class="sel" style="margin-bottom:12px"><option value="">— Selecione —</option><option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option><option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option><option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option><option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option><option>Lavanderia</option><option>Casa - Limpeza</option><option>Casa - Utilitários</option><option>Farmácia / Remédios</option></select><button id="btnIniciarInventario">Iniciar inventário</button><div id="avisoInventario" class="aviso"></div></div>
+        <div id="invPassoItens" class="oculto"><div class="titulo-secao" id="invSubtitulo"></div><div id="invItens"></div><div style="margin-top:16px;display:flex;gap:8px"><button id="btnConcluirInventario">Concluir inventário</button><button id="btnVoltarLocal" class="secundario">Voltar</button></div></div>
       </div>
     </div>
   </section>
