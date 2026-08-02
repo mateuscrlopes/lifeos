@@ -320,6 +320,32 @@
       </div>
     </div>
 
+    <!-- Modal histórico de conta -->
+    <div id="modalHistConta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+      <div style="background:var(--cartao);border-radius:14px;width:100%;max-width:520px;margin:0 auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <strong id="hcNome" style="font-size:18px"></strong>
+          <button id="btnFecharHistConta" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div id="hcResumo" style="font-size:13px;color:var(--suave);margin-bottom:16px"></div>
+        <!-- Adicionar mês retroativo -->
+        <div class="cartao" style="margin-bottom:16px;padding:14px">
+          <div class="titulo-secao">Adicionar mês retroativo</div>
+          <div class="linha-add">
+            <div style="flex:1"><label for="hcMes">Mês</label><input id="hcMes" type="month"/></div>
+            <div style="flex:1"><label for="hcValorRetro">Valor (R$)</label><input id="hcValorRetro" type="number" min="0" step="0.01" placeholder="opcional"/></div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="btnAddRetro">Adicionar</button>
+          </div>
+          <div id="avisoRetro" class="aviso"></div>
+        </div>
+        <!-- Historico mensal -->
+        <div class="titulo-secao">Histórico</div>
+        <div id="hcHistorico"></div>
+      </div>
+    </div>
+
     <!-- Modal inventário -->
     <div id="modalInventario" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">

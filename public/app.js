@@ -9,6 +9,7 @@ import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgen
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
 let _filtroAtual='todas';
+let _contaHistAtual=null;
 let _plantaAberta=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
@@ -479,6 +480,143 @@ async function concluirRitual(){
 
 function criarTarefaDoRitual(){el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');trocarAba('tarefas');el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
 
+// --- HISTORICO DE CONTAS ---
+async function abrirHistConta(conta) {
+  _contaHistAtual = conta;
+  el('hcNome').textContent = conta.nome;
+  el('avisoRetro').textContent = '';
+  el('hcValorRetro').value = '';
+  // Preenche o mes atual no campo de retroativo
+  const hoje = new Date();
+  el('hcMes').value = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  await renderizarHistConta(conta);
+  el('modalHistConta').classList.remove('oculto');
+  el('modalHistConta').classList.add('modal-aberto');
+}
+
+async function renderizarHistConta(conta) {
+  // Busca todas as ocorrencias desta conta (mesmo nome, recorrente ou não)
+  const { data: ocorrencias } = await supa
+    .from('contas')
+    .select('id, valor, vencimento, paga, paga_em')
+    .eq('casa_id', usuario.casa_id)
+    .eq('nome', conta.nome)
+    .order('vencimento', { ascending: false })
+    .limit(24);
+
+  const todas = ocorrencias || [];
+  const pagas = todas.filter(c => c.paga);
+  const abertas = todas.filter(c => !c.paga);
+
+  // Resumo
+  const resumoEl = el('hcResumo');
+  if (pagas.length > 0) {
+    const valores = pagas.map(c => c.valor).filter(v => v != null);
+    const media = valores.length ? valores.reduce((a,b)=>a+b,0)/valores.length : null;
+    const ultimo = pagas[0]?.valor;
+    const partes = [`${pagas.length} ${pagas.length===1?'mês pago':'meses pagos'}`];
+    if (media != null) partes.push(`média ${formatarValor(media)}`);
+    if (ultimo != null) partes.push(`último ${formatarValor(ultimo)}`);
+    resumoEl.textContent = partes.join(' · ');
+  } else {
+    resumoEl.textContent = abertas.length > 0 ? 'Nenhum mês pago ainda.' : 'Nenhuma ocorrência encontrada.';
+  }
+
+  // Histórico mensal
+  const area = el('hcHistorico');
+  area.innerHTML = '';
+
+  if (!todas.length) {
+    area.innerHTML = '<div class="vazio">Nenhuma ocorrência encontrada.</div>';
+    return;
+  }
+
+  // Calcular variação entre meses pagos consecutivos
+  let anteriorValor = null;
+  for (const c of todas) {
+    const linha = document.createElement('div');
+    linha.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid var(--linha)';
+
+    const venc = c.vencimento.slice(0,7); // YYYY-MM
+    const [ano, mes] = venc.split('-');
+    const nomesMes = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const mesLabel = `${nomesMes[Number(mes)]} ${ano}`;
+
+    const esq = document.createElement('div');
+    const mesSpan = document.createElement('div');
+    mesSpan.style.cssText = 'font-size:14px;font-weight:600';
+    mesSpan.textContent = mesLabel;
+
+    const statusSpan = document.createElement('div');
+    statusSpan.style.cssText = 'font-size:12px;margin-top:2px';
+    statusSpan.style.color = c.paga ? 'var(--acao)' : 'var(--suave)';
+    statusSpan.textContent = c.paga
+      ? `Pago${c.paga_em ? ' em ' + new Date(c.paga_em).toLocaleDateString('pt-BR') : ''}`
+      : 'Em aberto';
+
+    esq.appendChild(mesSpan);
+    esq.appendChild(statusSpan);
+
+    const dir = document.createElement('div');
+    dir.style.cssText = 'text-align:right';
+
+    const valorSpan = document.createElement('div');
+    valorSpan.style.cssText = 'font-size:15px;font-weight:600';
+    valorSpan.textContent = formatarValor(c.valor);
+    dir.appendChild(valorSpan);
+
+    // Variação em relação ao mês anterior (só para pagos)
+    if (c.paga && c.valor != null && anteriorValor != null) {
+      const diff = c.valor - anteriorValor;
+      const varSpan = document.createElement('div');
+      varSpan.style.cssText = `font-size:11px;${diff > 0 ? 'color:var(--perigo)' : diff < 0 ? 'color:var(--acao)' : 'color:var(--suave)'}`;
+      varSpan.textContent = diff === 0 ? '=' : (diff > 0 ? '▲ ' : '▼ ') + formatarValor(Math.abs(diff));
+      dir.appendChild(varSpan);
+    }
+    if (c.paga && c.valor != null) anteriorValor = c.valor;
+
+    linha.appendChild(esq);
+    linha.appendChild(dir);
+    area.appendChild(linha);
+  }
+}
+
+async function adicionarRetroativo() {
+  if (!_contaHistAtual) return;
+  const mes = el('hcMes').value; // YYYY-MM
+  if (!mes) { aviso('avisoRetro', 'Escolha o mês.', 'erro'); return; }
+  const valor = el('hcValorRetro').value === '' ? null : Number(el('hcValorRetro').value);
+  const vencimento = `${mes}-01`;
+  el('btnAddRetro').disabled = true;
+  // Verifica se já existe uma conta com esse nome e mês
+  const { data: exist } = await supa.from('contas')
+    .select('id').eq('casa_id', usuario.casa_id)
+    .eq('nome', _contaHistAtual.nome)
+    .gte('vencimento', `${mes}-01`).lte('vencimento', `${mes}-28`).limit(1);
+  if (exist && exist.length > 0) {
+    aviso('avisoRetro', 'Já existe uma conta para este mês.', 'erro');
+    el('btnAddRetro').disabled = false;
+    return;
+  }
+  const { error } = await supa.from('contas').insert({
+    casa_id: usuario.casa_id,
+    nome: _contaHistAtual.nome,
+    valor,
+    vencimento,
+    paga: true,
+    paga_em: new Date().toISOString(),
+    recorrente: _contaHistAtual.recorrente,
+    dia_vencimento: _contaHistAtual.dia_vencimento,
+    criada_por: usuario.id,
+  });
+  el('btnAddRetro').disabled = false;
+  if (error) { aviso('avisoRetro', 'Erro ao adicionar.', 'erro'); return; }
+  aviso('avisoRetro', 'Mês adicionado.', 'ok');
+  setTimeout(() => aviso('avisoRetro', ''), 1500);
+  await renderizarHistConta(_contaHistAtual);
+  await carregarContas();
+}
+
 // --- CONTAS ---
 async function carregarContas(){
   const{data:contas,error}=await supa.from('contas').select('id,nome,categoria,valor,vencimento,paga,recorrente,dia_vencimento').eq('casa_id',usuario.casa_id).order('paga').order('vencimento');
@@ -494,8 +632,12 @@ async function carregarContas(){
     const m=document.createElement('span');m.className='meta';m.textContent=`${formatarValor(conta.valor)} · vence ${venc}`;d.appendChild(m);
     const dir=document.createElement('div');dir.className='est-controles';
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
-    if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=()=>pagarConta(conta,btn);dir.appendChild(btn);}
-    l.appendChild(d);l.appendChild(dir);area.appendChild(l);
+    if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
+    l.appendChild(d);l.appendChild(dir);
+    // Clique na linha abre histórico
+    l.style.cursor='pointer';
+    l.onclick=()=>abrirHistConta(conta);
+    area.appendChild(l);
   }
 }
 
@@ -748,6 +890,8 @@ el('npEspecie').addEventListener('change',aoEscolherEspecie);
 el('btnAddTarefa').onclick=adicionarTarefa;
 el('tfRecorrente').addEventListener('change',e=>el('tfRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
 el('btnAddConta').onclick=adicionarConta;
+el('btnFecharHistConta').onclick=()=>{el('modalHistConta').classList.add('oculto');el('modalHistConta').classList.remove('modal-aberto');_contaHistAtual=null;};
+el('btnAddRetro').onclick=adicionarRetroativo;
 el('btnSair').onclick=sair;
 document.querySelectorAll('.aba').forEach(b=>{b.onclick=()=>trocarAba(b.dataset.aba);});
 document.querySelectorAll('.filtro-btn').forEach(b=>{b.onclick=()=>{_filtroAtual=b.dataset.filtro;document.querySelectorAll('.filtro-btn').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');renderizarPlantas();};});

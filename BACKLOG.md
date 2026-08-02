@@ -3,7 +3,7 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Plantas v0.19.0 (cadastro + edição de rotinas)
+Última atualização: 02/08/2026 — Plantas v0.20.0 (cuidado manual, remoção, eventos editáveis)
 
 ---
 
@@ -25,6 +25,7 @@
 | v0.17 | Atalhos Siri: /atalho/lista + /atalho/tarefa + /atalho/estoque | Sim |
 | v0.18 | Módulo Plantas (40 plantas, rotinas, ficha, histórico, card no Hoje) | Sim |
 | v0.19 | Plantas: cadastro de novas plantas + edição de rotinas | Sim |
+| v0.20 | Plantas: cuidado manual, remover planta, editar/remover eventos | Sim |
 | — | UptimeRobot configurado (cold start resolvido) | Sim |
 | — | Teste de concorrência | Sim |
 
@@ -54,8 +55,9 @@
 ### Módulo Plantas — fatias futuras
 - ✅ **Cadastro de novas plantas** — v0.19.0
 - ✅ **Edição de rotinas** — v0.19.0
-- **Registro manual de cuidado** — sem precisar abrir a ficha, registrar qualquer evento
-- **Status falecida/doada** — fluxo de encerramento com histórico preservado
+- ✅ **Registro manual de cuidado** — v0.20.0
+- ✅ **Remover planta** — v0.20.0 (histórico preservado)
+- ✅ **Editar/remover eventos da linha do tempo** — v0.20.0
 
 ### Onda 2 — restante
 - **Estoque Fatia 4** — estimativa por consumo e confiança
