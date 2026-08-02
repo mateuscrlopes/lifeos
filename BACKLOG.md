@@ -3,7 +3,7 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Onda 2 CONCLUÍDA 🎉
+Última atualização: 02/08/2026 — Onda 3 reorganizada, iniciando Estoque Fatia 4
 
 ---
 
@@ -67,23 +67,38 @@
 
 ---
 
-## 🕒 Onda 3 — próxima fase
+## 🕒 Onda 3 — próxima fase (priorizada)
 
-### Integrações
+### 1. Estoque Fatia 4 — estimativa por consumo
+- Taxa de consumo manual por item (ex: "1 rolo/semana")
+- Sistema calcula quando o item vai acabar com base na taxa + quantidade atual
+- Alerta antecipado antes de zerar (ex: "vai acabar em 3 dias")
+- Sugestão automática na lista quando atingir o prazo estimado
+- Decisão: opção A (taxa manual), não depende de histórico acumulado
+
+### 2. Geolocalização
+- Notificação ao chegar em um local cadastrado (ex: mercado, farmácia)
+- Verifica se há itens na lista com categoria correspondente ao local
+- Se houver, envia notificação: "Você está no mercado. Tem X itens na lista."
+- Requer: permissão de geolocalização no iPhone + lógica de matching por categoria
+- Decisão pendente: como associar item da lista a um local? (por categoria? por tag?)
+
+### 3. Tablet da Casa
+- Sempre aberto no LifeOS, tela grande
+- Exibe basicamente a Tela Hoje — sem projetos pessoais, sem tarefas privadas
+- Layout adaptado para tela maior (definir quando o tablet chegar)
+- Mateus vai revisar o layout quando tiver o hardware em mãos
+
+---
+
+## 💭 Onda 4+ — integrações futuras
+
 - **GhuMat** (IA) — resumos, sugestões, perguntas sobre o LifeOS
 - **NFC** (seção 27.1) — tags em objetos e locais
-- **Geolocalização** (seção 26) — chegada ao mercado
 - **Gmail** (seção 28) — leitura automática de boletos
 - **Apple Saúde** (seção 29.3)
-- **Notificações** (seção 14)
-
-### Infraestrutura
-- **Tablet da Casa** (seção 11) — painel doméstico sem projetos pessoais
-- **Refinamento de privacidade** — "pessoal protegido" (seção 8)
-
-### Módulos pendentes
-- **Estoque Fatia 4** — estimativa por consumo e confiança (requer histórico acumulado)
 - **Contas: Gmail** — leitura automática de boletos
+- **Refinamento de privacidade** — "pessoal protegido" (seção 8)
 
 ---
 
