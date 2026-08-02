@@ -37,7 +37,7 @@ async function aoEntrar(){
   if(error||!p){aviso('avisoLogin','Perfil não encontrado.','erro');return;}
   usuario=p;el('quem').textContent=p.nome;
   el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');aviso('avisoLogin','');
-  await Promise.all([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas()]);
+  await Promise.all([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
   ligarTempoReal();
 }
 
@@ -61,7 +61,7 @@ async function sair(){
 }
 
 function trocarAba(qual){
-  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
+  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaPainelProjeto','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
   document.querySelectorAll('.aba').forEach(b=>b.classList.toggle('ativa',b.dataset.aba===qual));
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='plantas'&&usuario)renderizarPlantas();
@@ -663,12 +663,185 @@ async function pagarConta(conta,botao){
 }
 
 // --- TAREFAS ---
+// --- PROJETOS PESSOAIS ---
+let _projetoAtual=null;
+
+const STATUS_PROJ={
+  nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
+  em_andamento:{label:'Em andamento',cor:'#2f6f4f'},
+  concluido:{label:'Concluído',cor:'#3b7dbf'},
+  pausado:{label:'Pausado',cor:'#b8860b'},
+};
+
+async function carregarProjetos(){
+  const{data,error}=await supa.from('projetos')
+    .select('id,nome,descricao,status,frequencia,inicio,termino,criado_em')
+    .eq('usuario_id',usuario.id)
+    .order('criado_em',{ascending:false});
+  const area=el('listaProjetos');area.innerHTML='';
+  const lista=data||[];
+  el('projetosSubtitulo').textContent=`${lista.length} ${lista.length===1?'projeto':'projetos'}`;
+  if(error){area.innerHTML='<div class="cartao"><div class="vazio">Erro ao carregar.</div></div>';return;}
+  if(!lista.length){area.innerHTML='<div class="cartao"><div class="vazio">Nenhum projeto ainda. Crie o primeiro acima.</div></div>';return;}
+  const cartao=document.createElement('div');cartao.className='cartao';
+  for(const p of lista){
+    const div=document.createElement('div');div.className='projeto-card';
+    const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center';
+    const nome=document.createElement('span');nome.style.cssText='font-size:15px;font-weight:600';nome.textContent=p.nome;
+    const badge=document.createElement('span');badge.className='status-proj';
+    const st=STATUS_PROJ[p.status]||STATUS_PROJ.nao_iniciado;
+    badge.style.cssText=`background:${st.cor}20;color:${st.cor}`;badge.textContent=st.label;
+    topo.appendChild(nome);topo.appendChild(badge);div.appendChild(topo);
+    if(p.descricao){const desc=document.createElement('div');desc.style.cssText='font-size:13px;color:var(--suave);margin-top:4px';desc.textContent=p.descricao;div.appendChild(desc);}
+    if(p.inicio||p.termino){
+      const periodo=document.createElement('div');periodo.style.cssText='font-size:12px;color:var(--suave);margin-top:4px';
+      const ini=p.inicio?p.inicio.slice(0,10).split('-').reverse().join('/'):'';
+      const ter=p.termino?p.termino.slice(0,10).split('-').reverse().join('/'):'';
+      periodo.textContent=ini&&ter?`${ini} → ${ter}`:ini||ter;div.appendChild(periodo);
+    }
+    div.onclick=()=>abrirPainelProjeto(p);
+    cartao.appendChild(div);
+  }
+  area.appendChild(cartao);
+}
+
+async function abrirPainelProjeto(projeto){
+  _projetoAtual=projeto;
+  el('ppNome').textContent=projeto.nome;
+  // Esconde a lista e mostra o painel
+  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.add('oculto'));
+  el('abaPainelProjeto').classList.remove('oculto');
+  document.querySelectorAll('.aba').forEach(b=>b.classList.remove('ativa'));
+  // Ocultar inputs
+  el('inputObjetivo').style.display='none';el('inputObjetivo').classList.add('oculto');
+  el('inputTarefaProjeto').style.display='none';el('inputTarefaProjeto').classList.add('oculto');
+  el('inputItemProjeto').style.display='none';el('inputItemProjeto').classList.add('oculto');
+  await renderizarPainelProjeto(projeto);
+}
+
+async function renderizarPainelProjeto(projeto){
+  // Buscar tarefas e calcular progresso
+  const{data:tarefas}=await supa.from('tarefas').select('id,titulo,feita,privado,data').eq('projeto_id',projeto.id).order('feita').order('criada_em',{ascending:true});
+  const todas=tarefas||[];
+  const concluidas=todas.filter(t=>t.feita).length;
+  const pct=todas.length?Math.round(concluidas/todas.length*100):0;
+  // Progresso
+  const ppDiv=el('ppProgresso');ppDiv.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <div class="titulo-secao" style="margin:0">Progresso</div>
+      <strong style="font-size:22px;color:var(--acao)">${pct}%</strong>
+    </div>
+    <div class="progresso-barra"><div class="progresso-fill" style="width:${pct}%"></div></div>
+    <div style="font-size:12px;color:var(--suave);margin-top:4px">${concluidas} de ${todas.length} tarefas concluídas</div>
+    ${projeto.descricao?`<div style="font-size:13px;color:var(--suave);margin-top:8px">${projeto.descricao}</div>`:''}
+    ${projeto.inicio||projeto.termino?`<div style="font-size:12px;color:var(--suave);margin-top:4px">${projeto.inicio?projeto.inicio.slice(0,10).split('-').reverse().join('/'):'?'} → ${projeto.termino?projeto.termino.slice(0,10).split('-').reverse().join('/'):'?'}</div>`:''}
+  `;
+  // Objetivos
+  const{data:objs}=await supa.from('projeto_objetivos').select('id,descricao').eq('projeto_id',projeto.id).order('ordem');
+  const ppObj=el('ppObjetivos');ppObj.innerHTML='';
+  if(!objs||!objs.length){ppObj.innerHTML='<div class="vazio" style="padding:12px 0">Nenhum objetivo ainda.</div>';}
+  for(const o of(objs||[])){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha);font-size:14px';
+    const txt=document.createElement('span');txt.textContent='• '+o.descricao;
+    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    rem.onclick=async()=>{await supa.from('projeto_objetivos').delete().eq('id',o.id);await renderizarPainelProjeto(_projetoAtual);};
+    linha.appendChild(txt);linha.appendChild(rem);ppObj.appendChild(linha);
+  }
+  // Tarefas do projeto
+  const ppTar=el('ppTarefas');ppTar.innerHTML='';
+  if(!todas.length){ppTar.innerHTML='<div class="vazio" style="padding:12px 0">Nenhuma tarefa ainda.</div>';}
+  for(const t of todas){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--linha)';
+    const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.textContent=t.feita?'✓':'';
+    ch.onclick=async()=>{
+      await supa.from('tarefas').update({feita:!t.feita,feita_por:!t.feita?usuario.id:null,feita_em:!t.feita?new Date().toISOString():null}).eq('id',t.id);
+      await renderizarPainelProjeto(_projetoAtual);
+    };
+    const info=document.createElement('div');info.style.flex='1';
+    const nome=document.createElement('div');nome.style.cssText='font-size:14px'+(t.feita?';text-decoration:line-through;color:var(--suave)':'');nome.textContent=t.titulo;
+    const meta=document.createElement('div');meta.style.cssText='font-size:11px;color:var(--suave)';
+    const partes=[];if(t.privado)partes.push('🔒 Privada');if(t.data)partes.push(t.data.slice(0,10).split('-').reverse().join('/'));
+    meta.textContent=partes.join(' · ');
+    info.appendChild(nome);if(partes.length)info.appendChild(meta);
+    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    rem.onclick=async()=>{await supa.from('tarefas').delete().eq('id',t.id);await renderizarPainelProjeto(_projetoAtual);};
+    linha.appendChild(ch);linha.appendChild(info);linha.appendChild(rem);ppTar.appendChild(linha);
+  }
+  // Itens do projeto
+  const{data:itens}=await supa.from('projeto_itens').select('id,nome,estoque_id').eq('projeto_id',projeto.id);
+  const ppIt=el('ppItens');ppIt.innerHTML='';
+  if(!itens||!itens.length){ppIt.innerHTML='<div class="vazio" style="padding:12px 0">Nenhum item vinculado.</div>';}
+  for(const it of(itens||[])){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha);font-size:14px';
+    const txt=document.createElement('span');txt.textContent=it.nome;
+    const dir=document.createElement('div');dir.style.cssText='display:flex;gap:6px;align-items:center';
+    const btnLista=document.createElement('button');btnLista.textContent='→ Lista';btnLista.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
+    btnLista.onclick=async()=>{await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome:it.nome,status:'pendente',origem:'projeto',criado_por:usuario.id});await carregarLista();};
+    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    rem.onclick=async()=>{await supa.from('projeto_itens').delete().eq('id',it.id);await renderizarPainelProjeto(_projetoAtual);};
+    dir.appendChild(btnLista);dir.appendChild(rem);linha.appendChild(txt);linha.appendChild(dir);ppIt.appendChild(linha);
+  }
+}
+
+async function salvarProjeto(){
+  const nome=el('projNome').value.trim();
+  if(!nome){aviso('avisoProjeto','Digite o nome.','erro');return;}
+  el('btnSalvarProjeto').disabled=true;
+  const payload={
+    usuario_id:usuario.id,nome,descricao:el('projDesc').value.trim()||null,
+    status:el('projStatus').value,frequencia:el('projFreq').value,
+    inicio:el('projInicio').value||null,termino:el('projTermino').value||null,
+  };
+  let error;
+  if(_projetoAtual&&el('modalProjetoTitulo').textContent==='Editar projeto'){
+    ({error}=await supa.from('projetos').update(payload).eq('id',_projetoAtual.id));
+    if(!error){_projetoAtual={..._projetoAtual,...payload};}
+  }else{
+    const{error:e}=await supa.from('projetos').insert(payload);error=e;
+  }
+  el('btnSalvarProjeto').disabled=false;
+  if(error){aviso('avisoProjeto','Erro ao salvar.','erro');return;}
+  el('modalProjeto').classList.add('oculto');el('modalProjeto').classList.remove('modal-aberto');
+  await carregarProjetos();
+  if(_projetoAtual&&el('abaPainelProjeto')&&!el('abaPainelProjeto').classList.contains('oculto')){
+    el('ppNome').textContent=_projetoAtual.nome;
+    await renderizarPainelProjeto(_projetoAtual);
+  }
+}
+
+async function removerProjeto(){
+  if(!_projetoAtual)return;
+  if(!confirm(`Remover o projeto "${_projetoAtual.nome}"?
+Todas as tarefas e objetivos vinculados serão removidos.`))return;
+  await supa.from('projetos').delete().eq('id',_projetoAtual.id);
+  _projetoAtual=null;
+  trocarAba('projetos');
+  await carregarProjetos();
+}
+
+function toggleInputProjeto(id){
+  const el2=el(id);const vis=el2.style.display==='none'||el2.classList.contains('oculto');
+  el2.style.display=vis?'block':'none';
+  if(vis)el2.classList.remove('oculto');else el2.classList.add('oculto');
+}
+
 async function carregarTarefas(){
-  const{data:tarefas,error}=await supa.from('tarefas').select('id,titulo,responsavel,prioridade,data,feita,recorrente,recorrencia').eq('casa_id',usuario.casa_id).order('feita').order('data',{nullsFirst:true});
+  const{data:tarefas,error}=await supa.from('tarefas').select('id,titulo,responsavel,prioridade,data,feita,recorrente,recorrencia,privado,projeto_id').eq('casa_id',usuario.casa_id).order('feita').order('data',{nullsFirst:true});
   const area=el('itensTarefas');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro.</div>';return;}
-  if(!tarefas||!tarefas.length){area.innerHTML='<div class="vazio">Nenhuma tarefa.</div>';return;}
-  for(const t of tarefas){
+  // Filtra: só tarefas gerais (sem projeto), e privadas só do usuario logado
+  const gerais=(tarefas||[]).filter(t=>(t.projeto_id===null||t.projeto_id===undefined)&&(!t.privado||t.responsavel===usuario.nome.toLowerCase()||t.responsavel==='ambos'));
+  if(!gerais.length){area.innerHTML='<div class="vazio">Nenhuma tarefa.</div>';return;}
+  // Separa privadas das publicas
+  const publicas=gerais.filter(t=>!t.privado);
+  const privadas=gerais.filter(t=>t.privado);
+  const todasOrdenadas=[...publicas,...privadas];
+  if(privadas.length){
+    const sep=document.createElement('div');sep.style.cssText='font-size:11px;color:var(--suave);text-transform:uppercase;letter-spacing:.05em;padding:12px 4px 4px;border-bottom:1px solid var(--linha);margin-bottom:4px';
+    // Será inserido antes das privadas — tratamos abaixo
+  }
+  const tarefas2=todasOrdenadas;
+  for(const t of tarefas2){
     const l=document.createElement('div');l.className='item'+(t.feita?' concluida':'');
     const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.textContent=t.feita?'✓':'';ch.onclick=()=>alternarTarefa(t);
     const d=document.createElement('div');d.className='desc';d.style.cssText='flex:1;margin-left:12px';
@@ -890,6 +1063,64 @@ el('npEspecie').addEventListener('change',aoEscolherEspecie);
 el('btnAddTarefa').onclick=adicionarTarefa;
 el('tfRecorrente').addEventListener('change',e=>el('tfRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
 el('btnAddConta').onclick=adicionarConta;
+// Projetos
+el('btnNovoProjeto').onclick=()=>{
+  _projetoAtual=null;
+  el('modalProjetoTitulo').textContent='Novo projeto';
+  el('projNome').value='';el('projDesc').value='';el('projInicio').value='';el('projTermino').value='';
+  el('projStatus').value='nao_iniciado';el('projFreq').value='semanal';
+  aviso('avisoProjeto','');
+  el('modalProjeto').classList.remove('oculto');el('modalProjeto').classList.add('modal-aberto');
+};
+el('btnFecharModalProjeto').onclick=()=>{el('modalProjeto').classList.add('oculto');el('modalProjeto').classList.remove('modal-aberto');};
+el('btnSalvarProjeto').onclick=salvarProjeto;
+el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;trocarAba('projetos');};
+el('btnEditarProjeto').onclick=()=>{
+  if(!_projetoAtual)return;
+  el('modalProjetoTitulo').textContent='Editar projeto';
+  el('projNome').value=_projetoAtual.nome||'';
+  el('projDesc').value=_projetoAtual.descricao||'';
+  el('projInicio').value=_projetoAtual.inicio||'';
+  el('projTermino').value=_projetoAtual.termino||'';
+  el('projStatus').value=_projetoAtual.status||'nao_iniciado';
+  el('projFreq').value=_projetoAtual.frequencia||'semanal';
+  aviso('avisoProjeto','');
+  el('modalProjeto').classList.remove('oculto');el('modalProjeto').classList.add('modal-aberto');
+};
+el('btnRemoverProjeto').onclick=removerProjeto;
+el('btnAddObjetivo').onclick=()=>toggleInputProjeto('inputObjetivo');
+el('btnSalvarObjetivo').onclick=async()=>{
+  const txt=el('novoObjetivo').value.trim();if(!txt)return;
+  await supa.from('projeto_objetivos').insert({projeto_id:_projetoAtual.id,descricao:txt,ordem:0});
+  el('novoObjetivo').value='';toggleInputProjeto('inputObjetivo');
+  await renderizarPainelProjeto(_projetoAtual);
+};
+el('btnAddTarefaProjeto').onclick=()=>toggleInputProjeto('inputTarefaProjeto');
+el('btnSalvarTarefaProjeto').onclick=async()=>{
+  const titulo=el('novaTarefaProjeto').value.trim();
+  if(!titulo){aviso('avisoTarefaProjeto','Digite o título.','erro');return;}
+  const privado=el('tfpPriv').value==='true';
+  await supa.from('tarefas').insert({
+    casa_id:usuario.casa_id,titulo,responsavel:usuario.nome.toLowerCase(),
+    data:el('tfpData').value||null,feita:false,
+    privado,projeto_id:_projetoAtual.id,criada_por:usuario.id,
+  });
+  el('novaTarefaProjeto').value='';el('tfpData').value='';
+  toggleInputProjeto('inputTarefaProjeto');
+  await renderizarPainelProjeto(_projetoAtual);
+};
+el('btnAddItemProjeto').onclick=()=>toggleInputProjeto('inputItemProjeto');
+el('btnSalvarItemProjeto').onclick=async()=>{
+  const nome=el('novoItemProjeto').value.trim();if(!nome)return;
+  await supa.from('projeto_itens').insert({projeto_id:_projetoAtual.id,nome,estoque_id:null});
+  if(el('itemProjetoParaLista').checked){
+    await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome,status:'pendente',origem:'projeto',criado_por:usuario.id});
+    await carregarLista();
+  }
+  el('novoItemProjeto').value='';el('itemProjetoParaLista').checked=false;
+  toggleInputProjeto('inputItemProjeto');
+  await renderizarPainelProjeto(_projetoAtual);
+};
 el('btnFecharHistConta').onclick=()=>{el('modalHistConta').classList.add('oculto');el('modalHistConta').classList.remove('modal-aberto');_contaHistAtual=null;};
 el('btnAddRetro').onclick=adicionarRetroativo;
 el('btnSair').onclick=sair;

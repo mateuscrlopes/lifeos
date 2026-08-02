@@ -3,7 +3,7 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Plantas v0.20.0 (cuidado manual, remoção, eventos editáveis)
+Última atualização: 02/08/2026 — Contas v0.21.0 (histórico mensal + variação + retroativo)
 
 ---
 
@@ -26,6 +26,7 @@
 | v0.18 | Módulo Plantas (40 plantas, rotinas, ficha, histórico, card no Hoje) | Sim |
 | v0.19 | Plantas: cadastro de novas plantas + edição de rotinas | Sim |
 | v0.20 | Plantas: cuidado manual, remover planta, editar/remover eventos | Sim |
+| v0.21 | Contas: histórico mensal, variação mês a mês, retroativo manual | Sim |
 | — | UptimeRobot configurado (cold start resolvido) | Sim |
 | — | Teste de concorrência | Sim |
 
@@ -61,8 +62,20 @@
 
 ### Onda 2 — restante
 - **Estoque Fatia 4** — estimativa por consumo e confiança
-- **Contas avançadas** — Gmail, histórico, variação mês a mês
-- **Projetos pessoais** (seção 24)
+- ✅ **Contas: histórico e variação** — v0.21.0
+- **Contas: Gmail** — leitura automática de boletos (Onda 3)
+- **Projetos pessoais** — ver descrição detalhada abaixo
+- **Projetos pessoais** (seção 24) — decisão arquitetural pendente antes de implementar
+  - Aba privada por usuário (não aparece no tablet)
+  - Projetos genéricos com nome, objetivo e cronograma
+  - Divididos em etapas com prazo (dias/semanas)
+  - Etapas viram tarefas do módulo existente (responsável = dono do projeto)
+  - Check diário/semanal de execução → gera histórico de evolução
+  - Integração com estoque: item de consumo do projeto (ex: whey) → quando check acumula consumo → sugere reposição na lista
+  - Perguntas a responder antes de implementar:
+    1. Um projeto tem data de início e fim, ou é contínuo?
+    2. A evolução é calculada por etapas concluídas ou por tempo?
+    3. O check diário é uma tarefa recorrente ou um controle separado?
 
 ---
 

@@ -86,6 +86,12 @@
     .evento-linha{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px;}
     .evento-linha:last-child{border-bottom:none;}
     .evento-data{color:var(--suave);font-size:11px;min-width:70px;}
+    .progresso-barra{height:8px;background:var(--linha);border-radius:999px;overflow:hidden;margin:8px 0;}
+    .progresso-fill{height:100%;background:var(--acao);border-radius:999px;transition:width .3s;}
+    .projeto-card{padding:14px;border-bottom:1px solid var(--linha);cursor:pointer;}
+    .projeto-card:last-child{border-bottom:none;}
+    .projeto-card:hover{background:var(--fundo);}
+    .status-proj{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;}
   </style>
 </head>
 <body>
@@ -107,6 +113,7 @@
       <button class="aba" data-aba="estoque">Estoque</button>
       <button class="aba" data-aba="cardapio">Cardápio</button>
       <button class="aba" data-aba="plantas">🌿</button>
+      <button class="aba" data-aba="projetos">Projetos</button>
       <button class="aba" data-aba="rituais">Rituais</button>
       <button class="aba" data-aba="tarefas">Tarefas</button>
       <button class="aba" data-aba="contas">Contas</button>
@@ -174,6 +181,75 @@
         <button class="filtro-btn" data-filtro="outros">Outros</button>
       </div>
       <div id="listaPlantas"></div>
+    </div>
+
+    <!-- PROJETOS PESSOAIS -->
+    <div id="abaProjetos" class="oculto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:13px;color:var(--suave)" id="projetosSubtitulo">Seus projetos</span>
+        <button id="btnNovoProjeto" style="font-size:13px;padding:7px 14px">+ Novo projeto</button>
+      </div>
+      <div id="listaProjetos"></div>
+    </div>
+
+    <!-- PAINEL DO PROJETO -->
+    <div id="abaPainelProjeto" class="oculto">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <button id="btnVoltarProjetos" class="secundario" style="font-size:13px;padding:7px 12px">← Voltar</button>
+        <strong id="ppNome" style="font-size:18px"></strong>
+      </div>
+      <!-- Progresso -->
+      <div class="cartao" id="ppProgresso"></div>
+      <!-- Objetivos -->
+      <div class="cartao">
+        <div class="card-hoje-titulo">
+          <div class="titulo-secao">Objetivos</div>
+          <button id="btnAddObjetivo" class="secundario" style="font-size:12px;padding:5px 10px">+ Objetivo</button>
+        </div>
+        <div id="ppObjetivos"></div>
+        <div id="inputObjetivo" class="oculto" style="display:none;margin-top:8px">
+          <div class="linha-add"><input id="novoObjetivo" type="text" placeholder="Ex.: Treinar 4x por semana"/><button id="btnSalvarObjetivo" style="font-size:13px;padding:8px 12px">Salvar</button></div>
+        </div>
+      </div>
+      <!-- Tarefas do projeto -->
+      <div class="cartao">
+        <div class="card-hoje-titulo">
+          <div class="titulo-secao">Tarefas</div>
+          <button id="btnAddTarefaProjeto" class="secundario" style="font-size:12px;padding:5px 10px">+ Tarefa</button>
+        </div>
+        <div id="ppTarefas"></div>
+        <div id="inputTarefaProjeto" class="oculto" style="display:none;margin-top:8px">
+          <div class="campo"><input id="novaTarefaProjeto" type="text" placeholder="Título da tarefa"/></div>
+          <div class="linha-add" style="margin-bottom:8px">
+            <div style="flex:1"><label for="tfpData">Data (opcional)</label><input id="tfpData" type="date"/></div>
+            <div style="flex:1"><label for="tfpPriv">Visibilidade</label>
+              <select id="tfpPriv" class="sel"><option value="false">Pública</option><option value="true">Privada</option></select>
+            </div>
+          </div>
+          <button id="btnSalvarTarefaProjeto" style="font-size:13px">Salvar tarefa</button>
+          <div id="avisoTarefaProjeto" class="aviso"></div>
+        </div>
+      </div>
+      <!-- Itens / lista de compras -->
+      <div class="cartao">
+        <div class="card-hoje-titulo">
+          <div class="titulo-secao">Itens necessários</div>
+          <button id="btnAddItemProjeto" class="secundario" style="font-size:12px;padding:5px 10px">+ Item</button>
+        </div>
+        <div id="ppItens"></div>
+        <div id="inputItemProjeto" class="oculto" style="display:none;margin-top:8px">
+          <div class="linha-add">
+            <input id="novoItemProjeto" type="text" placeholder="Ex.: Whey, Shampoo"/>
+            <button id="btnSalvarItemProjeto" style="font-size:13px;padding:8px 12px">Adicionar</button>
+          </div>
+          <div style="margin-top:6px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input id="itemProjetoParaLista" type="checkbox" style="width:auto"/>Adicionar também à lista de compras agora</label></div>
+        </div>
+      </div>
+      <!-- Ações do projeto -->
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="btnEditarProjeto" class="secundario" style="font-size:13px">Editar projeto</button>
+        <button id="btnRemoverProjeto" style="background:none;color:var(--perigo);border:1px solid var(--perigo);font-size:13px;padding:8px 14px">Remover</button>
+      </div>
     </div>
 
     <div id="abaRituais" class="oculto">
@@ -317,6 +393,41 @@
         <div class="campo"><input id="modalRefNomeAvulso" type="text" placeholder="Ou digite um nome avulso…"/></div>
         <div id="modalRefLista"></div>
         <div style="margin-top:12px;display:flex;gap:8px"><button id="btnConfirmarRef">Confirmar</button><button id="btnLimparSlot" class="secundario">Limpar slot</button></div>
+      </div>
+    </div>
+
+    <!-- Modal novo/editar projeto -->
+    <div id="modalProjeto" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+      <div style="background:var(--cartao);border-radius:14px;width:100%;max-width:520px;margin:0 auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong id="modalProjetoTitulo">Novo projeto</strong>
+          <button id="btnFecharModalProjeto" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="campo"><label for="projNome">Nome</label><input id="projNome" type="text" placeholder="Ex.: Projeto Verão 2027"/></div>
+        <div class="campo"><label for="projDesc">Descrição (opcional)</label><input id="projDesc" type="text" placeholder="Objetivo geral"/></div>
+        <div class="linha-add">
+          <div style="flex:1"><label for="projInicio">Início</label><input id="projInicio" type="date"/></div>
+          <div style="flex:1"><label for="projTermino">Término previsto</label><input id="projTermino" type="date"/></div>
+        </div>
+        <div class="linha-add" style="margin-top:8px">
+          <div style="flex:1"><label for="projStatus">Status</label>
+            <select id="projStatus" class="sel">
+              <option value="nao_iniciado">Não iniciado</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="concluido">Concluído</option>
+              <option value="pausado">Pausado</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="projFreq">Acompanhamento</label>
+            <select id="projFreq" class="sel">
+              <option value="diario">Diário</option>
+              <option value="semanal" selected>Semanal</option>
+              <option value="mensal">Mensal</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:16px"><button id="btnSalvarProjeto">Salvar projeto</button></div>
+        <div id="avisoProjeto" class="aviso"></div>
       </div>
     </div>
 
