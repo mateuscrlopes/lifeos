@@ -3,11 +3,11 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Contas v0.21.0 (histórico mensal + variação + retroativo)
+Última atualização: 02/08/2026 — Onda 2 CONCLUÍDA 🎉
 
 ---
 
-## ✅ Concluído
+## ✅ Concluído (Onda 1 + Onda 2)
 
 | Versão | Entrega | Testado |
 |--------|---------|---------|
@@ -23,76 +23,71 @@
 | v0.15 | Alimentação (cardápio + lista de ingredientes) | Sim |
 | v0.16 | Rituais (pauta + sessões + histórico) — Onda 1 fechada | Sim |
 | v0.17 | Atalhos Siri: /atalho/lista + /atalho/tarefa + /atalho/estoque | Sim |
-| v0.18 | Módulo Plantas (40 plantas, rotinas, ficha, histórico, card no Hoje) | Sim |
+| v0.18 | Módulo Plantas (40 plantas, rotinas, ficha, histórico) | Sim |
 | v0.19 | Plantas: cadastro de novas plantas + edição de rotinas | Sim |
 | v0.20 | Plantas: cuidado manual, remover planta, editar/remover eventos | Sim |
 | v0.21 | Contas: histórico mensal, variação mês a mês, retroativo manual | Sim |
-| — | UptimeRobot configurado (cold start resolvido) | Sim |
+| v0.22 | Projetos pessoais: privado por usuário, objetivos, tarefas, itens, progresso — Onda 2 fechada | Sim |
+| — | UptimeRobot (cold start resolvido) | Sim |
 | — | Teste de concorrência | Sim |
 
 ---
 
-## 📋 Módulo Plantas — o que foi entregue (v0.18)
+## 📋 O que foi entregue na Onda 2
 
-**Banco de dados:**
-- `especies` — 23 espécies cadastradas
-- `plantas` — 40 plantas reais (PL-001 a PL-040) com código, etiqueta, cômodo, posição, método, perfil hídrico
-- `planta_rotinas` — uma rotina por planta (Verificar e regar / Trocar a água / Fazer imersão)
-- `planta_eventos` — evento de cadastro registrado para cada planta
-- `planta_fotos` — tabela criada, interface de upload futura
-- `tarefas` ganhou `planta_id` e `rotina_id` (opcionais)
+**Atalhos Siri (v0.17)**
+- Endpoint `/atalho/lista` — adicionar item à lista por voz
+- Endpoint `/atalho/tarefa` — criar tarefa por voz
+- Endpoint `/atalho/estoque` — marcar item como acabou por voz
+- Autenticação por token por usuário
 
-**Tela (aba 🌿):**
-- Lista agrupada por cômodo com filtros (Todas / Vencidas / Hoje / Em breve / Sala / Outros)
-- Ponto colorido por perfil hídrico (azul=baixo, verde=alto, laranja=médio)
-- Botão "Cuidar" nas plantas com rotina vencida ou vencendo hoje
-- Ficha individual com dados, rotinas e linha do tempo de eventos
-- Card na Tela Hoje mostrando quantas plantas precisam de cuidado
+**Módulo Plantas (v0.18–0.20)**
+- 40 plantas reais cadastradas com espécies e rotinas
+- Lista agrupada por cômodo com filtros de urgência
+- Ficha individual com dados, rotinas e linha do tempo
+- Cuidado manual por método (rega, troca de água, imersão, adubação, poda)
+- Cadastro de novas plantas e espécies
+- Edição de intervalos de rotina
+- Remover planta (histórico preservado)
+- Editar e remover eventos da linha do tempo
+- Card na Tela Hoje
 
----
+**Contas avançadas (v0.21)**
+- Histórico mensal por conta (clicando na conta)
+- Variação mês a mês (▲/▼)
+- Retroativo manual por mês
 
-## 🕒 Próximos passos sugeridos
-
-### Módulo Plantas — fatias futuras
-- ✅ **Cadastro de novas plantas** — v0.19.0
-- ✅ **Edição de rotinas** — v0.19.0
-- ✅ **Registro manual de cuidado** — v0.20.0
-- ✅ **Remover planta** — v0.20.0 (histórico preservado)
-- ✅ **Editar/remover eventos da linha do tempo** — v0.20.0
-
-### Onda 2 — restante
-- **Estoque Fatia 4** — estimativa por consumo e confiança
-- ✅ **Contas: histórico e variação** — v0.21.0
-- **Contas: Gmail** — leitura automática de boletos (Onda 3)
-- **Projetos pessoais** — ver descrição detalhada abaixo
-- **Projetos pessoais** (seção 24) — decisão arquitetural pendente antes de implementar
-  - Aba privada por usuário (não aparece no tablet)
-  - Projetos genéricos com nome, objetivo e cronograma
-  - Divididos em etapas com prazo (dias/semanas)
-  - Etapas viram tarefas do módulo existente (responsável = dono do projeto)
-  - Check diário/semanal de execução → gera histórico de evolução
-  - Integração com estoque: item de consumo do projeto (ex: whey) → quando check acumula consumo → sugere reposição na lista
-  - Perguntas a responder antes de implementar:
-    1. Um projeto tem data de início e fim, ou é contínuo?
-    2. A evolução é calculada por etapas concluídas ou por tempo?
-    3. O check diário é uma tarefa recorrente ou um controle separado?
+**Projetos pessoais (v0.22)**
+- Privacidade por usuário (Mateus só vê os seus)
+- Objetivos (metas descritivas)
+- Tarefas com visibilidade pública/privada
+- Itens necessários com envio para lista de compras
+- Progresso em % por tarefas concluídas
+- Separação clara entre tarefas gerais e tarefas de projeto
 
 ---
 
-## 💭 Futuro / integrações
+## 🕒 Onda 3 — próxima fase
 
-- **GhuMat** (IA) — Onda 3+
-- **NFC** (seção 27.1)
-- **Geolocalização** (seção 26)
-- **Gmail** (seção 28)
+### Integrações
+- **GhuMat** (IA) — resumos, sugestões, perguntas sobre o LifeOS
+- **NFC** (seção 27.1) — tags em objetos e locais
+- **Geolocalização** (seção 26) — chegada ao mercado
+- **Gmail** (seção 28) — leitura automática de boletos
 - **Apple Saúde** (seção 29.3)
 - **Notificações** (seção 14)
-- **Tablet da Casa** (seção 11)
+
+### Infraestrutura
+- **Tablet da Casa** (seção 11) — painel doméstico sem projetos pessoais
 - **Refinamento de privacidade** — "pessoal protegido" (seção 8)
+
+### Módulos pendentes
+- **Estoque Fatia 4** — estimativa por consumo e confiança (requer histórico acumulado)
+- **Contas: Gmail** — leitura automática de boletos
 
 ---
 
 ## Dívidas técnicas
 
 - Arquivos temporários em `public/`: `locais.js`, `patch_html.txt`, `patch_app.js`, `index_patch.js` podem ser removidos
-- README.md pode ser atualizado para refletir v0.18.0
+- README.md desatualizado (ainda descreve a fundação)
