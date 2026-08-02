@@ -91,6 +91,30 @@
 
 ---
 
+## 🕒 Onda 3 — restante
+
+### 2. Geolocalização
+- Usar campo `local` já existente no estoque como referência de onde comprar
+- Cadastrar locais físicos (ex: "Supermercado", "Farmácia") e mapear para os locais do estoque
+- Atalho de automação iOS dispara ao chegar no endereço cadastrado
+- Endpoint `/atalho/chegada` verifica itens da lista que vêm de produtos daquele local
+- Envia notificação: "Você está no Supermercado. Tem X itens na lista."
+- Decisão tomada: usar `local` do estoque como chave de associação
+
+### 3. Tablet da Casa
+- Aguardando hardware (chega essa semana)
+- Layout a definir quando Mateus tiver o tablet em mãos
+- Conteúdo: basicamente a Tela Hoje sem projetos pessoais e sem tarefas privadas
+
+### 4. Aba de Configurações (registrado para não perder)
+- Muitas coisas estão hardcoded no código hoje:
+  - Lista de locais do estoque
+  - Frequências de acompanhamento
+  - Tokens dos Atalhos Siri
+  - Categorias e labels
+- Ideia: aba de configurações para editar essas coisas sem mexer no código
+- Escopo a definir antes de construir
+
 ## 💭 Onda 4+ — integrações futuras
 
 - **GhuMat** (IA) — resumos, sugestões, perguntas sobre o LifeOS
