@@ -62,6 +62,76 @@ export function registrarRotasAtalhos(app) {
     res.send(`Tarefa "${t}" criada para ${quem}.`);
   });
 
+  // POST /atalho/chegada
+  // Chamado pelo Atalho de automacao iOS ao chegar num local.
+  // Body: { token, latitude, longitude }
+  // Retorna texto com os itens da lista relevantes para aquele local.
+  app.post('/atalho/chegada', async (req, res) => {
+    const { token, latitude, longitude } = req.body ?? {};
+    if (!latitude || !longitude) return res.status(400).send('Coordenadas não informadas.');
+    const usuario = await autenticarToken(token);
+    if (!usuario) return res.status(401).send('Token inválido.');
+
+    const supa = createClient(config.supabaseUrl, config.supabaseServiceKey);
+
+    // Busca todos os locais com seus enderecos e categorias
+    const { data: locais } = await supa
+      .from('locais_compra')
+      .select('id, nome, locais_compra_enderecos(latitude,longitude,raio_metros), locais_compra_categorias(local_estoque)')
+      .eq('casa_id', usuario.casa_id)
+      .eq('ativo', true);
+
+    if (!locais || !locais.length) return res.send('Nenhum local cadastrado.');
+
+    // Calcula distancia em metros (formula de Haversine simplificada)
+    function distanciaMetros(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // Identifica em qual local o usuario esta
+    let localDetectado = null;
+    for (const local of locais) {
+      for (const end of (local.locais_compra_enderecos || [])) {
+        if (!end.latitude || !end.longitude) continue;
+        const dist = distanciaMetros(Number(latitude), Number(longitude), Number(end.latitude), Number(end.longitude));
+        if (dist <= (end.raio_metros || 200)) {
+          localDetectado = local;
+          break;
+        }
+      }
+      if (localDetectado) break;
+    }
+
+    if (!localDetectado) return res.send('Você não está próximo de nenhum local cadastrado.');
+
+    // Pega as categorias desse local
+    const categorias = (localDetectado.locais_compra_categorias || []).map(c => c.local_estoque);
+    if (!categorias.length) return res.send(`Você está no ${localDetectado.nome}, mas sem categorias mapeadas.`);
+
+    // Busca itens pendentes na lista que vêm de produtos com local nessas categorias
+    const { data: itensLista } = await supa
+      .from('lista_compras')
+      .select('nome, estoque_id, estoque(local)')
+      .eq('casa_id', usuario.casa_id)
+      .eq('status', 'pendente');
+
+    const relevantes = (itensLista || []).filter(item => {
+      const localItem = item.estoque?.local;
+      return localItem && categorias.includes(localItem);
+    });
+
+    if (!relevantes.length) {
+      return res.send(`Você está no ${localDetectado.nome}. Nenhum item da lista é daqui.`);
+    }
+
+    const nomes = relevantes.map(i => i.nome).join(', ');
+    return res.send(`${localDetectado.nome}: ${relevantes.length} ${relevantes.length === 1 ? 'item' : 'itens'} na lista — ${nomes}`);
+  });
+
   // POST /atalho/estoque — marca item do estoque como acabou
   // Body: { token, item }
   app.post('/atalho/estoque', async (req, res) => {

@@ -109,11 +109,13 @@
 ### 4. Aba de Configurações (registrado para não perder)
 - Muitas coisas estão hardcoded no código hoje:
   - Lista de locais do estoque
+  - Locais físicos de compra e seus mapeamentos de categoria
   - Frequências de acompanhamento
   - Tokens dos Atalhos Siri
   - Categorias e labels
 - Ideia: aba de configurações para editar essas coisas sem mexer no código
 - Escopo a definir antes de construir
+- **Nota:** ao implementar, migrar os locais físicos e mapeamentos que hoje estão no SQL (016) para serem editáveis pela interface
 
 ## 💭 Onda 4+ — integrações futuras
 
