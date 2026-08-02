@@ -306,10 +306,7 @@ async function abrirFichaPlanta(planta){
       else{await registrarCuidadoManual(supa,usuario,planta,tipo);}
       await atualizarPlantas();
       // Recarrega eventos na ficha
-      const{data:evs}=await supa.from('planta_eventos').select('tipo,data,notas').eq('planta_id',planta.id).order('data',{ascending:false}).limit(20);
-      const evArea=el('mpEventos');evArea.innerHTML='';
-      const TIPO_LABEL={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.',alteracao_status:'🔁 Status'};
-      for(const ev of(evs||[])){const div=document.createElement('div');div.className='evento-linha';div.innerHTML=`<span class="evento-data">${new Date(ev.data).toLocaleDateString('pt-BR')}</span><span>${TIPO_LABEL[ev.tipo]||ev.tipo}${ev.notas?' — '+ev.notas:''}</span>`;evArea.appendChild(div);}
+      if(_plantaAberta)await renderizarEventosPlanta(_plantaAberta);
     };
     acoes.appendChild(btn);
   }
@@ -339,16 +336,7 @@ async function abrirFichaPlanta(planta){
   }
 
   // Eventos (linha do tempo)
-  const{data:eventos}=await supa.from('planta_eventos').select('tipo,data,notas').eq('planta_id',planta.id).order('data',{ascending:false}).limit(20);
-  const evArea=el('mpEventos');evArea.innerHTML='';
-  const TIPO_LABEL={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.'};
-  for(const ev of(eventos||[])){
-    const div=document.createElement('div');div.className='evento-linha';
-    const data=new Date(ev.data).toLocaleDateString('pt-BR');
-    div.innerHTML=`<span class="evento-data">${data}</span><span>${TIPO_LABEL[ev.tipo]||ev.tipo}${ev.notas?' — '+ev.notas:''}</span>`;
-    evArea.appendChild(div);
-  }
-  if(!eventos||!eventos.length)evArea.innerHTML='<div class="vazio">Nenhum evento registrado ainda.</div>';
+  await renderizarEventosPlanta(planta);
 
   el('modalPlanta').classList.remove('oculto');el('modalPlanta').classList.add('modal-aberto');
 }
@@ -606,6 +594,44 @@ async function carregarHoje(){
 
 function criarCartaoHoje(titulo,dest){const c=document.createElement('div');c.className='cartao card-clicavel';const cab=document.createElement('div');cab.className='card-hoje-titulo';const t=document.createElement('div');t.className='titulo-secao';t.textContent=titulo;const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';cab.appendChild(t);cab.appendChild(ab);const corpo=document.createElement('div');c.appendChild(cab);c.appendChild(corpo);c.onclick=()=>trocarAba(dest);return{cartao:c,corpo};}
 function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='m-meta';d.textContent=[meta,valor].filter(Boolean).join('  ');l.appendChild(e);l.appendChild(d);return l;}
+
+// --- EVENTOS DA LINHA DO TEMPO ---
+const TIPO_LABEL_EV={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.',alteracao_status:'🔁 Status',muda_retirada:'🌱 Muda'};
+
+async function renderizarEventosPlanta(planta){
+  const{data:eventos}=await supa.from('planta_eventos').select('id,tipo,data,notas').eq('planta_id',planta.id).order('data',{ascending:false}).limit(30);
+  const evArea=el('mpEventos');evArea.innerHTML='';
+  if(!eventos||!eventos.length){evArea.innerHTML='<div class="vazio">Nenhum evento registrado ainda.</div>';return;}
+  for(const ev of eventos){
+    const div=document.createElement('div');div.className='evento-linha';div.style.alignItems='flex-start';
+    const data=document.createElement('span');data.className='evento-data';data.textContent=new Date(ev.data).toLocaleDateString('pt-BR');
+    const corpo=document.createElement('div');corpo.style.cssText='flex:1;font-size:13px';
+    const tipoLabel=TIPO_LABEL_EV[ev.tipo]||ev.tipo;
+    const notaSpan=document.createElement('span');notaSpan.textContent=tipoLabel+(ev.notas?' — '+ev.notas:'');
+    corpo.appendChild(notaSpan);
+    // Botoes editar e remover (só para tipos editáveis)
+    const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:6px;margin-top:4px';
+    if(ev.tipo==='observacao'||ev.notas){
+      const btnEdit=document.createElement('button');btnEdit.textContent='Editar';btnEdit.style.cssText='background:none;color:var(--acao);font-size:11px;padding:2px 6px;font-weight:400;border:1px solid var(--acao);border-radius:6px';
+      btnEdit.onclick=async()=>{
+        const novaNota=prompt('Editar observação:',ev.notas||'');
+        if(novaNota===null)return;
+        await supa.from('planta_eventos').update({notas:novaNota}).eq('id',ev.id);
+        await renderizarEventosPlanta(planta);
+      };
+      acoes.appendChild(btnEdit);
+    }
+    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);font-size:13px;padding:2px 6px;font-weight:400';
+    btnDel.onclick=async()=>{
+      if(!confirm('Remover este evento da linha do tempo?'))return;
+      await supa.from('planta_eventos').delete().eq('id',ev.id);
+      await renderizarEventosPlanta(planta);
+    };
+    acoes.appendChild(btnDel);
+    corpo.appendChild(acoes);
+    div.appendChild(data);div.appendChild(corpo);evArea.appendChild(div);
+  }
+}
 
 // --- NOVA PLANTA ---
 async function abrirModalNovaPlanta(){
