@@ -22,6 +22,7 @@ export function registrarRotasAtalhos(app) {
   // POST /atalho/lista — adiciona item a lista de compras
   app.post('/atalho/lista', async (req, res) => {
     const { token, item } = req.body ?? {};
+    res.setHeader('Content-Type','text/plain; charset=utf-8');
     if (!item || String(item).trim() === '') return res.status(400).send('Item nao informado.');
     const usuario = await autenticarToken(token);
     if (!usuario) return res.status(401).send('Token invalido.');
@@ -43,6 +44,7 @@ export function registrarRotasAtalhos(app) {
   // Body: { token, titulo, responsavel? ('mateus'|'ghustavo'|'ambos') }
   app.post('/atalho/tarefa', async (req, res) => {
     const { token, titulo, responsavel } = req.body ?? {};
+    res.setHeader('Content-Type','text/plain; charset=utf-8');
     if (!titulo || String(titulo).trim() === '') return res.status(400).send('Titulo nao informado.');
     const usuario = await autenticarToken(token);
     if (!usuario) return res.status(401).send('Token invalido.');
@@ -68,6 +70,7 @@ export function registrarRotasAtalhos(app) {
   // Retorna texto com os itens da lista relevantes para aquele local.
   app.post('/atalho/chegada', async (req, res) => {
     const { token, latitude, longitude } = req.body ?? {};
+    res.setHeader('Content-Type','text/plain; charset=utf-8');
     if (!latitude || !longitude) return res.status(400).send('Coordenadas não informadas.');
     const usuario = await autenticarToken(token);
     if (!usuario) return res.status(401).send('Token inválido.');
@@ -136,6 +139,7 @@ export function registrarRotasAtalhos(app) {
   // Body: { token, item }
   app.post('/atalho/estoque', async (req, res) => {
     const { token, item } = req.body ?? {};
+    res.setHeader('Content-Type','text/plain; charset=utf-8');
     if (!item || String(item).trim() === '') return res.status(400).send('Item nao informado.');
     const usuario = await autenticarToken(token);
     if (!usuario) return res.status(401).send('Token invalido.');
