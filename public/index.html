@@ -86,6 +86,7 @@
     .evento-linha{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px;}
     .evento-linha:last-child{border-bottom:none;}
     .evento-data{color:var(--suave);font-size:11px;min-width:70px;}
+    .badge-consumo{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600;color:#fff;margin-left:6px;}
     .progresso-barra{height:8px;background:var(--linha);border-radius:999px;overflow:hidden;margin:8px 0;}
     .progresso-fill{height:100%;background:var(--acao);border-radius:999px;transition:width .3s;}
     .projeto-card{padding:14px;border-bottom:1px solid var(--linha);cursor:pointer;}
@@ -132,6 +133,19 @@
         <div class="campo"><input id="estNome" type="text" placeholder="Nome"/></div>
         <div class="campo"><label for="estLocal">Local</label><select id="estLocal" class="sel"><option value="">— Sem local —</option><option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option><option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option><option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option><option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option><option>Lavanderia</option><option>Casa - Limpeza</option><option>Casa - Utilitários</option><option>Farmácia / Remédios</option></select></div>
         <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="estCritico" type="checkbox" style="width:auto"/>Item crítico</label></div>
+        <div class="campo">
+          <label>Consumo estimado (opcional)</label>
+          <div class="linha-add">
+            <input id="estTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1"/>
+            <select id="estTaxaPeriodo" class="sel" style="flex:1">
+              <option value="">— por —</option>
+              <option value="dia">por dia</option>
+              <option value="semana">por semana</option>
+              <option value="mes">por mês</option>
+            </select>
+            <div style="flex:1"><label for="estAlertaDias" style="font-size:11px">Avisar com</label><div style="display:flex;align-items:center;gap:4px"><input id="estAlertaDias" type="number" min="1" value="7" style="width:52px;padding:8px"/><span style="font-size:12px;color:var(--suave);white-space:nowrap">dias de antecedência</span></div></div>
+          </div>
+        </div>
         <div class="campo"><label for="estTipo">Tipo</label><select id="estTipo" class="sel"><option value="contavel">Unidade contável</option><option value="peso_volume">Peso / Volume</option><option value="nivel_visual">Nível visual</option></select></div>
         <div id="estCamposNum"><div class="linha-add"><div style="flex:1"><label for="estQtd">Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div><div style="flex:1"><label for="estMin">Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div></div><div class="campo"><label for="estUnidade">Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div></div>
         <div id="estCamposNivel" class="oculto"><div class="linha-add"><div style="flex:1"><label for="estNivelAtual">Nível atual</label><select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select></div><div style="flex:1"><label for="estNivelMin">Alertar abaixo de</label><select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select></div></div></div>

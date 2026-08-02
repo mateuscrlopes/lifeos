@@ -4,6 +4,7 @@ import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
+import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
 
 let supa=null,usuario=null,canalTempoReal=null;
@@ -77,7 +78,7 @@ async function carregarLista(){
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome;
-    if(item.origem==='sugestao_estoque'||item.origem==='cardapio'){const t=document.createElement('span');t.className='badge';t.style.background=item.origem==='cardapio'?'#5b6e9e':'#8a6d3b';t.style.cssText+='margin-left:8px;font-size:10px';t.textContent=item.origem==='cardapio'?'cardápio':'sugestão estoque';n.appendChild(t);}
+    if(item.origem==='sugestao_estoque'||item.origem==='cardapio'||item.origem==='sugestao_consumo'){const t=document.createElement('span');t.className='badge';t.style.background=item.origem==='cardapio'?'#5b6e9e':item.origem==='sugestao_consumo'?'#b23c3c':'#8a6d3b';t.style.cssText+='margin-left:8px;font-size:10px';t.textContent=item.origem==='cardapio'?'cardápio':item.origem==='sugestao_consumo'?'consumo':'sugestão estoque';n.appendChild(t);}
     d.appendChild(n);
     const ps=[];if(item.quantidade)ps.push(item.quantidade+(item.unidade?' '+item.unidade:''));if(item.categoria)ps.push(item.categoria);
     if(ps.length){const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);}
@@ -110,16 +111,29 @@ async function comprar(item,botao){
 function normalizarNome(n){return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ');}
 
 async function carregarEstoque(){
-  const{data:itens,error}=await supa.from('estoque').select('id,nome,categoria,tipo,quantidade,unidade,minimo,nivel,minimo_nivel,local,critico').eq('casa_id',usuario.casa_id).order('nome');
+  const{data:itens,error}=await supa.from('estoque').select('id,nome,categoria,tipo,quantidade,unidade,minimo,nivel,minimo_nivel,local,critico,taxa_consumo,taxa_periodo,alerta_dias').eq('casa_id',usuario.casa_id).order('nome');
   const area=el('itensEstoque');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro.</div>';return;}
   if(!itens||!itens.length){area.innerHTML='<div class="vazio">Nada no estoque ainda.</div>';return;}
+  // Verifica consumo critico em background (nao bloqueia a renderizacao)
+  verificarConsumoEstoque(itens);
   for(const item of itens){
     const status=calcularStatus(item.quantidade,item.minimo,item.tipo,item.nivel,item.minimo_nivel);const info=rotuloStatus(status);
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome+(item.critico?' ⭐':'');d.appendChild(n);
-    const m=document.createElement('span');m.className='meta';m.textContent=(item.local?item.local+' · ':'')+descricaoQuantidade(item);d.appendChild(m);
+    const m=document.createElement('span');m.className='meta';
+    let metaTxt=(item.local?item.local+' · ':'')+descricaoQuantidade(item);
+    const lc=labelConsumo(item);if(lc)metaTxt+=' · '+lc;
+    m.textContent=metaTxt;d.appendChild(m);
+    // Badge de consumo crítico
+    const sc=statusConsumo(item);
+    if(sc==='critico'||sc==='atencao'){
+      const bc=document.createElement('span');bc.className='badge-consumo';
+      bc.style.background=sc==='critico'?'#b23c3c':'#b8860b';
+      bc.textContent=sc==='critico'?'Acabando':'Atenção';
+      n.appendChild(bc);
+    }
     const dir=document.createElement('div');dir.className='est-controles';
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(item.tipo==='nivel_visual'){const sel=document.createElement('select');sel.className='sel';sel.style.cssText='width:auto;padding:6px 8px;font-size:13px';NIVEIS_VISUAL.forEach(nv=>{const o=document.createElement('option');o.value=nv;o.textContent=ROTULO_NIVEL[nv];if(nv===item.nivel)o.selected=true;sel.appendChild(o);});sel.onchange=()=>ajustarNivel(item,sel.value);dir.appendChild(sel);}
@@ -128,13 +142,22 @@ async function carregarEstoque(){
   }
 }
 
+// Verifica consumo critico e gera sugestoes na lista (chamado ao carregar estoque)
+async function verificarConsumoEstoque(itens){
+  const{data:pendentes}=await supa.from('lista_compras').select('nome').eq('casa_id',usuario.casa_id).eq('status','pendente');
+  const gerados=await gerarSugestoesConsumo(supa,usuario,itens||[],pendentes||[]);
+  if(gerados>0)await carregarLista();
+}
+
 async function adicionarEstoque(){
   const nome=el('estNome').value.trim(),tipo=el('estTipo').value;
   if(!nome){aviso('avisoEstoque','Digite o nome.','erro');return;}
   const{data:ex}=await supa.from('estoque').select('nome').eq('casa_id',usuario.casa_id);
   const nn=normalizarNome(nome),dup=(ex||[]).find(i=>normalizarNome(i.nome)===nn);
   if(dup){aviso('avisoEstoque',`Já existe "${dup.nome}".`,'erro');return;}
-  let payload={casa_id:usuario.casa_id,nome,tipo,atualizado_por:usuario.id,local:el('estLocal').value||null,critico:el('estCritico').checked};
+  const taxaC=el('estTaxaConsumo').value?Number(el('estTaxaConsumo').value):null;
+  const taxaP=el('estTaxaPeriodo').value||null;
+  let payload={casa_id:usuario.casa_id,nome,tipo,atualizado_por:usuario.id,local:el('estLocal').value||null,critico:el('estCritico').checked,taxa_consumo:taxaC,taxa_periodo:taxaP,alerta_dias:Number(el('estAlertaDias').value)||7};
   if(tipo==='contavel'||tipo==='peso_volume'){const quantidade=Number(el('estQtd').value),minimo=Number(el('estMin').value);if(!isFinite(quantidade)||!isFinite(minimo)){aviso('avisoEstoque','Números inválidos.','erro');return;}payload={...payload,quantidade,minimo,unidade:el('estUnidade').value.trim()||(tipo==='peso_volume'?'g':'unidades')};}
   else if(tipo==='nivel_visual'){payload={...payload,nivel:el('estNivelAtual').value,minimo_nivel:el('estNivelMin').value,quantidade:0,minimo:0};}
   el('btnAddEstoque').disabled=true;
@@ -142,7 +165,7 @@ async function adicionarEstoque(){
   if(data)supa.from('eventos').insert({tipo:'estoque_item_criado',entidade:'estoque',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome});
   el('btnAddEstoque').disabled=false;
   if(error){aviso('avisoEstoque','Erro.','erro');return;}
-  el('estNome').value='';el('estTipo').value='contavel';el('estQtd').value='0';el('estMin').value='1';el('estUnidade').value='';el('estLocal').value='';el('estCritico').checked=false;
+  el('estNome').value='';el('estTipo').value='contavel';el('estQtd').value='0';el('estMin').value='1';el('estUnidade').value='';el('estLocal').value='';el('estCritico').checked=false;el('estTaxaConsumo').value='';el('estTaxaPeriodo').value='';el('estAlertaDias').value='7';
   el('estCamposNum').classList.remove('oculto');el('estCamposNivel').classList.add('oculto');
   aviso('avisoEstoque','Adicionado.','ok');setTimeout(()=>aviso('avisoEstoque',''),1500);
   if(data){await sincronizarItem(supa,usuario,data);await carregarLista();}await carregarEstoque();
