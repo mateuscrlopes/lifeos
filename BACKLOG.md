@@ -3,7 +3,7 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Onda 3 reorganizada, iniciando Estoque Fatia 4
+Última atualização: 02/08/2026 — Estoque Fatia 4 concluída (v0.23.0)
 
 ---
 
@@ -28,6 +28,7 @@
 | v0.20 | Plantas: cuidado manual, remover planta, editar/remover eventos | Sim |
 | v0.21 | Contas: histórico mensal, variação mês a mês, retroativo manual | Sim |
 | v0.22 | Projetos pessoais: privado por usuário, objetivos, tarefas, itens, progresso — Onda 2 fechada | Sim |
+| v0.23 | Estoque Fatia 4: taxa de consumo, estimativa de dias, sugestão automática na lista | Sim |
 | — | UptimeRobot (cold start resolvido) | Sim |
 | — | Teste de concorrência | Sim |
 
@@ -69,12 +70,11 @@
 
 ## 🕒 Onda 3 — próxima fase (priorizada)
 
-### 1. Estoque Fatia 4 — estimativa por consumo
+### ✅ 1. Estoque Fatia 4 — estimativa por consumo (v0.23.0)
 - Taxa de consumo manual por item (ex: "1 rolo/semana")
 - Sistema calcula quando o item vai acabar com base na taxa + quantidade atual
-- Alerta antecipado antes de zerar (ex: "vai acabar em 3 dias")
-- Sugestão automática na lista quando atingir o prazo estimado
-- Decisão: opção A (taxa manual), não depende de histórico acumulado
+- Badge "Atenção" / "Acabando" no item
+- Sugestão automática na lista com etiqueta "consumo" quando atingir o alerta
 
 ### 2. Geolocalização
 - Notificação ao chegar em um local cadastrado (ex: mercado, farmácia)
