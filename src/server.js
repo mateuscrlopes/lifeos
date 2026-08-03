@@ -1,12 +1,14 @@
-// server.js — LifeOS v0.17.0
+// server.js — LifeOS v0.27.0 + Gumate Lab
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
 import { registrarRotasAtalhos } from './atalhos.js';
+import { registrarRotasGumate } from './gumate/index.js';
 import { buscarClima } from './clima.js';
 
 const app = express();
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(express.json({ limit: '32kb' }));
 app.use(express.static('public'));
 
 app.get('/config', (req, res) => {
@@ -21,7 +23,7 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
-    versao: '0.26.0',
+    versao: '0.27.0',
   });
 });
 
@@ -39,6 +41,10 @@ app.get('/clima', async (req, res) => {
 // Rotas dos Atalhos do iOS (Siri).
 registrarRotasAtalhos(app);
 
+// Rotas do assistente de voz da Casa.
+registrarRotasGumate(app);
+
 app.listen(config.porta, '0.0.0.0', () => {
-  console.log(`\nLifeOS v0.17.0 — porta ${config.porta}\n`);
+  console.log(`\nLifeOS v0.27.0 — porta ${config.porta}`);
+  console.log(`Gumate: ${config.gumateEnabled ? 'habilitado' : 'desabilitado'}\n`);
 });
