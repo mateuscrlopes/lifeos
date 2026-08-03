@@ -325,6 +325,29 @@
       </div>
     </div>
 
+    <!-- Modal editar ritual -->
+    <div id="modalEditarRitual" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
+      <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong>Editar ritual</strong>
+          <button id="btnFecharEditarRitual" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="campo"><label for="erNome">Nome</label><input id="erNome" type="text"/></div>
+        <div class="campo"><label for="erFreq">Frequência</label>
+          <select id="erFreq" class="sel">
+            <option value="semanal">Semanal</option>
+            <option value="mensal">Mensal</option>
+            <option value="bimestral">Bimestral</option>
+            <option value="livre">Livre</option>
+          </select>
+        </div>
+        <div class="campo"><label for="erPauta">Pauta padrão</label><textarea id="erPauta" placeholder="Tópicos, um por linha"></textarea></div>
+        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="erPrivado" type="checkbox" style="width:auto"/>Conteúdo privado</label></div>
+        <div style="margin-top:12px"><button id="btnSalvarEditarRitual">Salvar alterações</button></div>
+        <div id="avisoEditarRitual" class="aviso"></div>
+      </div>
+    </div>
+
     <!-- Modal editar planta -->
     <div id="modalEditarPlanta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">

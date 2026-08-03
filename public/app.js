@@ -573,6 +573,7 @@ async function gerarListaCardapio(){
 
 // --- RITUAIS ---
 let _ritualAtual=null;
+let _ritualEditando=null;
 async function carregarRituais(){
   const{data:rituais,error}=await supa.from('rituais').select('id,nome,frequencia,pauta,privado,ritual_sessoes(id,realizado_em,proxima_em)').eq('casa_id',usuario.casa_id).order('nome');
   const area=el('listaRituais');area.innerHTML='';
@@ -588,8 +589,9 @@ async function carregarRituais(){
     const m=document.createElement('div');m.className='ritual-meta';const partes=[freqLabel[r.frequencia]||r.frequencia];if(ultima)partes.push(`última: ${new Date(ultima.realizado_em).toLocaleDateString('pt-BR')}`);if(proxima)partes.push(`próxima: ${proxima.split('-').reverse().join('/')}`);m.textContent=partes.join(' · ');esq.appendChild(m);
     const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;align-items:center';
     const btnAb=document.createElement('button');btnAb.textContent='Iniciar';btnAb.style.cssText='padding:7px 12px;font-size:13px';btnAb.onclick=()=>abrirModalRitual(r);
-    const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r.id);
-    btns.appendChild(btnAb);btns.appendChild(btnRem);topo.appendChild(esq);topo.appendChild(btns);div.appendChild(topo);
+    const btnEditR=document.createElement('button');btnEditR.textContent='✏️';btnEditR.title='Editar';btnEditR.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditR.onclick=()=>abrirEditarRitual(r);
+    const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r);
+    btns.appendChild(btnAb);btns.appendChild(btnEditR);btns.appendChild(btnRem);topo.appendChild(esq);topo.appendChild(btns);div.appendChild(topo);
     if(sessoes.length){const hist=document.createElement('div');hist.style.marginTop='8px';sessoes.slice(0,3).forEach(s=>{const h=document.createElement('div');h.className='historico-item';h.textContent=new Date(s.realizado_em).toLocaleDateString('pt-BR');hist.appendChild(h);});div.appendChild(hist);}
     area.appendChild(div);
   }
@@ -606,7 +608,41 @@ async function salvarRitual(){
   aviso('avisoRitual','Ritual salvo.','ok');setTimeout(()=>aviso('avisoRitual',''),1500);await carregarRituais();
 }
 
-async function removerRitual(id){await supa.from('rituais').delete().eq('id',id);await carregarRituais();}
+async function removerRitual(r){
+  if(!confirm(`Excluir o ritual "${r.nome}"?`))return;
+  const{error}=await supa.from('rituais').delete().eq('id',r.id);
+  if(!error){
+    supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'rituais',registro_id:r.id,dados:r});
+    await carregarRituais();
+  }
+}
+
+function abrirEditarRitual(r){
+  _ritualEditando=r;
+  el('erNome').value=r.nome||'';
+  el('erFreq').value=r.frequencia||'semanal';
+  el('erPauta').value=r.pauta||'';
+  el('erPrivado').checked=!!r.privado;
+  aviso('avisoEditarRitual','');
+  el('modalEditarRitual').classList.remove('oculto');el('modalEditarRitual').classList.add('modal-aberto');
+}
+
+async function salvarEditarRitual(){
+  if(!_ritualEditando)return;
+  const nome=el('erNome').value.trim();
+  if(!nome){aviso('avisoEditarRitual','Digite o nome.','erro');return;}
+  el('btnSalvarEditarRitual').disabled=true;
+  const{error}=await supa.from('rituais').update({
+    nome,frequencia:el('erFreq').value,
+    pauta:el('erPauta').value.trim()||null,
+    privado:el('erPrivado').checked,
+  }).eq('id',_ritualEditando.id);
+  el('btnSalvarEditarRitual').disabled=false;
+  if(error){aviso('avisoEditarRitual','Erro ao salvar.','erro');return;}
+  el('modalEditarRitual').classList.add('oculto');el('modalEditarRitual').classList.remove('modal-aberto');
+  _ritualEditando=null;
+  await carregarRituais();
+}
 
 function abrirModalRitual(ritual){
   _ritualAtual=ritual;el('modalRitNome').textContent=ritual.nome;el('modalRitPauta').textContent=ritual.pauta||'Sem pauta definida.';el('modalRitNotas').value='';
@@ -1363,6 +1399,8 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarRitual').onclick=()=>{el('modalEditarRitual').classList.add('oculto');el('modalEditarRitual').classList.remove('modal-aberto');_ritualEditando=null;};
+el('btnSalvarEditarRitual').onclick=salvarEditarRitual;
 el('btnFecharEditarPlanta').onclick=()=>{el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');_plantaEditando=null;};
 el('btnSalvarEditarPlanta').onclick=salvarEditarPlanta;
 el('btnEditarPlanta').onclick=abrirEditarPlanta;
