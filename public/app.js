@@ -12,6 +12,7 @@ let _plantasCache=[];
 let _filtroAtual='todas';
 let _contaHistAtual=null;
 let _plantaAberta=null;
+let _plantaEditando=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
 function aviso(id,t,tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
@@ -448,6 +449,45 @@ async function abrirFichaPlanta(planta){
   await renderizarEventosPlanta(planta);
 
   el('modalPlanta').classList.remove('oculto');el('modalPlanta').classList.add('modal-aberto');
+}
+
+function abrirEditarPlanta(){
+  if(!_plantaAberta)return;
+  _plantaEditando=_plantaAberta;
+  const p=_plantaEditando;
+  el('epTitulo').textContent=`Editar ${p.especies?.nome_popular||p.codigo}`;
+  el('epApelido').value=p.nome_personalizado||'';
+  el('epComodo').value=p.comodo||'Sala';
+  el('epPosicao').value=p.posicao||'';
+  el('epMetodo').value=p.metodo_cultivo||'substrato';
+  el('epPerfil').value=p.perfil_hidrico||'medio';
+  el('epObs').value=p.observacoes||'';
+  aviso('avisoEditarPlanta','');
+  el('modalEditarPlanta').classList.remove('oculto');el('modalEditarPlanta').classList.add('modal-aberto');
+}
+
+async function salvarEditarPlanta(){
+  if(!_plantaEditando)return;
+  el('btnSalvarEditarPlanta').disabled=true;
+  const perfil=el('epPerfil').value;
+  const corMap={alto:'verde',medio:'laranja',baixo:'azul'};
+  const{error}=await supa.from('plantas').update({
+    nome_personalizado:el('epApelido').value.trim()||null,
+    comodo:el('epComodo').value,
+    posicao:el('epPosicao').value.trim()||null,
+    metodo_cultivo:el('epMetodo').value,
+    perfil_hidrico:perfil,
+    cor_etiqueta:corMap[perfil]||null,
+    observacoes:el('epObs').value.trim()||null,
+  }).eq('id',_plantaEditando.id);
+  el('btnSalvarEditarPlanta').disabled=false;
+  if(error){aviso('avisoEditarPlanta','Erro ao salvar.','erro');return;}
+  el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');
+  // Atualiza o cache e reabre a ficha com dados novos
+  await atualizarPlantas();
+  const atualizada=_plantasCache.find(p=>p.id===_plantaEditando.id);
+  _plantaEditando=null;
+  if(atualizada)await abrirFichaPlanta(atualizada);
 }
 
 // --- CARDAPIO ---
@@ -1323,6 +1363,9 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarPlanta').onclick=()=>{el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');_plantaEditando=null;};
+el('btnSalvarEditarPlanta').onclick=salvarEditarPlanta;
+el('btnEditarPlanta').onclick=abrirEditarPlanta;
 el('btnFecharEditarLista').onclick=()=>{el('modalEditarLista').classList.add('oculto');el('modalEditarLista').classList.remove('modal-aberto');_listaEditando=null;};
 el('btnSalvarEditarLista').onclick=salvarEditarLista;
 el('btnFecharEditarEstoque').onclick=()=>{el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');_estoqueEditando=null;};

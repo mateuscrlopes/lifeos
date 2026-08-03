@@ -317,10 +317,51 @@
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="mpAcoes"></div>
         <div id="mpRotinas" style="margin-bottom:16px"></div>
         <div style="margin-bottom:16px">
+          <button id="btnEditarPlanta" class="secundario" style="font-size:13px">Editar ficha</button>
           <button id="btnRemoverPlanta" style="background:none;color:var(--perigo);border:1px solid var(--perigo);padding:7px 14px;font-size:13px">Remover planta</button>
         </div>
         <div class="titulo-secao">Linha do tempo</div>
         <div id="mpEventos"></div>
+      </div>
+    </div>
+
+    <!-- Modal editar planta -->
+    <div id="modalEditarPlanta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
+      <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong id="epTitulo">Editar planta</strong>
+          <button id="btnFecharEditarPlanta" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="campo"><label for="epApelido">Nome personalizado (opcional)</label><input id="epApelido" type="text" placeholder="Ex.: Jiboia da janela"/></div>
+        <div class="linha-add">
+          <div style="flex:1"><label for="epComodo">Cômodo</label>
+            <select id="epComodo" class="sel">
+              <option value="Sala">Sala</option><option value="Cozinha">Cozinha</option>
+              <option value="Banheiro">Banheiro</option><option value="Escritório">Escritório</option>
+              <option value="Varanda">Varanda</option><option value="Quarto">Quarto</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="epPosicao">Posição</label><input id="epPosicao" type="text" placeholder="Ex.: Mesa, Chão"/></div>
+        </div>
+        <div class="linha-add" style="margin-top:8px">
+          <div style="flex:1"><label for="epMetodo">Método</label>
+            <select id="epMetodo" class="sel">
+              <option value="substrato">Substrato</option>
+              <option value="agua">Água</option>
+              <option value="kokedama">Kokedama</option>
+            </select>
+          </div>
+          <div style="flex:1"><label for="epPerfil">Perfil hídrico</label>
+            <select id="epPerfil" class="sel">
+              <option value="alto">Alto (Verde)</option>
+              <option value="medio">Médio (Laranja)</option>
+              <option value="baixo">Baixo (Azul)</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo" style="margin-top:8px"><label for="epObs">Observações</label><input id="epObs" type="text"/></div>
+        <div style="margin-top:12px"><button id="btnSalvarEditarPlanta">Salvar alterações</button></div>
+        <div id="avisoEditarPlanta" class="aviso"></div>
       </div>
     </div>
 
