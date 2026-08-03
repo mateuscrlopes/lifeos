@@ -445,6 +445,49 @@
       </div>
     </div>
 
+    <!-- Modal editar item de estoque -->
+    <div id="modalEditarEstoque" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
+      <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong>Editar item</strong>
+          <button id="btnFecharEditarEstoque" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="campo"><label for="eeNome">Nome</label><input id="eeNome" type="text"/></div>
+        <div class="campo"><label for="eeLocal">Local</label>
+          <select id="eeLocal" class="sel">
+            <option value="">— Sem local —</option>
+            <option>Cozinha - Não perecíveis</option><option>Cozinha - Hortifruti</option>
+            <option>Cozinha - Carnes</option><option>Cozinha - Café da manhã</option>
+            <option>Cozinha - Temperos</option><option>Banheiro - Higiene pessoal</option>
+            <option>Banheiro - Cosméticos</option><option>Banheiro - Limpeza</option>
+            <option>Lavanderia</option><option>Casa - Limpeza</option>
+            <option>Casa - Utilitários</option><option>Farmácia / Remédios</option>
+          </select>
+        </div>
+        <div id="eeQtdBox">
+          <div class="linha-add">
+            <div style="flex:1"><label for="eeMin">Mínimo</label><input id="eeMin" type="number" min="0" step="any"/></div>
+            <div style="flex:1"><label for="eeUnidade">Unidade</label><input id="eeUnidade" type="text"/></div>
+          </div>
+        </div>
+        <div class="campo"><label>Consumo estimado</label>
+          <div class="linha-add">
+            <input id="eeTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1"/>
+            <select id="eeTaxaPeriodo" class="sel" style="flex:1">
+              <option value="">— por —</option>
+              <option value="dia">por dia</option>
+              <option value="semana">por semana</option>
+              <option value="mes">por mês</option>
+            </select>
+            <div style="flex:1;display:flex;align-items:center;gap:4px"><input id="eeAlertaDias" type="number" min="1" style="width:52px;padding:8px"/><span style="font-size:11px;color:var(--suave)">dias</span></div>
+          </div>
+        </div>
+        <div class="campo"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="eeCritico" type="checkbox" style="width:auto"/>Item crítico</label></div>
+        <div style="margin-top:12px"><button id="btnSalvarEditarEstoque">Salvar alterações</button></div>
+        <div id="avisoEditarEstoque" class="aviso"></div>
+      </div>
+    </div>
+
     <!-- Modal editar conta -->
     <div id="modalEditarConta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:20px">

@@ -38,7 +38,7 @@ async function aoEntrar(){
   if(error||!p){aviso('avisoLogin','Perfil não encontrado.','erro');return;}
   usuario=p;el('quem').textContent=p.nome;
   el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');aviso('avisoLogin','');
-  await Promise.all([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
+  await Promise.allSettled([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
   ligarTempoReal();
 }
 
@@ -138,6 +138,9 @@ async function carregarEstoque(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(item.tipo==='nivel_visual'){const sel=document.createElement('select');sel.className='sel';sel.style.cssText='width:auto;padding:6px 8px;font-size:13px';NIVEIS_VISUAL.forEach(nv=>{const o=document.createElement('option');o.value=nv;o.textContent=ROTULO_NIVEL[nv];if(nv===item.nivel)o.selected=true;sel.appendChild(o);});sel.onchange=()=>ajustarNivel(item,sel.value);dir.appendChild(sel);}
     else{const p=item.tipo==='peso_volume'?100:1;const bm=document.createElement('button');bm.textContent='−';bm.onclick=()=>ajustarEstoque(item,-p);const q=document.createElement('span');q.className='est-qtd';q.textContent=item.quantidade;const bp=document.createElement('button');bp.textContent='+';bp.onclick=()=>ajustarEstoque(item,p);dir.appendChild(bm);dir.appendChild(q);dir.appendChild(bp);}
+    const btnEditE=document.createElement('button');btnEditE.textContent='✏️';btnEditE.title='Editar';btnEditE.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditE.onclick=()=>abrirEditarEstoque(item);
+    const btnDelE=document.createElement('button');btnDelE.textContent='×';btnDelE.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelE.onclick=()=>removerEstoque(item);
+    dir.appendChild(btnEditE);dir.appendChild(btnDelE);
     l.appendChild(d);l.appendChild(dir);area.appendChild(l);
   }
 }
@@ -186,6 +189,47 @@ async function ajustarNivel(item,novoNivel){
 
 // --- INVENTARIO ---
 let _invItens=[],_invLocal='';
+function abrirEditarEstoque(item){
+  _estoqueEditando=item;
+  el('eeNome').value=item.nome||'';
+  el('eeLocal').value=item.local||'';
+  el('eeMin').value=item.minimo??'';
+  el('eeUnidade').value=item.unidade||'';
+  el('eeTaxaConsumo').value=item.taxa_consumo??'';
+  el('eeTaxaPeriodo').value=item.taxa_periodo||'';
+  el('eeAlertaDias').value=item.alerta_dias??7;
+  el('eeCritico').checked=!!item.critico;
+  el('eeQtdBox').style.display=item.tipo==='nivel_visual'?'none':'block';
+  aviso('avisoEditarEstoque','');
+  el('modalEditarEstoque').classList.remove('oculto');el('modalEditarEstoque').classList.add('modal-aberto');
+}
+
+async function salvarEditarEstoque(){
+  if(!_estoqueEditando)return;
+  const nome=el('eeNome').value.trim();
+  if(!nome){aviso('avisoEditarEstoque','Digite o nome.','erro');return;}
+  el('btnSalvarEditarEstoque').disabled=true;
+  const taxaC=el('eeTaxaConsumo').value?Number(el('eeTaxaConsumo').value):null;
+  const taxaP=el('eeTaxaPeriodo').value||null;
+  const payload={nome,local:el('eeLocal').value||null,critico:el('eeCritico').checked,taxa_consumo:taxaC,taxa_periodo:taxaP,alerta_dias:Number(el('eeAlertaDias').value)||7,atualizado_por:usuario.id,atualizado_em:new Date().toISOString()};
+  if(_estoqueEditando.tipo!=='nivel_visual'){payload.minimo=Number(el('eeMin').value)||0;payload.unidade=el('eeUnidade').value.trim()||_estoqueEditando.unidade;}
+  const{error}=await supa.from('estoque').update(payload).eq('id',_estoqueEditando.id);
+  el('btnSalvarEditarEstoque').disabled=false;
+  if(error){aviso('avisoEditarEstoque','Erro ao salvar.','erro');return;}
+  el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');
+  _estoqueEditando=null;
+  await carregarEstoque();await carregarLista();
+}
+
+async function removerEstoque(item){
+  if(!confirm(`Excluir "${item.nome}" do estoque?`))return;
+  const{error}=await supa.from('estoque').delete().eq('id',item.id);
+  if(!error){
+    supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'estoque',registro_id:item.id,dados:item});
+    await carregarEstoque();await carregarLista();
+  }
+}
+
 async function abrirModalInventario(){el('invPassoLocal').classList.remove('oculto');el('invPassoItens').classList.add('oculto');el('invLocal').value='';el('avisoInventario').textContent='';el('modalInventario').classList.remove('oculto');el('modalInventario').classList.add('modal-aberto');}
 async function iniciarInventario(){
   const local=el('invLocal').value;if(!local){aviso('avisoInventario','Escolha um ambiente.','erro');return;}
@@ -734,6 +778,7 @@ async function pagarConta(conta,botao){
 let _projetoAtual=null;
 let _tarefaEditando=null;
 let _contaEditando=null;
+let _estoqueEditando=null;
 
 const STATUS_PROJ={
   nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
@@ -1236,6 +1281,8 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarEstoque').onclick=()=>{el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');_estoqueEditando=null;};
+el('btnSalvarEditarEstoque').onclick=salvarEditarEstoque;
 el('btnFecharEditarConta').onclick=()=>{el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');_contaEditando=null;};
 el('btnSalvarEditarConta').onclick=salvarEditarConta;
 el('btnFecharEditarTarefa').onclick=()=>{el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');_tarefaEditando=null;};
