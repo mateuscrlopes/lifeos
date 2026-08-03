@@ -15,6 +15,30 @@ let _plantaAberta=null;
 let _plantaEditando=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
+
+// Ícones vetoriais da interface. Mantidos aqui para substituir emojis
+// sem depender de fonte, sistema operacional ou biblioteca externa.
+const ICONES_SVG={
+  estrela:'<path d="m12 2.6 2.82 5.72 6.31.92-4.56 4.44 1.08 6.28L12 17l-5.65 2.96 1.08-6.28-4.56-4.44 6.31-.92L12 2.6Z"/>',
+  atualizar:'<path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"/>',
+  balde:'<path d="M5 8h14l-1.2 11H6.2L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M4 8h16"/>',
+  gota:'<path d="M12 2.7S6.5 9 6.5 14a5.5 5.5 0 0 0 11 0c0-5-5.5-11.3-5.5-11.3Z"/>',
+  broto:'<path d="M12 22V12"/><path d="M12 15c-4.5 0-7-2.3-7-6 4.5 0 7 2.3 7 6Z"/><path d="M12 12c4.5 0 7-2.3 7-6-4.5 0-7 2.3-7 6Z"/>',
+  tesoura:'<circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.7 8.3 11.3 7.2M8.7 15.7 20 8.5"/>',
+  anotacao:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>',
+  cadeado:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  check:'<path d="m5 12 4 4L19 6"/>',
+  prancheta:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 9h6M9 13h6M9 17h4"/>',
+  repetir:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+};
+function iconeSvg(nome,tamanho=16,classe='icone-svg'){
+  const conteudo=ICONES_SVG[nome];
+  if(!conteudo)return'';
+  return `<svg class="${classe}" viewBox="0 0 24 24" width="${tamanho}" height="${tamanho}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="display:inline-block;flex:none;vertical-align:-0.15em">${conteudo}</svg>`;
+}
+function conteudoComIcone(nome,texto,tamanho=15){
+  return `${iconeSvg(nome,tamanho)}<span>${texto}</span>`;
+}
 function aviso(id,t,tipo=''){const a=el(id);if(!a)return;a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
 function abrirModal(id){const m=el(id);if(m){m.classList.add('aberto');}}
 function fecharModal(id){const m=el(id);if(m){m.classList.remove('aberto');}}
@@ -157,7 +181,7 @@ async function carregarLista(){
     if(ps.length){const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);}
     const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:2px;align-items:center';
     const btnComprei=document.createElement('button');btnComprei.textContent='Comprei';btnComprei.onclick=()=>comprar(item,btnComprei);
-    const btnEditL=document.createElement('button');btnEditL.textContent='✏️';btnEditL.title='Editar';btnEditL.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditL.onclick=()=>abrirEditarLista(item);
+    const btnEditL=document.createElement('button');btnEditL.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditL.title='Editar';btnEditL.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditL.onclick=()=>abrirEditarLista(item);
     const btnDelL=document.createElement('button');btnDelL.textContent='×';btnDelL.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelL.onclick=()=>removerItemLista(item);
     acoes.appendChild(btnComprei);acoes.appendChild(btnEditL);acoes.appendChild(btnDelL);
     l.appendChild(d);l.appendChild(acoes);area.appendChild(l);
@@ -235,7 +259,7 @@ async function carregarEstoque(){
     const status=calcularStatus(item.quantidade,item.minimo,item.tipo,item.nivel,item.minimo_nivel);const info=rotuloStatus(status);
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
-    const n=document.createElement('span');n.className='nome';n.textContent=item.nome+(item.critico?' ⭐':'');d.appendChild(n);
+    const n=document.createElement('span');n.className='nome';n.textContent=item.nome;if(item.critico){n.insertAdjacentHTML('beforeend',' '+iconeSvg('estrela',13));n.title='Item crítico';}d.appendChild(n);
     const m=document.createElement('span');m.className='meta';
     let metaTxt=(item.local?item.local+' · ':'')+descricaoQuantidade(item);
     const lc=labelConsumo(item);if(lc)metaTxt+=' · '+lc;
@@ -252,7 +276,7 @@ async function carregarEstoque(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(item.tipo==='nivel_visual'){const sel=document.createElement('select');sel.className='sel';sel.style.cssText='width:auto;padding:6px 8px;font-size:13px';NIVEIS_VISUAL.forEach(nv=>{const o=document.createElement('option');o.value=nv;o.textContent=ROTULO_NIVEL[nv];if(nv===item.nivel)o.selected=true;sel.appendChild(o);});sel.onchange=()=>ajustarNivel(item,sel.value);dir.appendChild(sel);}
     else{const p=item.tipo==='peso_volume'?100:1;const bm=document.createElement('button');bm.textContent='−';bm.onclick=()=>ajustarEstoque(item,-p);const q=document.createElement('span');q.className='est-qtd';q.textContent=item.quantidade;const bp=document.createElement('button');bp.textContent='+';bp.onclick=()=>ajustarEstoque(item,p);dir.appendChild(bm);dir.appendChild(q);dir.appendChild(bp);}
-    const btnEditE=document.createElement('button');btnEditE.textContent='✏️';btnEditE.title='Editar';btnEditE.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditE.onclick=()=>abrirEditarEstoque(item);
+    const btnEditE=document.createElement('button');btnEditE.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditE.title='Editar';btnEditE.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditE.onclick=()=>abrirEditarEstoque(item);
     const btnDelE=document.createElement('button');btnDelE.textContent='×';btnDelE.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelE.onclick=()=>removerEstoque(item);
     dir.appendChild(btnEditE);dir.appendChild(btnDelE);
     l.appendChild(d);l.appendChild(dir);area.appendChild(l);
@@ -357,7 +381,7 @@ async function iniciarInventario(){
   for(const item of itens){
     const bloco=document.createElement('div');bloco.style.cssText='padding:12px 0;border-bottom:1px solid var(--linha)';
     const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;margin-bottom:8px';
-    const n=document.createElement('span');n.className='nome';n.textContent=item.nome+(item.critico?' ⭐':'');topo.appendChild(n);bloco.appendChild(topo);
+    const n=document.createElement('span');n.className='nome';n.textContent=item.nome;if(item.critico){n.insertAdjacentHTML('beforeend',' '+iconeSvg('estrela',13));n.title='Item crítico';}topo.appendChild(n);bloco.appendChild(topo);
     if(item.tipo==='nivel_visual'){const sel=document.createElement('select');sel.className='sel';sel.dataset.itemId=item.id;NIVEIS_VISUAL.forEach(nv=>{const o=document.createElement('option');o.value=nv;o.textContent=ROTULO_NIVEL[nv];if(nv===item.nivel)o.selected=true;sel.appendChild(o);});bloco.appendChild(sel);}
     else{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px';const inp=document.createElement('input');inp.type='number';inp.min='0';inp.step=item.tipo==='peso_volume'?'100':'1';inp.value=item.quantidade;inp.dataset.itemId=item.id;inp.style.flex='1';const un=document.createElement('span');un.className='meta';un.textContent=item.unidade||'';row.appendChild(inp);row.appendChild(un);bloco.appendChild(row);}
     area.appendChild(bloco);
@@ -477,12 +501,12 @@ async function abrirFichaPlanta(planta){
   const acoes=el('mpAcoes');acoes.innerHTML='';
   const metodo=planta.metodo_cultivo;
   const tiposManual = metodo==='agua'
-    ? [['troca_agua','🔄 Trocar água']]
+    ? [['troca_agua','atualizar','Trocar água']]
     : metodo==='kokedama'
-    ? [['imersao','🪣 Imersão']]
-    : [['rega','💧 Regar agora'],['adubacao','🌱 Adubar'],['poda','✂️ Podar'],['observacao','📝 Observação']];
-  for(const[tipo,label] of tiposManual){
-    const btn=document.createElement('button');btn.textContent=label;btn.className='secundario';btn.style.cssText='font-size:13px;padding:7px 12px';
+    ? [['imersao','balde','Imersão']]
+    : [['rega','gota','Regar agora'],['adubacao','broto','Adubar'],['poda','tesoura','Podar'],['observacao','anotacao','Observação']];
+  for(const[tipo,icone,label] of tiposManual){
+    const btn=document.createElement('button');btn.innerHTML=conteudoComIcone(icone,label,14);btn.className='secundario';btn.style.cssText='font-size:13px;padding:7px 12px;display:inline-flex;align-items:center;gap:6px';
     btn.onclick=async()=>{
       if(tipo==='observacao'){const nota=prompt('Observação:');if(!nota)return;await supa.from('planta_eventos').insert({planta_id:planta.id,tipo:'observacao',notas:nota,usuario_id:usuario.id,data:new Date().toISOString()});}
       else{await registrarCuidadoManual(supa,usuario,planta,tipo);}
@@ -504,14 +528,14 @@ async function abrirFichaPlanta(planta){
     // Linha principal
     const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
     topo.innerHTML=`<span style="font-size:13px">${r.tipo} · <strong>${quando}</strong></span>`;
-    if(dias===null||dias<=0){const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';btn.onclick=async()=>{btn.disabled=true;await registrarCuidado(supa,usuario,planta,r);await atualizarPlantas();btn.textContent='✓';};topo.appendChild(btn);}
+    if(dias===null||dias<=0){const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';btn.onclick=async()=>{btn.disabled=true;await registrarCuidado(supa,usuario,planta,r);await atualizarPlantas();btn.innerHTML=iconeSvg('check',13);btn.title='Concluído';};topo.appendChild(btn);}
     div.appendChild(topo);
     // Linha de edição do intervalo
     const edit=document.createElement('div');edit.style.cssText='display:flex;align-items:center;gap:8px;font-size:12px;color:var(--suave)';
     const inp=document.createElement('input');inp.type='number';inp.min='1';inp.value=r.intervalo_dias;inp.style.cssText='width:56px;padding:4px 8px;font-size:12px';
     const lbl=document.createElement('span');lbl.textContent='dias entre cuidados';
     const btnSalvar=document.createElement('button');btnSalvar.textContent='Salvar';btnSalvar.style.cssText='padding:4px 10px;font-size:12px';
-    btnSalvar.onclick=async()=>{btnSalvar.disabled=true;const ok=await editarRotina(supa,r,inp.value);if(ok){await atualizarPlantas();btnSalvar.textContent='✓';}else{btnSalvar.disabled=false;}};
+    btnSalvar.onclick=async()=>{btnSalvar.disabled=true;const ok=await editarRotina(supa,r,inp.value);if(ok){await atualizarPlantas();btnSalvar.innerHTML=iconeSvg('check',13);btnSalvar.title='Salvo';}else{btnSalvar.disabled=false;}};
     edit.appendChild(inp);edit.appendChild(lbl);edit.appendChild(btnSalvar);
     div.appendChild(edit);
     rotDiv.appendChild(div);
@@ -657,11 +681,11 @@ async function carregarRituais(){
     const div=document.createElement('div');div.className='ritual-card';
     const topo=document.createElement('div');topo.className='ritual-topo';
     const esq=document.createElement('div');
-    const n=document.createElement('span');n.className='nome';n.textContent=r.nome+(r.privado?' 🔒':'');esq.appendChild(n);
+    const n=document.createElement('span');n.className='nome';n.textContent=r.nome;if(r.privado){n.insertAdjacentHTML('beforeend',' '+iconeSvg('cadeado',13));n.title='Ritual privado';}esq.appendChild(n);
     const m=document.createElement('div');m.className='ritual-meta';const partes=[freqLabel[r.frequencia]||r.frequencia];if(ultima)partes.push(`última: ${new Date(ultima.realizado_em).toLocaleDateString('pt-BR')}`);if(proxima)partes.push(`próxima: ${proxima.split('-').reverse().join('/')}`);m.textContent=partes.join(' · ');esq.appendChild(m);
     const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;align-items:center';
     const btnAb=document.createElement('button');btnAb.textContent='Iniciar';btnAb.style.cssText='padding:7px 12px;font-size:13px';btnAb.onclick=()=>abrirModalRitual(r);
-    const btnEditR=document.createElement('button');btnEditR.textContent='✏️';btnEditR.title='Editar';btnEditR.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditR.onclick=()=>abrirEditarRitual(r);
+    const btnEditR=document.createElement('button');btnEditR.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditR.title='Editar';btnEditR.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditR.onclick=()=>abrirEditarRitual(r);
     const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r);
     btns.appendChild(btnAb);btns.appendChild(btnEditR);btns.appendChild(btnRem);topo.appendChild(esq);topo.appendChild(btns);div.appendChild(topo);
     if(sessoes.length){const hist=document.createElement('div');hist.style.marginTop='8px';sessoes.slice(0,3).forEach(s=>{const h=document.createElement('div');h.className='historico-item';h.textContent=new Date(s.realizado_em).toLocaleDateString('pt-BR');hist.appendChild(h);});div.appendChild(hist);}
@@ -931,7 +955,7 @@ async function carregarContas(){
     const dir=document.createElement('div');dir.className='est-controles';
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
-    const btnEditC=document.createElement('button');btnEditC.textContent='✏️';btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
+    const btnEditC=document.createElement('button');btnEditC.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
     const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta);};
     dir.appendChild(btnEditC);dir.appendChild(btnDelC);
     l.appendChild(d);l.appendChild(dir);
@@ -1060,7 +1084,7 @@ async function renderizarPainelProjeto(projeto){
   if(!todas.length){ppTar.innerHTML='<div class="vazio" style="padding:12px 0">Nenhuma tarefa ainda.</div>';}
   for(const t of todas){
     const linha=document.createElement('div');linha.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--linha)';
-    const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.textContent=t.feita?'✓':'';
+    const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.innerHTML=t.feita?iconeSvg('check',12):'';
     ch.onclick=async()=>{
       await supa.from('tarefas').update({feita:!t.feita,feita_por:!t.feita?usuario.id:null,feita_em:!t.feita?new Date().toISOString():null}).eq('id',t.id);
       await renderizarPainelProjeto(_projetoAtual);
@@ -1068,8 +1092,8 @@ async function renderizarPainelProjeto(projeto){
     const info=document.createElement('div');info.style.flex='1';
     const nome=document.createElement('div');nome.style.cssText='font-size:14px'+(t.feita?';text-decoration:line-through;color:var(--suave)':'');nome.textContent=t.titulo;
     const meta=document.createElement('div');meta.style.cssText='font-size:11px;color:var(--suave)';
-    const partes=[];if(t.privado)partes.push('🔒 Privada');if(t.data)partes.push(t.data.slice(0,10).split('-').reverse().join('/'));
-    meta.textContent=partes.join(' · ');
+    const partes=[];if(t.privado)partes.push({icone:'cadeado',texto:'Privada'});if(t.data)partes.push({texto:t.data.slice(0,10).split('-').reverse().join('/')});
+    partes.forEach((parte,i)=>{if(i)meta.appendChild(document.createTextNode(' · '));if(parte.icone)meta.insertAdjacentHTML('beforeend',iconeSvg(parte.icone,11)+' ');meta.appendChild(document.createTextNode(parte.texto));});
     info.appendChild(nome);if(partes.length)info.appendChild(meta);
     const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
     rem.onclick=async()=>{await supa.from('tarefas').delete().eq('id',t.id);await renderizarPainelProjeto(_projetoAtual);};
@@ -1151,14 +1175,14 @@ async function carregarTarefas(){
   const tarefas2=todasOrdenadas;
   for(const t of tarefas2){
     const l=document.createElement('div');l.className='item'+(t.feita?' concluida':'');
-    const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.textContent=t.feita?'✓':'';ch.onclick=()=>alternarTarefa(t);
+    const ch=document.createElement('div');ch.className='check-tarefa'+(t.feita?' feita':'');ch.innerHTML=t.feita?iconeSvg('check',12):'';ch.onclick=()=>alternarTarefa(t);
     const d=document.createElement('div');d.className='desc';d.style.cssText='flex:1;margin-left:12px';
     const n=document.createElement('span');n.className='nome';n.textContent=t.titulo;d.appendChild(n);
     const quem=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);
     const ps=[quem];if(t.recorrente&&t.recorrencia)ps.push(t.recorrencia);if(t.data)ps.push(t.data.slice(0,10).split('-').reverse().join('/'));
     const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);
     const acoesTarefa=document.createElement('div');acoesTarefa.style.cssText='display:flex;gap:2px;align-items:center';
-    const btnEdit=document.createElement('button');btnEdit.textContent='✏️';btnEdit.title='Editar';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEdit.onclick=()=>abrirEditarTarefa(t);
+    const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEdit.title='Editar';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;display:flex;align-items:center;';btnEdit.onclick=()=>abrirEditarTarefa(t);
     const br=document.createElement('button');br.textContent='×';br.style.cssText='background:none;color:var(--suave);padding:4px 6px';br.onclick=()=>removerTarefa(t);
     acoesTarefa.appendChild(btnEdit);acoesTarefa.appendChild(br);
     const esq=document.createElement('div');esq.style.cssText='display:flex;align-items:center;flex:1';esq.appendChild(ch);esq.appendChild(d);l.appendChild(esq);l.appendChild(acoesTarefa);area.appendChild(l);
@@ -1303,7 +1327,7 @@ function criarCartaoHoje(titulo,dest){
 function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='mini-meta';d.textContent=[meta,valor].filter(Boolean).join(' · ');l.appendChild(e);l.appendChild(d);return l;}
 
 // --- EVENTOS DA LINHA DO TEMPO ---
-const TIPO_LABEL_EV={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.',alteracao_status:'🔁 Status',muda_retirada:'🌱 Muda'};
+const TIPO_LABEL_EV={cadastro:{icone:'prancheta',texto:'Cadastro'},rega:{icone:'gota',texto:'Rega'},troca_agua:{icone:'atualizar',texto:'Troca de água'},imersao:{icone:'balde',texto:'Imersão'},adubacao:{icone:'broto',texto:'Adubação'},poda:{icone:'tesoura',texto:'Poda'},observacao:{icone:'anotacao',texto:'Obs.'},alteracao_status:{icone:'repetir',texto:'Status'},muda_retirada:{icone:'broto',texto:'Muda'}};
 
 async function renderizarEventosPlanta(planta){
   const{data:eventos}=await supa.from('planta_eventos').select('id,tipo,data,notas').eq('planta_id',planta.id).order('data',{ascending:false}).limit(30);
@@ -1313,8 +1337,11 @@ async function renderizarEventosPlanta(planta){
     const div=document.createElement('div');div.className='evento-linha';div.style.alignItems='flex-start';
     const data=document.createElement('span');data.className='evento-data';data.textContent=new Date(ev.data).toLocaleDateString('pt-BR');
     const corpo=document.createElement('div');corpo.style.cssText='flex:1;font-size:13px';
-    const tipoLabel=TIPO_LABEL_EV[ev.tipo]||ev.tipo;
-    const notaSpan=document.createElement('span');notaSpan.textContent=tipoLabel+(ev.notas?' — '+ev.notas:'');
+    const tipoInfo=TIPO_LABEL_EV[ev.tipo];
+    const notaSpan=document.createElement('span');notaSpan.style.cssText='display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap';
+    if(tipoInfo){notaSpan.insertAdjacentHTML('beforeend',iconeSvg(tipoInfo.icone,14));notaSpan.appendChild(document.createTextNode(tipoInfo.texto));}
+    else{notaSpan.appendChild(document.createTextNode(ev.tipo));}
+    if(ev.notas)notaSpan.appendChild(document.createTextNode(' — '+ev.notas));
     corpo.appendChild(notaSpan);
     // Botoes editar e remover (só para tipos editáveis)
     const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:6px;margin-top:4px';
@@ -1457,7 +1484,7 @@ async function carregarLocaisEstoque(){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px';
     const txt=document.createElement('span');txt.textContent=loc.nome;
     const dir=document.createElement('div');dir.style.cssText='display:flex;gap:4px';
-    const btnEdit=document.createElement('button');btnEdit.textContent='✏️';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';
+    const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;display:flex;align-items:center;';
     btnEdit.onclick=()=>{const novo=prompt('Novo nome:',loc.nome);if(novo&&novo.trim()){supa.from('locais_estoque').update({nome:novo.trim()}).eq('id',loc.id).then(()=>{carregarLocaisEstoque();atualizarSelectsLocais();});}};
     const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
     btnDel.onclick=async()=>{if(!confirm(`Remover "${loc.nome}"?`))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
@@ -1500,7 +1527,7 @@ async function carregarLocaisCompraConfig(){
     const m=document.createElement('div');m.style.cssText='font-size:11px;color:var(--suave);margin-top:2px';
     m.textContent=`${(loc.locais_compra_enderecos||[]).length} endereço(s) · ${(loc.locais_compra_categorias||[]).length} categoria(s)`;
     esq.appendChild(n);esq.appendChild(m);
-    const btnEdit=document.createElement('button');btnEdit.textContent='✏️ Editar';btnEdit.style.cssText='font-size:12px;padding:6px 10px;background:var(--acao-clara);color:var(--acao)';
+    const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span style='margin-left:4px'>Editar</span>`;btnEdit.style.cssText='font-size:12px;padding:6px 10px;background:var(--acao-clara);color:var(--acao);display:flex;align-items:center;gap:4px;border-radius:8px;';
     btnEdit.onclick=()=>abrirEditarLocalCompra(loc);
     linha.appendChild(esq);linha.appendChild(btnEdit);area.appendChild(linha);
   }
