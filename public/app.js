@@ -82,8 +82,49 @@ async function carregarLista(){
     d.appendChild(n);
     const ps=[];if(item.quantidade)ps.push(item.quantidade+(item.unidade?' '+item.unidade:''));if(item.categoria)ps.push(item.categoria);
     if(ps.length){const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);}
-    const btn=document.createElement('button');btn.textContent='Comprei';btn.onclick=()=>comprar(item,btn);
-    l.appendChild(d);l.appendChild(btn);area.appendChild(l);
+    const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:2px;align-items:center';
+    const btnComprei=document.createElement('button');btnComprei.textContent='Comprei';btnComprei.onclick=()=>comprar(item,btnComprei);
+    const btnEditL=document.createElement('button');btnEditL.textContent='✏️';btnEditL.title='Editar';btnEditL.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditL.onclick=()=>abrirEditarLista(item);
+    const btnDelL=document.createElement('button');btnDelL.textContent='×';btnDelL.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelL.onclick=()=>removerItemLista(item);
+    acoes.appendChild(btnComprei);acoes.appendChild(btnEditL);acoes.appendChild(btnDelL);
+    l.appendChild(d);l.appendChild(acoes);area.appendChild(l);
+  }
+}
+
+function abrirEditarLista(item){
+  _listaEditando=item;
+  el('elNome').value=item.nome||'';
+  el('elQtd').value=item.quantidade??'';
+  el('elUnidade').value=item.unidade||'';
+  aviso('avisoEditarLista','');
+  el('modalEditarLista').classList.remove('oculto');el('modalEditarLista').classList.add('modal-aberto');
+}
+
+async function salvarEditarLista(){
+  if(!_listaEditando)return;
+  const nome=el('elNome').value.trim();
+  if(!nome){aviso('avisoEditarLista','Digite o nome.','erro');return;}
+  el('btnSalvarEditarLista').disabled=true;
+  const qtd=el('elQtd').value?Number(el('elQtd').value):null;
+  const{error}=await supa.from('lista_compras').update({
+    nome,quantidade:qtd,unidade:el('elUnidade').value.trim()||null,
+  }).eq('id',_listaEditando.id);
+  el('btnSalvarEditarLista').disabled=false;
+  if(error){aviso('avisoEditarLista','Erro ao salvar.','erro');return;}
+  el('modalEditarLista').classList.add('oculto');el('modalEditarLista').classList.remove('modal-aberto');
+  _listaEditando=null;
+  await carregarLista();
+}
+
+async function removerItemLista(item){
+  if(!confirm(`Remover "${item.nome}" da lista?`))return;
+  const{error}=await supa.from('lista_compras').delete().eq('id',item.id);
+  if(!error){
+    supa.from('historico_excluidos').insert({
+      casa_id:usuario.casa_id,usuario_id:usuario.id,
+      modulo:'lista_compras',registro_id:item.id,dados:item,
+    });
+    await carregarLista();
   }
 }
 
@@ -779,6 +820,7 @@ let _projetoAtual=null;
 let _tarefaEditando=null;
 let _contaEditando=null;
 let _estoqueEditando=null;
+let _listaEditando=null;
 
 const STATUS_PROJ={
   nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
@@ -1281,6 +1323,8 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarLista').onclick=()=>{el('modalEditarLista').classList.add('oculto');el('modalEditarLista').classList.remove('modal-aberto');_listaEditando=null;};
+el('btnSalvarEditarLista').onclick=salvarEditarLista;
 el('btnFecharEditarEstoque').onclick=()=>{el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');_estoqueEditando=null;};
 el('btnSalvarEditarEstoque').onclick=salvarEditarEstoque;
 el('btnFecharEditarConta').onclick=()=>{el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');_contaEditando=null;};
