@@ -8,7 +8,7 @@
 
 // A camada abaixo concentra refinamentos visuais e comportamentais sem
 // alterar a arquitetura ou a estrutura de navegacao do LifeOS.
-import './ui-refinements.js';
+import './ui-refinements.js?v=2';
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
