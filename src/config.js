@@ -19,7 +19,14 @@ export const config = {
   porta: process.env.PORT ? Number(process.env.PORT) : 3000,
   supabaseUrl: normalizarUrlSupabase(obrigatorio('SUPABASE_URL')),
   supabaseAnonKey: obrigatorio('SUPABASE_ANON_KEY'),
-  // Service key: usada APENAS no backend para operacoes dos Atalhos.
-  // NUNCA vai para o frontend nem para o Git.
+
+  // Chave administrativa: usada somente no backend.
+  // Nunca vai para o navegador, aplicativo Android ou Git.
   supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+
+  // Gumate: a API de IA e opcional. Comandos simples continuam funcionando
+  // pelas regras locais mesmo quando GEMINI_API_KEY nao estiver configurada.
+  gumateEnabled: process.env.GUMATE_ENABLED !== 'false',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
 };

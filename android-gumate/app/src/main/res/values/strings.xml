@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Gumate Lab</string>
+    <string name="notification_channel">Gumate ativo</string>
+    <string name="notification_text">Escutando a palavra de ativação</string>
+</resources>
