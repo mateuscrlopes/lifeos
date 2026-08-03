@@ -6,6 +6,10 @@
 //   nivel_visual — nivel em escala (cheio/75/metade/25/quase_acabando/acabou)
 // Nota: tipo "presenca" foi removido da interface (tudo e contavel).
 
+// A camada abaixo concentra refinamentos visuais e comportamentais sem
+// alterar a arquitetura ou a estrutura de navegacao do LifeOS.
+import './ui-refinements.js';
+
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
 
