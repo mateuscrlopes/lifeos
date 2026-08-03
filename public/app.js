@@ -688,6 +688,7 @@ async function pagarConta(conta,botao){
 // --- TAREFAS ---
 // --- PROJETOS PESSOAIS ---
 let _projetoAtual=null;
+let _tarefaEditando=null;
 
 const STATUS_PROJ={
   nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
@@ -872,9 +873,42 @@ async function carregarTarefas(){
     const quem=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);
     const ps=[quem];if(t.recorrente&&t.recorrencia)ps.push(t.recorrencia);if(t.data)ps.push(t.data.slice(0,10).split('-').reverse().join('/'));
     const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);
-    const br=document.createElement('button');br.textContent='×';br.style.cssText='background:none;color:var(--suave);padding:4px 8px';br.onclick=()=>removerTarefa(t.id);
-    const esq=document.createElement('div');esq.style.cssText='display:flex;align-items:center;flex:1';esq.appendChild(ch);esq.appendChild(d);l.appendChild(esq);l.appendChild(br);area.appendChild(l);
+    const acoesTarefa=document.createElement('div');acoesTarefa.style.cssText='display:flex;gap:2px;align-items:center';
+    const btnEdit=document.createElement('button');btnEdit.textContent='✏️';btnEdit.title='Editar';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEdit.onclick=()=>abrirEditarTarefa(t);
+    const br=document.createElement('button');br.textContent='×';br.style.cssText='background:none;color:var(--suave);padding:4px 6px';br.onclick=()=>removerTarefa(t);
+    acoesTarefa.appendChild(btnEdit);acoesTarefa.appendChild(br);
+    const esq=document.createElement('div');esq.style.cssText='display:flex;align-items:center;flex:1';esq.appendChild(ch);esq.appendChild(d);l.appendChild(esq);l.appendChild(acoesTarefa);area.appendChild(l);
   }
+}
+
+function abrirEditarTarefa(t){
+  _tarefaEditando=t;
+  el('etTitulo').value=t.titulo||'';
+  el('etResp').value=t.responsavel||'ambos';
+  el('etData').value=t.data?t.data.slice(0,10):'';
+  el('etRecorrente').checked=!!t.recorrente;
+  el('etRecorrencia').value=t.recorrencia||'';
+  el('etRecorrenciaBox').classList.toggle('oculto',!t.recorrente);
+  aviso('avisoEditarTarefa','');
+  el('modalEditarTarefa').classList.remove('oculto');el('modalEditarTarefa').classList.add('modal-aberto');
+}
+
+async function salvarEditarTarefa(){
+  if(!_tarefaEditando)return;
+  const titulo=el('etTitulo').value.trim();
+  if(!titulo){aviso('avisoEditarTarefa','Digite o título.','erro');return;}
+  el('btnSalvarEditarTarefa').disabled=true;
+  const recorrente=el('etRecorrente').checked;
+  const{error}=await supa.from('tarefas').update({
+    titulo,responsavel:el('etResp').value,
+    data:el('etData').value||null,
+    recorrente,recorrencia:recorrente?el('etRecorrencia').value.trim()||null:null,
+  }).eq('id',_tarefaEditando.id);
+  el('btnSalvarEditarTarefa').disabled=false;
+  if(error){aviso('avisoEditarTarefa','Erro ao salvar.','erro');return;}
+  el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');
+  _tarefaEditando=null;
+  await carregarTarefas();
 }
 
 async function adicionarTarefa(){
@@ -896,7 +930,20 @@ async function alternarTarefa(t){
   await carregarTarefas();
 }
 
-async function removerTarefa(id){const{error}=await supa.from('tarefas').delete().eq('id',id);if(!error){supa.from('eventos').insert({tipo:'tarefa_removida',entidade:'tarefas',entidade_id:id,usuario_id:usuario.id,detalhe:usuario.nome+' removeu uma tarefa'});await carregarTarefas();}}
+async function removerTarefa(t){
+  if(!confirm(`Excluir a tarefa "${t.titulo}"?`))return;
+  const{error}=await supa.from('tarefas').delete().eq('id',t.id);
+  if(!error){
+    // Guarda no histórico de excluídos
+    supa.from('historico_excluidos').insert({
+      casa_id:usuario.casa_id,usuario_id:usuario.id,
+      modulo:'tarefas',registro_id:t.id,
+      dados:t,
+    });
+    supa.from('eventos').insert({tipo:'tarefa_removida',entidade:'tarefas',entidade_id:t.id,usuario_id:usuario.id,detalhe:usuario.nome+' removeu a tarefa: '+t.titulo});
+    await carregarTarefas();
+  }
+}
 
 // --- HOJE ---
 async function carregarHoje(){
@@ -1144,6 +1191,9 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarTarefa').onclick=()=>{el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');_tarefaEditando=null;};
+el('btnSalvarEditarTarefa').onclick=salvarEditarTarefa;
+el('etRecorrente').addEventListener('change',e=>el('etRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
 el('btnFecharHistConta').onclick=()=>{el('modalHistConta').classList.add('oculto');el('modalHistConta').classList.remove('modal-aberto');_contaHistAtual=null;};
 el('btnAddRetro').onclick=adicionarRetroativo;
 el('btnSair').onclick=sair;
