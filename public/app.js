@@ -40,6 +40,7 @@ async function aoEntrar(){
   usuario=p;el('quem').textContent=p.nome;
   el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');aviso('avisoLogin','');
   await Promise.allSettled([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
+  carregarLocaisEstoque();
   ligarTempoReal();
 }
 
@@ -63,10 +64,11 @@ async function sair(){
 }
 
 function trocarAba(qual){
-  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaPainelProjeto','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
+  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaPainelProjeto','abaRituais','abaTarefas','abaContas','abaConfig'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
   document.querySelectorAll('.aba').forEach(b=>b.classList.toggle('ativa',b.dataset.aba===qual));
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='plantas'&&usuario)renderizarPlantas();
+  if(qual==='config'&&usuario){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
 }
 
 // --- LISTA ---
@@ -897,6 +899,10 @@ let _tarefaEditando=null;
 let _contaEditando=null;
 let _estoqueEditando=null;
 let _listaEditando=null;
+let _moduloHistorico='todos';
+let _localCompraEditando=null;
+let _localCompraEnderecos=[];
+let _localCompraCategorias=[];
 
 const STATUS_PROJ={
   nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
@@ -1295,6 +1301,244 @@ function aoEscolherEspecie(){
   }
 }
 
+// ===================================================================
+// CONFIGURAÇÕES
+// ===================================================================
+
+// --- TOKENS ---
+async function carregarTokens(){
+  const{data}=await supa.from('atalho_tokens').select('id,token,nome,ativo,criado_em').order('criado_em');
+  const area=el('listaTokens');area.innerHTML='';
+  if(!data||!data.length){area.innerHTML='<div class="vazio">Nenhum token cadastrado.</div>';return;}
+  for(const t of data){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha);font-size:13px';
+    const esq=document.createElement('div');
+    esq.innerHTML=`<div style="font-weight:600">${t.nome||'Sem nome'}</div><div style="font-size:11px;color:var(--suave);margin-top:2px">${t.token.slice(0,16)}…</div>`;
+    const dir=document.createElement('div');dir.style.cssText='display:flex;gap:6px';
+    const badge=document.createElement('span');badge.className='badge';badge.style.background=t.ativo?'#2f6f4f':'#6b7280';badge.textContent=t.ativo?'Ativo':'Inativo';
+    const btnRev=document.createElement('button');btnRev.textContent=t.ativo?'Revogar':'Reativar';btnRev.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
+    btnRev.onclick=async()=>{await supa.from('atalho_tokens').update({ativo:!t.ativo}).eq('id',t.id);carregarTokens();};
+    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
+    btnDel.onclick=async()=>{if(!confirm('Excluir este token? O Atalho vai parar de funcionar.'))return;await supa.from('atalho_tokens').delete().eq('id',t.id);carregarTokens();};
+    dir.appendChild(badge);dir.appendChild(btnRev);dir.appendChild(btnDel);
+    linha.appendChild(esq);linha.appendChild(dir);area.appendChild(linha);
+  }
+}
+
+async function gerarNovoToken(){
+  const nome=prompt('Nome para identificar este token (ex: iPhone de Mateus):');
+  if(!nome)return;
+  const token=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  // Busca o usuario_id pelo nome
+  const{data:u}=await supa.from('usuarios').select('id').eq('casa_id',usuario.casa_id).ilike('nome',`%${nome.split(' ')[0]}%`).limit(1);
+  const uid=u?.[0]?.id||usuario.id;
+  const{error}=await supa.from('atalho_tokens').insert({usuario_id:uid,token,nome,ativo:true});
+  if(error){aviso('avisoTokens','Erro ao gerar token.','erro');return;}
+  aviso('avisoTokens','Token gerado: '+token,'ok');
+  carregarTokens();
+}
+
+// --- LOCAIS DO ESTOQUE ---
+let _locaisEstoque=[];
+
+async function carregarLocaisEstoque(){
+  const{data}=await supa.from('locais_estoque').select('id,nome,ordem,ativo').eq('casa_id',usuario.casa_id).eq('ativo',true).order('ordem');
+  _locaisEstoque=data||[];
+  const area=el('listaLocaisEstoque');if(!area)return;area.innerHTML='';
+  for(const loc of _locaisEstoque){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha);font-size:13px';
+    const txt=document.createElement('span');txt.textContent=loc.nome;
+    const dir=document.createElement('div');dir.style.cssText='display:flex;gap:4px';
+    const btnEdit=document.createElement('button');btnEdit.textContent='✏️';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';
+    btnEdit.onclick=()=>{const novo=prompt('Novo nome:',loc.nome);if(novo&&novo.trim()){supa.from('locais_estoque').update({nome:novo.trim()}).eq('id',loc.id).then(()=>{carregarLocaisEstoque();atualizarSelectsLocais();});}};
+    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
+    btnDel.onclick=async()=>{if(!confirm(`Remover "${loc.nome}"?`))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
+    dir.appendChild(btnEdit);dir.appendChild(btnDel);linha.appendChild(txt);linha.appendChild(dir);area.appendChild(linha);
+  }
+  atualizarSelectsLocais();
+}
+
+async function salvarNovoLocalEstoque(){
+  const nome=el('nomeNovoLocalEstoque').value.trim();
+  if(!nome)return;
+  const ordem=(_locaisEstoque.length?Math.max(..._locaisEstoque.map(l=>l.ordem)):0)+1;
+  await supa.from('locais_estoque').insert({casa_id:usuario.casa_id,nome,ordem});
+  el('nomeNovoLocalEstoque').value='';
+  toggleInputProjeto('inputNovoLocalEstoque');
+  carregarLocaisEstoque();
+}
+
+// Atualiza todos os selects de local no app com os locais do banco
+function atualizarSelectsLocais(){
+  const ids=['estLocal','eeLocal','invLocal'];
+  for(const id of ids){
+    const sel=el(id);if(!sel)continue;
+    const val=sel.value;
+    sel.innerHTML='<option value="">— Sem local —</option>';
+    for(const loc of _locaisEstoque){const o=document.createElement('option');o.value=loc.nome;o.textContent=loc.nome;sel.appendChild(o);}
+    sel.value=val;
+  }
+}
+
+// --- LOCAIS DE COMPRA ---
+async function carregarLocaisCompraConfig(){
+  const{data}=await supa.from('locais_compra').select('id,nome,ativo,locais_compra_enderecos(id,endereco,latitude,longitude),locais_compra_categorias(id,local_estoque)').eq('casa_id',usuario.casa_id).order('nome');
+  const area=el('listaLocaisCompra');if(!area)return;area.innerHTML='';
+  if(!data||!data.length){area.innerHTML='<div class="vazio">Nenhum local cadastrado.</div>';return;}
+  for(const loc of data){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)';
+    const esq=document.createElement('div');
+    const n=document.createElement('div');n.style.cssText='font-size:14px;font-weight:600';n.textContent=loc.nome+(loc.ativo?'':' (inativo)');
+    const m=document.createElement('div');m.style.cssText='font-size:11px;color:var(--suave);margin-top:2px';
+    m.textContent=`${(loc.locais_compra_enderecos||[]).length} endereço(s) · ${(loc.locais_compra_categorias||[]).length} categoria(s)`;
+    esq.appendChild(n);esq.appendChild(m);
+    const btnEdit=document.createElement('button');btnEdit.textContent='✏️ Editar';btnEdit.style.cssText='font-size:12px;padding:6px 10px;background:var(--acao-clara);color:var(--acao)';
+    btnEdit.onclick=()=>abrirEditarLocalCompra(loc);
+    linha.appendChild(esq);linha.appendChild(btnEdit);area.appendChild(linha);
+  }
+}
+
+async function criarNovoLocalCompra(){
+  const nome=el('nomeNovoLocalCompra').value.trim();
+  if(!nome){aviso('avisoNovoLocalCompra','Digite o nome.','erro');return;}
+  const{data,error}=await supa.from('locais_compra').insert({casa_id:usuario.casa_id,nome,ativo:true}).select().single();
+  if(error){aviso('avisoNovoLocalCompra','Erro.','erro');return;}
+  el('nomeNovoLocalCompra').value='';
+  toggleInputProjeto('inputNovoLocalCompra');
+  carregarLocaisCompraConfig();
+  // Abre para edição imediata
+  if(data)abrirEditarLocalCompra({...data,locais_compra_enderecos:[],locais_compra_categorias:[]});
+}
+
+function abrirEditarLocalCompra(loc){
+  _localCompraEditando=loc;
+  _localCompraEnderecos=[...(loc.locais_compra_enderecos||[])];
+  _localCompraCategorias=(loc.locais_compra_categorias||[]).map(c=>c.local_estoque);
+  el('elcTitulo').textContent=loc.nome;
+  el('elcNome').value=loc.nome;
+  el('elcNovoEnd').value='';el('elcNovoLat').value='';el('elcNovoLon').value='';
+  renderizarEnderecos();
+  renderizarCategoriasLocalCompra();
+  aviso('avisoEditarLocalCompra','');
+  el('modalEditarLocalCompra').classList.remove('oculto');el('modalEditarLocalCompra').classList.add('modal-aberto');
+}
+
+function renderizarEnderecos(){
+  const area=el('elcEnderecos');area.innerHTML='';
+  for(const e of _localCompraEnderecos){
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--linha);font-size:12px';
+    linha.innerHTML=`<span>${e.endereco||'Sem endereço'} ${e.latitude?`(${Number(e.latitude).toFixed(4)}, ${Number(e.longitude).toFixed(4)})`:'sem coords'}</span>`;
+    const btnD=document.createElement('button');btnD.textContent='×';btnD.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    btnD.onclick=async()=>{if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
+    linha.appendChild(btnD);area.appendChild(linha);
+  }
+  if(!_localCompraEnderecos.length)area.innerHTML='<div style="font-size:12px;color:var(--suave);padding:6px 0">Nenhum endereço.</div>';
+}
+
+function renderizarCategoriasLocalCompra(){
+  const area=el('elcCategorias');area.innerHTML='';
+  for(const cat of _localCompraCategorias){
+    const chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--acao-clara);color:var(--acao);font-size:11px;padding:3px 8px;border-radius:999px;margin:2px';
+    chip.textContent=cat;
+    const x=document.createElement('span');x.textContent='×';x.style.cursor='pointer';x.onclick=()=>{_localCompraCategorias=_localCompraCategorias.filter(c=>c!==cat);renderizarCategoriasLocalCompra();renderizarBotoesCategorias();};
+    chip.appendChild(x);area.appendChild(chip);
+  }
+  renderizarBotoesCategorias();
+}
+
+function renderizarBotoesCategorias(){
+  const area=el('elcBtnsCategorias');area.innerHTML='';
+  for(const loc of _locaisEstoque){
+    if(_localCompraCategorias.includes(loc.nome))continue;
+    const btn=document.createElement('button');btn.className='secundario';btn.style.cssText='font-size:11px;padding:4px 8px;margin:2px';btn.textContent='+ '+loc.nome;
+    btn.onclick=()=>{_localCompraCategorias.push(loc.nome);renderizarCategoriasLocalCompra();};
+    area.appendChild(btn);
+  }
+}
+
+async function salvarEditarLocalCompra(){
+  if(!_localCompraEditando)return;
+  el('btnSalvarEditarLocalCompra').disabled=true;
+  const nome=el('elcNome').value.trim();
+  if(!nome){aviso('avisoEditarLocalCompra','Digite o nome.','erro');el('btnSalvarEditarLocalCompra').disabled=false;return;}
+  // Atualiza nome
+  await supa.from('locais_compra').update({nome}).eq('id',_localCompraEditando.id);
+  // Recria categorias
+  await supa.from('locais_compra_categorias').delete().eq('local_compra_id',_localCompraEditando.id);
+  if(_localCompraCategorias.length)await supa.from('locais_compra_categorias').insert(_localCompraCategorias.map(c=>({local_compra_id:_localCompraEditando.id,local_estoque:c})));
+  el('btnSalvarEditarLocalCompra').disabled=false;
+  aviso('avisoEditarLocalCompra','Salvo.','ok');
+  setTimeout(()=>{el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');_localCompraEditando=null;carregarLocaisCompraConfig();},1000);
+}
+
+async function excluirLocalCompra(){
+  if(!_localCompraEditando)return;
+  if(!confirm(`Excluir "${_localCompraEditando.nome}"?`))return;
+  await supa.from('locais_compra').delete().eq('id',_localCompraEditando.id);
+  el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');
+  _localCompraEditando=null;carregarLocaisCompraConfig();
+}
+
+async function adicionarEnderecoLocal(){
+  const end=el('elcNovoEnd').value.trim();
+  const lat=el('elcNovoLat').value?Number(el('elcNovoLat').value):null;
+  const lon=el('elcNovoLon').value?Number(el('elcNovoLon').value):null;
+  if(!end)return;
+  if(_localCompraEditando?.id){
+    const{data}=await supa.from('locais_compra_enderecos').insert({local_compra_id:_localCompraEditando.id,endereco:end,latitude:lat,longitude:lon,raio_metros:200}).select().single();
+    if(data)_localCompraEnderecos.push(data);
+  }else{_localCompraEnderecos.push({endereco:end,latitude:lat,longitude:lon});}
+  el('elcNovoEnd').value='';el('elcNovoLat').value='';el('elcNovoLon').value='';
+  renderizarEnderecos();
+}
+
+// --- HISTÓRICO DE EXCLUÍDOS ---
+async function carregarHistoricoExcluidos(modulo){
+  _moduloHistorico=modulo;
+  const area=el('listaHistorico');area.innerHTML='<div class="vazio">Carregando...</div>';
+  let q=supa.from('historico_excluidos').select('id,modulo,dados,excluido_em,restaurado_em').eq('casa_id',usuario.casa_id).order('excluido_em',{ascending:false}).limit(50);
+  if(modulo!=='todos')q=q.eq('modulo',modulo);
+  const{data}=await q;
+  area.innerHTML='';
+  if(!data||!data.length){area.innerHTML='<div class="vazio">Nenhum item excluído nesta categoria.</div>';return;}
+  const MOD_LABEL={tarefas:'Tarefa',contas:'Conta',estoque:'Estoque',lista_compras:'Lista',rituais:'Ritual'};
+  for(const h of data){
+    const nome=h.dados?.titulo||h.dados?.nome||h.dados?.nome_popular||'Item excluído';
+    const quando=new Date(h.excluido_em).toLocaleDateString('pt-BR');
+    const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)';
+    const esq=document.createElement('div');
+    esq.innerHTML=`<div style="font-size:13px;font-weight:600">${nome}</div><div style="font-size:11px;color:var(--suave)">${MOD_LABEL[h.modulo]||h.modulo} · excluído em ${quando}${h.restaurado_em?' · restaurado':''}</div>`;
+    const btnRest=document.createElement('button');btnRest.textContent='Restaurar';btnRest.style.cssText='font-size:12px;padding:6px 10px;background:var(--acao-clara);color:var(--acao)';
+    btnRest.disabled=!!h.restaurado_em;
+    btnRest.onclick=async()=>{await restaurarItem(h);btnRest.disabled=true;btnRest.textContent='Restaurado';};
+    linha.appendChild(esq);linha.appendChild(btnRest);area.appendChild(linha);
+  }
+}
+
+async function restaurarItem(h){
+  const d=h.dados;
+  try{
+    if(h.modulo==='tarefas'){
+      await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo:d.titulo,responsavel:d.responsavel,data:d.data,feita:false,recorrente:d.recorrente,recorrencia:d.recorrencia,criada_por:usuario.id});
+      await carregarTarefas();
+    }else if(h.modulo==='contas'){
+      await supa.from('contas').insert({casa_id:usuario.casa_id,nome:d.nome,valor:d.valor,vencimento:d.vencimento,paga:d.paga,recorrente:d.recorrente,dia_vencimento:d.dia_vencimento,criada_por:usuario.id});
+      await carregarContas();
+    }else if(h.modulo==='estoque'){
+      await supa.from('estoque').insert({casa_id:usuario.casa_id,nome:d.nome,tipo:d.tipo,quantidade:d.quantidade,minimo:d.minimo,unidade:d.unidade,nivel:d.nivel,minimo_nivel:d.minimo_nivel,local:d.local,critico:d.critico,taxa_consumo:d.taxa_consumo,taxa_periodo:d.taxa_periodo,alerta_dias:d.alerta_dias,atualizado_por:usuario.id});
+      await carregarEstoque();
+    }else if(h.modulo==='lista_compras'){
+      await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome:d.nome,quantidade:d.quantidade,unidade:d.unidade,status:'pendente',criado_por:usuario.id});
+      await carregarLista();
+    }else if(h.modulo==='rituais'){
+      await supa.from('rituais').insert({casa_id:usuario.casa_id,nome:d.nome,frequencia:d.frequencia,pauta:d.pauta,privado:d.privado});
+      await carregarRituais();
+    }
+    // Marca como restaurado
+    await supa.from('historico_excluidos').update({restaurado_em:new Date().toISOString(),restaurado_por:usuario.id}).eq('id',h.id);
+  }catch(e){console.error('Erro ao restaurar:',e);}
+}
+
 // --- EVENTOS ---
 el('btnEntrar').onclick=entrar;
 el('senha').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
@@ -1399,6 +1643,17 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+// Configurações
+el('btnGerarToken').onclick=gerarNovoToken;
+el('btnNovoLocalEstoque').onclick=()=>toggleInputProjeto('inputNovoLocalEstoque');
+el('btnSalvarNovoLocalEstoque').onclick=salvarNovoLocalEstoque;
+el('btnNovoLocalCompra').onclick=()=>toggleInputProjeto('inputNovoLocalCompra');
+el('nomeNovoLocalCompra').addEventListener('keydown',e=>{if(e.key==='Enter')criarNovoLocalCompra();});
+el('btnFecharEditarLocalCompra').onclick=()=>{el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');_localCompraEditando=null;};
+el('btnSalvarEditarLocalCompra').onclick=salvarEditarLocalCompra;
+el('btnExcluirLocalCompra').onclick=excluirLocalCompra;
+el('btnAddEndereco').onclick=adicionarEnderecoLocal;
+document.querySelectorAll('[data-modulo]').forEach(b=>{b.onclick=()=>{_moduloHistorico=b.dataset.modulo;document.querySelectorAll('[data-modulo]').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');carregarHistoricoExcluidos(b.dataset.modulo);};});
 el('btnFecharEditarRitual').onclick=()=>{el('modalEditarRitual').classList.add('oculto');el('modalEditarRitual').classList.remove('modal-aberto');_ritualEditando=null;};
 el('btnSalvarEditarRitual').onclick=salvarEditarRitual;
 el('btnFecharEditarPlanta').onclick=()=>{el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');_plantaEditando=null;};
