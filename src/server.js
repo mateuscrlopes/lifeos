@@ -25,6 +25,11 @@ app.get('/saude', async (req, res) => {
   });
 });
 
+// Tablet da Casa
+app.get('/tablet', (req, res) => {
+  res.sendFile('tablet.html', { root: './public' });
+});
+
 // Clima — para o tablet
 app.get('/clima', async (req, res) => {
   const clima = await buscarClima();

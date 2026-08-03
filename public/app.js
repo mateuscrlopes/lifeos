@@ -15,7 +15,9 @@ let _plantaAberta=null;
 let _plantaEditando=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
-function aviso(id,t,tipo=''){const a=el(id);a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
+function aviso(id,t,tipo=''){const a=el(id);if(!a)return;a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
+function abrirModal(id){const m=el(id);if(m){m.classList.add('aberto');}}
+function fecharModal(id){const m=el(id);if(m){m.classList.remove('aberto');}}
 
 async function iniciar(){
   try{const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
@@ -37,8 +39,12 @@ async function aoEntrar(){
   const{data:s}=await supa.auth.getSession();
   const{data:p,error}=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',s.session.user.id).single();
   if(error||!p){aviso('avisoLogin','Perfil não encontrado.','erro');return;}
-  usuario=p;el('quem').textContent=p.nome;
-  el('telaLogin').classList.add('oculto');el('telaApp').classList.remove('oculto');aviso('avisoLogin','');
+  usuario=p;
+  // Atualizar header avatar
+  const av=el('headerAvatar');if(av)av.textContent=p.nome.charAt(0).toUpperCase();
+  // Atualizar data/hora/clima no Hoje
+  atualizarDataHoje();carregarClimaHoje();
+  el('telaLogin').style.display='none';el('telaApp').style.display='flex';aviso('avisoLogin','');
   await Promise.allSettled([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
   carregarLocaisEstoque();
   ligarTempoReal();
@@ -60,15 +66,79 @@ function ligarTempoReal(){
 async function sair(){
   if(canalTempoReal){supa.removeChannel(canalTempoReal);canalTempoReal=null;}
   await supa.auth.signOut();usuario=null;
-  el('quem').textContent='';el('telaApp').classList.add('oculto');el('telaLogin').classList.remove('oculto');
+  el('quem')&&(el('quem').textContent='');el('telaApp').style.display='none';el('telaLogin').style.display='flex';
 }
 
-function trocarAba(qual){
-  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaPainelProjeto','abaRituais','abaTarefas','abaContas','abaConfig'].forEach(id=>el(id).classList.toggle('oculto',id!=='aba'+qual.charAt(0).toUpperCase()+qual.slice(1)));
-  document.querySelectorAll('.aba').forEach(b=>b.classList.toggle('ativa',b.dataset.aba===qual));
+// Mapeamento das abas principais
+const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaPlantas','abaMais'];
+const SECOES_MAIS=['secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
+
+// ---- DATA, HORA e CLIMA ----
+function atualizarDataHoje(){
+  const agora=new Date();
+  const h=agora.getHours();
+  const periodo=h>=5&&h<12?'Bom dia':h>=12&&h<18?'Boa tarde':'Boa noite';
+  const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const data=`${dias[agora.getDay()]}, ${agora.getDate()} de ${meses[agora.getMonth()]}`;
+  const gp=el('greetingPeriodo');if(gp)gp.textContent=periodo;
+  const gn=el('greetingNome');if(gn&&usuario)gn.textContent=`Olá, ${usuario.nome}.`;
+  const dh=el('dataHoje');if(dh)dh.textContent=data;
+}
+
+async function carregarClimaHoje(){
+  try{
+    const r=await fetch('/clima');const c=await r.json();
+    const cr=el('climaResumido');
+    if(cr&&c.temperatura)cr.textContent=`${c.temperatura}° · ${c.descricao}`;
+  }catch(e){}
+}
+
+function trocarAba(qual,btn){
+  // Esconde todas as abas e seções
+  [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
+    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
+  });
+  // Mostra a aba alvo
+  const id='aba'+qual.charAt(0).toUpperCase()+qual.slice(1);
+  const alvo=el(id);if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
+  // Atualiza tab bar
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===qual));
+  // Scroll ao topo
+  const body=el('appBody');if(body)body.scrollTop=0;
+  // Ações por aba
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='plantas'&&usuario)renderizarPlantas();
-  if(qual==='config'&&usuario){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
+}
+
+function trocarSub(qual,btn){
+  document.querySelectorAll('.sub-conteudo').forEach(s=>{s.style.display='none';s.classList.add('oculto');});
+  const alvo=el('sub'+qual.charAt(0).toUpperCase()+qual.slice(1));
+  if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
+  document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
+}
+
+function abrirSecao(qual){
+  [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
+    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
+  });
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('ativa'));
+  const secao=el('secao'+qual.charAt(0).toUpperCase()+qual.slice(1));
+  if(secao){secao.style.display='block';secao.classList.remove('oculto');}
+  const body=el('appBody');if(body)body.scrollTop=0;
+  // Carregar dados da seção
+  if(qual==='projetos')carregarProjetos();
+  if(qual==='rituais')carregarRituais();
+  if(qual==='config'){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
+}
+
+function voltarMais(){
+  [...SECOES_MAIS].forEach(id=>{
+    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
+  });
+  const mais=el('abaMais');if(mais){mais.style.display='block';mais.classList.remove('oculto');}
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab==='mais'));
+  const body=el('appBody');if(body)body.scrollTop=0;
 }
 
 // --- LISTA ---
@@ -100,7 +170,7 @@ function abrirEditarLista(item){
   el('elQtd').value=item.quantidade??'';
   el('elUnidade').value=item.unidade||'';
   aviso('avisoEditarLista','');
-  el('modalEditarLista').classList.remove('oculto');el('modalEditarLista').classList.add('modal-aberto');
+  abrirModal('modalEditarLista');
 }
 
 async function salvarEditarLista(){
@@ -114,7 +184,7 @@ async function salvarEditarLista(){
   }).eq('id',_listaEditando.id);
   el('btnSalvarEditarLista').disabled=false;
   if(error){aviso('avisoEditarLista','Erro ao salvar.','erro');return;}
-  el('modalEditarLista').classList.add('oculto');el('modalEditarLista').classList.remove('modal-aberto');
+  fecharModal('modalEditarLista');
   _listaEditando=null;
   await carregarLista();
 }
@@ -245,7 +315,7 @@ function abrirEditarEstoque(item){
   el('eeCritico').checked=!!item.critico;
   el('eeQtdBox').style.display=item.tipo==='nivel_visual'?'none':'block';
   aviso('avisoEditarEstoque','');
-  el('modalEditarEstoque').classList.remove('oculto');el('modalEditarEstoque').classList.add('modal-aberto');
+  abrirModal('modalEditarEstoque');
 }
 
 async function salvarEditarEstoque(){
@@ -260,7 +330,7 @@ async function salvarEditarEstoque(){
   const{error}=await supa.from('estoque').update(payload).eq('id',_estoqueEditando.id);
   el('btnSalvarEditarEstoque').disabled=false;
   if(error){aviso('avisoEditarEstoque','Erro ao salvar.','erro');return;}
-  el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');
+  fecharModal('modalEditarEstoque');
   _estoqueEditando=null;
   await carregarEstoque();await carregarLista();
 }
@@ -274,7 +344,7 @@ async function removerEstoque(item){
   }
 }
 
-async function abrirModalInventario(){el('invPassoLocal').classList.remove('oculto');el('invPassoItens').classList.add('oculto');el('invLocal').value='';el('avisoInventario').textContent='';el('modalInventario').classList.remove('oculto');el('modalInventario').classList.add('modal-aberto');}
+async function abrirModalInventario(){el('invPassoLocal').classList.remove('oculto');el('invPassoItens').classList.add('oculto');el('invLocal').value='';el('avisoInventario').textContent='';abrirModal('modalInventario');}
 async function iniciarInventario(){
   const local=el('invLocal').value;if(!local){aviso('avisoInventario','Escolha um ambiente.','erro');return;}
   el('btnIniciarInventario').disabled=true;aviso('avisoInventario','Buscando...','');
@@ -292,13 +362,13 @@ async function iniciarInventario(){
     else{const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px';const inp=document.createElement('input');inp.type='number';inp.min='0';inp.step=item.tipo==='peso_volume'?'100':'1';inp.value=item.quantidade;inp.dataset.itemId=item.id;inp.style.flex='1';const un=document.createElement('span');un.className='meta';un.textContent=item.unidade||'';row.appendChild(inp);row.appendChild(un);bloco.appendChild(row);}
     area.appendChild(bloco);
   }
-  el('invPassoLocal').classList.add('oculto');el('invPassoItens').classList.remove('oculto');
+  el('invPassoLocal').style.display='none';el('invPassoItens').style.display='block';el('invPassoItens').classList.remove('oculto');
 }
 async function concluirInventario(){
   el('btnConcluirInventario').disabled=true;
   for(const item of _invItens){let v;if(item.tipo==='nivel_visual'){const s=el('invItens').querySelector(`select[data-item-id="${item.id}"]`);v=s?s.value:item.nivel;}else{const i=el('invItens').querySelector(`input[data-item-id="${item.id}"]`);v=i?i.value:item.quantidade;}await confirmarItemInventario(supa,usuario,item,v);}
   await concluirSessaoInventario(supa,usuario,_invLocal,_invItens.length);
-  el('btnConcluirInventario').disabled=false;el('modalInventario').classList.add('oculto');el('modalInventario').classList.remove('modal-aberto');
+  el('btnConcluirInventario').disabled=false;fecharModal('modalInventario');
   await carregarEstoque();await carregarLista();
 }
 
@@ -450,7 +520,7 @@ async function abrirFichaPlanta(planta){
   // Eventos (linha do tempo)
   await renderizarEventosPlanta(planta);
 
-  el('modalPlanta').classList.remove('oculto');el('modalPlanta').classList.add('modal-aberto');
+  abrirModal('modalPlanta');
 }
 
 function abrirEditarPlanta(){
@@ -465,7 +535,7 @@ function abrirEditarPlanta(){
   el('epPerfil').value=p.perfil_hidrico||'medio';
   el('epObs').value=p.observacoes||'';
   aviso('avisoEditarPlanta','');
-  el('modalEditarPlanta').classList.remove('oculto');el('modalEditarPlanta').classList.add('modal-aberto');
+  abrirModal('modalEditarPlanta');
 }
 
 async function salvarEditarPlanta(){
@@ -484,7 +554,7 @@ async function salvarEditarPlanta(){
   }).eq('id',_plantaEditando.id);
   el('btnSalvarEditarPlanta').disabled=false;
   if(error){aviso('avisoEditarPlanta','Erro ao salvar.','erro');return;}
-  el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');
+  fecharModal('modalEditarPlanta');
   // Atualiza o cache e reabre a ficha com dados novos
   await atualizarPlantas();
   const atualizada=_plantasCache.find(p=>p.id===_plantaEditando.id);
@@ -534,12 +604,12 @@ function abrirModalRefeicao(dia,tipo){
   const chave=`${dia}-${tipo}`;el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
   const lista=el('modalRefLista');lista.innerHTML='';
   _refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos').forEach(r=>{const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';btn.innerHTML=`<span class="nome">${r.nome}</span>`;btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};lista.appendChild(btn);});
-  el('modalRefeicao').classList.remove('oculto');el('modalRefeicao').classList.add('modal-aberto');
+  abrirModal('modalRefeicao');
 }
 
 function confirmarSlot(){if(!_slotAtual)return;const nome=el('modalRefNomeAvulso').value.trim();const chave=`${_slotAtual.dia}-${_slotAtual.tipo}`;if(nome)_planDias[chave]={nome,refeicaoId:_slotAtual.refeicaoId||null};fecharModalRefeicao();renderizarSlotsCardapio();}
 function limparSlot(){if(!_slotAtual)return;delete _planDias[`${_slotAtual.dia}-${_slotAtual.tipo}`];fecharModalRefeicao();renderizarSlotsCardapio();}
-function fecharModalRefeicao(){el('modalRefeicao').classList.add('oculto');el('modalRefeicao').classList.remove('modal-aberto');_slotAtual=null;}
+function fecharModalRefeicao(){fecharModal('modalRefeicao');_slotAtual=null;}
 
 async function carregarPlanejamento(){
   const seg=formatarDataISO(inicioSemana());
@@ -626,7 +696,7 @@ function abrirEditarRitual(r){
   el('erPauta').value=r.pauta||'';
   el('erPrivado').checked=!!r.privado;
   aviso('avisoEditarRitual','');
-  el('modalEditarRitual').classList.remove('oculto');el('modalEditarRitual').classList.add('modal-aberto');
+  abrirModal('modalEditarRitual');
 }
 
 async function salvarEditarRitual(){
@@ -641,7 +711,7 @@ async function salvarEditarRitual(){
   }).eq('id',_ritualEditando.id);
   el('btnSalvarEditarRitual').disabled=false;
   if(error){aviso('avisoEditarRitual','Erro ao salvar.','erro');return;}
-  el('modalEditarRitual').classList.add('oculto');el('modalEditarRitual').classList.remove('modal-aberto');
+  fecharModal('modalEditarRitual');
   _ritualEditando=null;
   await carregarRituais();
 }
@@ -651,7 +721,7 @@ function abrirModalRitual(ritual){
   const hoje=new Date();let prox=new Date(hoje);
   if(ritual.frequencia==='semanal')prox.setDate(hoje.getDate()+7);else if(ritual.frequencia==='mensal')prox.setMonth(hoje.getMonth()+1);else if(ritual.frequencia==='bimestral')prox.setMonth(hoje.getMonth()+2);
   el('modalRitProxima').value=ritual.frequencia==='livre'?'':formatarDataISO(prox);
-  aviso('avisoSessao','');el('modalRitual').classList.remove('oculto');el('modalRitual').classList.add('modal-aberto');
+  aviso('avisoSessao','');abrirModal('modalRitual');
 }
 
 async function concluirRitual(){
@@ -661,10 +731,10 @@ async function concluirRitual(){
   el('btnConcluirRitual').disabled=false;
   if(error){aviso('avisoSessao','Erro.','erro');return;}
   aviso('avisoSessao','Sessão registrada.','ok');
-  setTimeout(()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;carregarRituais();},1200);
+  setTimeout(()=>{fecharModal('modalRitual');_ritualAtual=null;carregarRituais();},1200);
 }
 
-function criarTarefaDoRitual(){el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');trocarAba('tarefas');el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
+function criarTarefaDoRitual(){fecharModal('modalRitual');trocarAba('casa');trocarSub('tarefas',null);el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
 
 function abrirEditarConta(conta){
   _contaEditando=conta;
@@ -673,7 +743,7 @@ function abrirEditarConta(conta){
   el('ecVenc').value=conta.vencimento?conta.vencimento.slice(0,10):'';
   el('ecRecorrente').checked=!!conta.recorrente;
   aviso('avisoEditarConta','');
-  el('modalEditarConta').classList.remove('oculto');el('modalEditarConta').classList.add('modal-aberto');
+  abrirModal('modalEditarConta');
 }
 
 async function salvarEditarConta(){
@@ -691,7 +761,7 @@ async function salvarEditarConta(){
   }).eq('id',_contaEditando.id);
   el('btnSalvarEditarConta').disabled=false;
   if(error){aviso('avisoEditarConta','Erro ao salvar.','erro');return;}
-  el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');
+  fecharModal('modalEditarConta');
   _contaEditando=null;
   await carregarContas();
 }
@@ -918,7 +988,7 @@ async function carregarProjetos(){
     .order('criado_em',{ascending:false});
   const area=el('listaProjetos');area.innerHTML='';
   const lista=data||[];
-  el('projetosSubtitulo').textContent=`${lista.length} ${lista.length===1?'projeto':'projetos'}`;
+  const ps=el('projetosSubtitulo');if(ps)ps.textContent=`${lista.length} ${lista.length===1?'projeto':'projetos'}`;
   if(error){area.innerHTML='<div class="cartao"><div class="vazio">Erro ao carregar.</div></div>';return;}
   if(!lista.length){area.innerHTML='<div class="cartao"><div class="vazio">Nenhum projeto ainda. Crie o primeiro acima.</div></div>';return;}
   const cartao=document.createElement('div');cartao.className='cartao';
@@ -947,9 +1017,9 @@ async function abrirPainelProjeto(projeto){
   _projetoAtual=projeto;
   el('ppNome').textContent=projeto.nome;
   // Esconde a lista e mostra o painel
-  ['abaHoje','abaCompras','abaEstoque','abaCardapio','abaPlantas','abaProjetos','abaRituais','abaTarefas','abaContas'].forEach(id=>el(id).classList.add('oculto'));
-  el('abaPainelProjeto').classList.remove('oculto');
-  document.querySelectorAll('.aba').forEach(b=>b.classList.remove('ativa'));
+  [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}});
+  el('abaPainelProjeto').style.display='block';el('abaPainelProjeto').classList.remove('oculto');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('ativa'));
   // Ocultar inputs
   el('inputObjetivo').style.display='none';el('inputObjetivo').classList.add('oculto');
   el('inputTarefaProjeto').style.display='none';el('inputTarefaProjeto').classList.add('oculto');
@@ -1039,7 +1109,7 @@ async function salvarProjeto(){
   }
   el('btnSalvarProjeto').disabled=false;
   if(error){aviso('avisoProjeto','Erro ao salvar.','erro');return;}
-  el('modalProjeto').classList.add('oculto');el('modalProjeto').classList.remove('modal-aberto');
+  fecharModal('modalProjeto');
   await carregarProjetos();
   if(_projetoAtual&&el('abaPainelProjeto')&&!el('abaPainelProjeto').classList.contains('oculto')){
     el('ppNome').textContent=_projetoAtual.nome;
@@ -1058,7 +1128,7 @@ Todas as tarefas e objetivos vinculados serão removidos.`))return;
 }
 
 function toggleInputProjeto(id){
-  const el2=el(id);const vis=el2.style.display==='none'||el2.classList.contains('oculto');
+  const el2=el(id);if(!el2)return;const vis=el2.style.display==='none'||el2.classList.contains('oculto');
   el2.style.display=vis?'block':'none';
   if(vis)el2.classList.remove('oculto');else el2.classList.add('oculto');
 }
@@ -1104,7 +1174,7 @@ function abrirEditarTarefa(t){
   el('etRecorrencia').value=t.recorrencia||'';
   el('etRecorrenciaBox').classList.toggle('oculto',!t.recorrente);
   aviso('avisoEditarTarefa','');
-  el('modalEditarTarefa').classList.remove('oculto');el('modalEditarTarefa').classList.add('modal-aberto');
+  abrirModal('modalEditarTarefa');
 }
 
 async function salvarEditarTarefa(){
@@ -1120,7 +1190,7 @@ async function salvarEditarTarefa(){
   }).eq('id',_tarefaEditando.id);
   el('btnSalvarEditarTarefa').disabled=false;
   if(error){aviso('avisoEditarTarefa','Erro ao salvar.','erro');return;}
-  el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');
+  fecharModal('modalEditarTarefa');
   _tarefaEditando=null;
   await carregarTarefas();
 }
@@ -1161,38 +1231,76 @@ async function removerTarefa(t){
 
 // --- HOJE ---
 async function carregarHoje(){
-  el('saudacao').textContent=saudacao(usuario.nome);
+  atualizarDataHoje();
   const dados=await montarHoje(supa,usuario);
+  // Hero destaque
+  const urgentes=contarUrgentes(_plantasCache);
+  const heroTit=el('heroTitulo');const heroSub=el('heroSub');
+  if(dados.tarefasAtencao&&dados.tarefasAtencao.length>0){
+    if(heroTit)heroTit.textContent=dados.tarefasAtencao[0].titulo;
+    if(heroSub)heroSub.textContent=`${dados.tarefasAtencao.length} tarefa${dados.tarefasAtencao.length>1?'s':''} pendente${dados.tarefasAtencao.length>1?'s':''} hoje`;
+  }else if(dados.cardapioHoje){
+    if(heroTit)heroTit.textContent=dados.cardapioHoje.almoco||dados.cardapioHoje.janta||'Cardápio do dia';
+    if(heroSub)heroSub.textContent='Cardápio planejado para hoje';
+  }else if(urgentes>0){
+    if(heroTit)heroTit.textContent=`${urgentes} planta${urgentes>1?'s precisam':' precisa'} de cuidado`;
+    if(heroSub)heroSub.textContent='Confira a aba Plantas';
+  }else{
+    if(heroTit)heroTit.textContent='Tudo em dia!';
+    if(heroSub)heroSub.textContent='Nenhuma pendência para hoje';
+  }
+  // Métricas rápidas
+  const mg=el('metricasHoje');
+  if(mg){
+    const tarefasN=dados.tarefasAtencao?.length||0;
+    const contasN=dados.contasAtencao?.length||0;
+    const comprasN=dados.compras?.total||0;
+    const estN=dados.estoqueAtencao?.length||0;
+    mg.innerHTML=`
+      <div class="metrica mi-sage"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas pendentes</div></div>
+      <div class="metrica mi-clay"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas próximas</div></div>
+      <div class="metrica mi-sky"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Itens na lista</div></div>
+      <div class="metrica mi-sun"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque em atenção</div></div>
+    `;
+  }
   const area=el('cardsHoje');area.innerHTML='';
 
   // Card plantas (se houver urgentes)
-  const urgentes=contarUrgentes(_plantasCache);
-  if(urgentes>0){
-    const card=criarCartaoHoje('🌿 Plantas','plantas');
-    const mini=document.createElement('div');mini.className='mini-item';
-    mini.innerHTML=`<span>${urgentes} ${urgentes===1?'planta precisa':'plantas precisam'} de cuidado hoje</span>`;
-    card.corpo.appendChild(mini);area.appendChild(card.cartao);
+  const urgentesCards=contarUrgentes(_plantasCache);
+  if(urgentesCards>0){
+    const card=criarCartaoHoje('Plantas','plantas');
+    card.corpo.appendChild(miniItem(`${urgentesCards} ${urgentesCards===1?'planta precisa':'plantas precisam'} de cuidado`,'',''));
+    area.appendChild(card.cartao);
   }
 
   if(dados.cardapioHoje){
-    const card=document.createElement('div');card.className='cartao card-clicavel';card.onclick=()=>trocarAba('cardapio');
-    const cab=document.createElement('div');cab.className='card-hoje-titulo';const t=document.createElement('div');t.className='titulo-secao';t.textContent='Cardápio de hoje';const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';cab.appendChild(t);cab.appendChild(ab);card.appendChild(cab);
-    const slots=document.createElement('div');slots.className='card-cardapio-hoje';const ch=dados.cardapioHoje;
-    if(ch.almoco){const s=document.createElement('div');s.className='slot-hoje';s.innerHTML=`<div class="rotulo">🍱 Almoço</div><div class="prato">${ch.almoco}</div>`;slots.appendChild(s);}
-    if(ch.janta){const s=document.createElement('div');s.className='slot-hoje';s.innerHTML=`<div class="rotulo">🍽️ Janta</div><div class="prato">${ch.janta}</div>`;slots.appendChild(s);}
-    card.appendChild(slots);if(ch.responsavel){const r=document.createElement('div');r.className='meta';r.style.marginTop='8px';r.textContent=`Responsável: ${ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1)}`;card.appendChild(r);}
-    area.appendChild(card);
+    const card=criarCartaoHoje('Cardápio de hoje','cardapio');const ch=dados.cardapioHoje;
+    if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
+    if(ch.janta)card.corpo.appendChild(miniItem('Janta',ch.janta,''));
+    if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+    area.appendChild(card.cartao);
   }
 
-  if(dados.tudoEmDia&&!dados.cardapioHoje&&urgentes===0){const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui. ✨</div>';area.appendChild(c);return;}
+  if(dados.tudoEmDia&&!dados.cardapioHoje&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);return;}
   if(dados.contasAtencao.length){const card=criarCartaoHoje('Contas próximas','contas');for(const c of dados.contasAtencao){const q=c.status==='vencida'?'venceu':c.status==='vence_hoje'?'vence hoje':`vence em ${c.dias} ${c.dias===1?'dia':'dias'}`;card.corpo.appendChild(miniItem(c.nome,q,formatarValor(c.valor)));}area.appendChild(card.cartao);}
   if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
   if(dados.estoqueAtencao.length){const card=criarCartaoHoje('Estoque em atenção','estoque');for(const i of dados.estoqueAtencao)card.corpo.appendChild(miniItem(i.nome,`${i.quantidade} · ${i.status==='acabou'?'acabou':'baixo'}`,''));area.appendChild(card.cartao);}
   if(dados.compras.total){const card=criarCartaoHoje('Compras','compras');for(const n of dados.compras.primeiros)card.corpo.appendChild(miniItem(n,'',''));if(dados.compras.total>dados.compras.primeiros.length){const r=document.createElement('div');r.className='mini-item';r.style.color='var(--suave)';r.textContent=`+ mais ${dados.compras.total-dados.compras.primeiros.length} na lista`;card.corpo.appendChild(r);}area.appendChild(card.cartao);}
 }
 
-function criarCartaoHoje(titulo,dest){const c=document.createElement('div');c.className='cartao card-clicavel';const cab=document.createElement('div');cab.className='card-hoje-titulo';const t=document.createElement('div');t.className='titulo-secao';t.textContent=titulo;const ab=document.createElement('span');ab.className='abrir';ab.textContent='Abrir';cab.appendChild(t);cab.appendChild(ab);const corpo=document.createElement('div');c.appendChild(cab);c.appendChild(corpo);c.onclick=()=>trocarAba(dest);return{cartao:c,corpo};}
-function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='m-meta';d.textContent=[meta,valor].filter(Boolean).join('  ');l.appendChild(e);l.appendChild(d);return l;}
+function criarCartaoHoje(titulo,dest){
+  const wrap=document.createElement('div');wrap.className='card-hoje';
+  const c=document.createElement('div');c.className='cartao clicavel';
+  const cab=document.createElement('div');cab.className='card-hoje-head';
+  const t=document.createElement('div');t.className='card-hoje-titulo-txt';t.textContent=titulo;
+  const ab=document.createElement('span');ab.className='card-hoje-abrir';ab.textContent='Abrir';
+  cab.appendChild(t);cab.appendChild(ab);
+  const corpo=document.createElement('div');
+  c.appendChild(cab);c.appendChild(corpo);
+  c.onclick=()=>{if(dest==='contas'||dest==='tarefas'||dest==='estoque'||dest==='compras'||dest==='cardapio'){trocarAba('casa');trocarSub(dest,null);}else{trocarAba(dest);}};
+  wrap.appendChild(c);return{cartao:wrap,corpo};
+}
+function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='mini-meta';d.textContent=[meta,valor].filter(Boolean).join(' · ');l.appendChild(e);l.appendChild(d);return l;}
 
 // --- EVENTOS DA LINHA DO TEMPO ---
 const TIPO_LABEL_EV={cadastro:'📋 Cadastro',rega:'💧 Rega',troca_agua:'🔄 Troca de água',imersao:'🪣 Imersão',adubacao:'🌱 Adubação',poda:'✂️ Poda',observacao:'📝 Obs.',alteracao_status:'🔁 Status',muda_retirada:'🌱 Muda'};
@@ -1243,7 +1351,7 @@ async function abrirModalNovaPlanta(){
   el('npApelido').value='';el('npPosicao').value='';el('npObs').value='';
   el('npNovaEspecieBox').style.display='none';el('npNovaEspecie').value='';
   el('npRotinaI').value='7';aviso('avisoNovaPlanta','');
-  el('modalNovaPlanta').classList.remove('oculto');el('modalNovaPlanta').classList.add('modal-aberto');
+  abrirModal('modalNovaPlanta');
 }
 
 async function salvarNovaPlanta(){
@@ -1283,7 +1391,7 @@ async function salvarNovaPlanta(){
   if(!res.ok){aviso('avisoNovaPlanta','Erro ao salvar: '+res.motivo,'erro');return;}
   aviso('avisoNovaPlanta',`${res.codigo} cadastrada com sucesso!`,'ok');
   await atualizarPlantas();
-  setTimeout(()=>{el('modalNovaPlanta').classList.add('oculto');el('modalNovaPlanta').classList.remove('modal-aberto');},1500);
+  setTimeout(()=>{fecharModal('modalNovaPlanta');},1500);
 }
 
 // Quando muda a especie no select, preenche metodo/perfil/rotina automaticamente
@@ -1420,7 +1528,7 @@ function abrirEditarLocalCompra(loc){
   renderizarEnderecos();
   renderizarCategoriasLocalCompra();
   aviso('avisoEditarLocalCompra','');
-  el('modalEditarLocalCompra').classList.remove('oculto');el('modalEditarLocalCompra').classList.add('modal-aberto');
+  abrirModal('modalEditarLocalCompra');
 }
 
 function renderizarEnderecos(){
@@ -1468,14 +1576,14 @@ async function salvarEditarLocalCompra(){
   if(_localCompraCategorias.length)await supa.from('locais_compra_categorias').insert(_localCompraCategorias.map(c=>({local_compra_id:_localCompraEditando.id,local_estoque:c})));
   el('btnSalvarEditarLocalCompra').disabled=false;
   aviso('avisoEditarLocalCompra','Salvo.','ok');
-  setTimeout(()=>{el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');_localCompraEditando=null;carregarLocaisCompraConfig();},1000);
+  setTimeout(()=>{fecharModal('modalEditarLocalCompra');_localCompraEditando=null;carregarLocaisCompraConfig();},1000);
 }
 
 async function excluirLocalCompra(){
   if(!_localCompraEditando)return;
   if(!confirm(`Excluir "${_localCompraEditando.nome}"?`))return;
   await supa.from('locais_compra').delete().eq('id',_localCompraEditando.id);
-  el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');
+  fecharModal('modalEditarLocalCompra');
   _localCompraEditando=null;carregarLocaisCompraConfig();
 }
 
@@ -1542,15 +1650,16 @@ async function restaurarItem(h){
 // --- EVENTOS ---
 el('btnEntrar').onclick=entrar;
 el('senha').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+el('btnSair').onclick=sair;
 el('btnAdd').onclick=adicionar;
 el('novoItem').addEventListener('keydown',e=>{if(e.key==='Enter')adicionar();});
 el('btnAddEstoque').onclick=adicionarEstoque;
 el('estTipo').addEventListener('change',e=>{const t=e.target.value;el('estCamposNum').classList.toggle('oculto',t==='nivel_visual');el('estCamposNivel').classList.toggle('oculto',t!=='nivel_visual');});
 el('btnInventario').onclick=abrirModalInventario;
-el('btnFecharInventario').onclick=()=>{el('modalInventario').classList.add('oculto');el('modalInventario').classList.remove('modal-aberto');};
+el('btnFecharInventario').onclick=()=>{fecharModal('modalInventario');};
 el('btnIniciarInventario').onclick=iniciarInventario;
 el('btnConcluirInventario').onclick=concluirInventario;
-el('btnVoltarLocal').onclick=()=>{el('invPassoItens').classList.add('oculto');el('invPassoLocal').classList.remove('oculto');};
+el('btnVoltarLocal').onclick=()=>{el('invPassoItens').style.display='none';el('invPassoLocal').style.display='block';};
 el('btnSalvarRefeicao').onclick=salvarRefeicao;
 el('btnAddIngrediente').onclick=adicionarLinhaIngrediente;
 el('btnConfirmarRef').onclick=confirmarSlot;
@@ -1561,8 +1670,8 @@ el('btnGerarLista').onclick=gerarListaCardapio;
 el('btnSalvarRitual').onclick=salvarRitual;
 el('btnConcluirRitual').onclick=concluirRitual;
 el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
-el('btnFecharModalRitual').onclick=()=>{el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');_ritualAtual=null;};
-el('btnFecharPlanta').onclick=()=>{el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');_plantaAberta=null;};
+el('btnFecharModalRitual').onclick=()=>{fecharModal('modalRitual');_ritualAtual=null;};
+el('btnFecharPlanta').onclick=()=>{fecharModal('modalPlanta');_plantaAberta=null;};
 el('btnRemoverPlanta').onclick=async()=>{
   if(!_plantaAberta)return;
   const nome=_plantaAberta.especies?.nome_popular||_plantaAberta.codigo;
@@ -1573,13 +1682,13 @@ O histórico e o cadastro serão preservados.`))return;
   const res=await removerPlanta(supa,usuario,_plantaAberta);
   el('btnRemoverPlanta').disabled=false;
   if(res.ok){
-    el('modalPlanta').classList.add('oculto');el('modalPlanta').classList.remove('modal-aberto');
+    fecharModal('modalPlanta');
     _plantaAberta=null;
     await atualizarPlantas();
   }
 };
 el('btnNovaPlanta').onclick=abrirModalNovaPlanta;
-el('btnFecharNovaPlanta').onclick=()=>{el('modalNovaPlanta').classList.add('oculto');el('modalNovaPlanta').classList.remove('modal-aberto');};
+el('btnFecharNovaPlanta').onclick=()=>{fecharModal('modalNovaPlanta');};
 el('btnSalvarNovaPlanta').onclick=salvarNovaPlanta;
 el('npEspecie').addEventListener('change',aoEscolherEspecie);
 el('btnAddTarefa').onclick=adicionarTarefa;
@@ -1592,11 +1701,11 @@ el('btnNovoProjeto').onclick=()=>{
   el('projNome').value='';el('projDesc').value='';el('projInicio').value='';el('projTermino').value='';
   el('projStatus').value='nao_iniciado';el('projFreq').value='semanal';
   aviso('avisoProjeto','');
-  el('modalProjeto').classList.remove('oculto');el('modalProjeto').classList.add('modal-aberto');
+  abrirModal('modalProjeto');
 };
-el('btnFecharModalProjeto').onclick=()=>{el('modalProjeto').classList.add('oculto');el('modalProjeto').classList.remove('modal-aberto');};
+el('btnFecharModalProjeto').onclick=()=>{fecharModal('modalProjeto');};
 el('btnSalvarProjeto').onclick=salvarProjeto;
-el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;trocarAba('projetos');};
+el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;abrirSecao('projetos');};
 el('btnEditarProjeto').onclick=()=>{
   if(!_projetoAtual)return;
   el('modalProjetoTitulo').textContent='Editar projeto';
@@ -1607,7 +1716,7 @@ el('btnEditarProjeto').onclick=()=>{
   el('projStatus').value=_projetoAtual.status||'nao_iniciado';
   el('projFreq').value=_projetoAtual.frequencia||'semanal';
   aviso('avisoProjeto','');
-  el('modalProjeto').classList.remove('oculto');el('modalProjeto').classList.add('modal-aberto');
+  abrirModal('modalProjeto');
 };
 el('btnRemoverProjeto').onclick=removerProjeto;
 el('btnAddObjetivo').onclick=()=>toggleInputProjeto('inputObjetivo');
@@ -1649,29 +1758,36 @@ el('btnNovoLocalEstoque').onclick=()=>toggleInputProjeto('inputNovoLocalEstoque'
 el('btnSalvarNovoLocalEstoque').onclick=salvarNovoLocalEstoque;
 el('btnNovoLocalCompra').onclick=()=>toggleInputProjeto('inputNovoLocalCompra');
 el('nomeNovoLocalCompra').addEventListener('keydown',e=>{if(e.key==='Enter')criarNovoLocalCompra();});
-el('btnFecharEditarLocalCompra').onclick=()=>{el('modalEditarLocalCompra').classList.add('oculto');el('modalEditarLocalCompra').classList.remove('modal-aberto');_localCompraEditando=null;};
+el('btnFecharEditarLocalCompra').onclick=()=>{fecharModal('modalEditarLocalCompra');_localCompraEditando=null;};
 el('btnSalvarEditarLocalCompra').onclick=salvarEditarLocalCompra;
 el('btnExcluirLocalCompra').onclick=excluirLocalCompra;
 el('btnAddEndereco').onclick=adicionarEnderecoLocal;
-document.querySelectorAll('[data-modulo]').forEach(b=>{b.onclick=()=>{_moduloHistorico=b.dataset.modulo;document.querySelectorAll('[data-modulo]').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');carregarHistoricoExcluidos(b.dataset.modulo);};});
-el('btnFecharEditarRitual').onclick=()=>{el('modalEditarRitual').classList.add('oculto');el('modalEditarRitual').classList.remove('modal-aberto');_ritualEditando=null;};
+document.querySelectorAll('[data-modulo]').forEach(b=>{b.onclick=()=>{_moduloHistorico=b.dataset.modulo;document.querySelectorAll('[data-modulo]').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');carregarHistoricoExcluidos(b.dataset.modulo);};}); 
+el('btnFecharEditarRitual').onclick=()=>{fecharModal('modalEditarRitual');_ritualEditando=null;};
 el('btnSalvarEditarRitual').onclick=salvarEditarRitual;
-el('btnFecharEditarPlanta').onclick=()=>{el('modalEditarPlanta').classList.add('oculto');el('modalEditarPlanta').classList.remove('modal-aberto');_plantaEditando=null;};
+el('btnFecharEditarPlanta').onclick=()=>{fecharModal('modalEditarPlanta');_plantaEditando=null;};
 el('btnSalvarEditarPlanta').onclick=salvarEditarPlanta;
 el('btnEditarPlanta').onclick=abrirEditarPlanta;
-el('btnFecharEditarLista').onclick=()=>{el('modalEditarLista').classList.add('oculto');el('modalEditarLista').classList.remove('modal-aberto');_listaEditando=null;};
+el('btnFecharEditarLista').onclick=()=>{fecharModal('modalEditarLista');_listaEditando=null;};
 el('btnSalvarEditarLista').onclick=salvarEditarLista;
-el('btnFecharEditarEstoque').onclick=()=>{el('modalEditarEstoque').classList.add('oculto');el('modalEditarEstoque').classList.remove('modal-aberto');_estoqueEditando=null;};
+el('btnFecharEditarEstoque').onclick=()=>{fecharModal('modalEditarEstoque');_estoqueEditando=null;};
 el('btnSalvarEditarEstoque').onclick=salvarEditarEstoque;
-el('btnFecharEditarConta').onclick=()=>{el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');_contaEditando=null;};
+el('btnFecharEditarConta').onclick=()=>{fecharModal('modalEditarConta');_contaEditando=null;};
 el('btnSalvarEditarConta').onclick=salvarEditarConta;
-el('btnFecharEditarTarefa').onclick=()=>{el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');_tarefaEditando=null;};
+el('btnFecharEditarTarefa').onclick=()=>{fecharModal('modalEditarTarefa');_tarefaEditando=null;};
 el('btnSalvarEditarTarefa').onclick=salvarEditarTarefa;
 el('etRecorrente').addEventListener('change',e=>el('etRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
-el('btnFecharHistConta').onclick=()=>{el('modalHistConta').classList.add('oculto');el('modalHistConta').classList.remove('modal-aberto');_contaHistAtual=null;};
+el('btnFecharHistConta').onclick=()=>{fecharModal('modalHistConta');_contaHistAtual=null;};
 el('btnAddRetro').onclick=adicionarRetroativo;
 el('btnSair').onclick=sair;
-document.querySelectorAll('.aba').forEach(b=>{b.onclick=()=>trocarAba(b.dataset.aba);});
+// Tab bar gerenciada pelo onclick inline no HTML
 document.querySelectorAll('.filtro-btn').forEach(b=>{b.onclick=()=>{_filtroAtual=b.dataset.filtro;document.querySelectorAll('.filtro-btn').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');renderizarPlantas();};});
 
 iniciar();
+
+// Expor funções globais para onclick inline no HTML
+window.trocarAba = trocarAba;
+window.trocarSub = trocarSub;
+window.abrirSecao = abrirSecao;
+window.voltarMais = voltarMais;
+window.mudarPagina = mudarPagina;
