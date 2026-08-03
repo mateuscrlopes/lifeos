@@ -445,6 +445,24 @@
       </div>
     </div>
 
+    <!-- Modal editar conta -->
+    <div id="modalEditarConta" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
+      <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <strong>Editar conta</strong>
+          <button id="btnFecharEditarConta" style="background:none;color:var(--suave);padding:4px 8px;font-size:20px">&times;</button>
+        </div>
+        <div class="campo"><label for="ecNome">Nome</label><input id="ecNome" type="text"/></div>
+        <div class="linha-add">
+          <div style="flex:1"><label for="ecValor">Valor (R$)</label><input id="ecValor" type="number" min="0" step="0.01"/></div>
+          <div style="flex:1"><label for="ecVenc">Vencimento</label><input id="ecVenc" type="date"/></div>
+        </div>
+        <div class="campo" style="margin-top:8px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input id="ecRecorrente" type="checkbox" style="width:auto"/>Repete todo mês</label></div>
+        <div style="margin-top:12px"><button id="btnSalvarEditarConta">Salvar alterações</button></div>
+        <div id="avisoEditarConta" class="aviso"></div>
+      </div>
+    </div>
+
     <!-- Modal editar tarefa -->
     <div id="modalEditarTarefa" class="oculto" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center">
       <div style="background:var(--cartao);border-radius:20px 20px 0 0;width:100%;max-width:560px;padding:20px">

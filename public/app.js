@@ -503,6 +503,48 @@ async function concluirRitual(){
 
 function criarTarefaDoRitual(){el('modalRitual').classList.add('oculto');el('modalRitual').classList.remove('modal-aberto');trocarAba('tarefas');el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
 
+function abrirEditarConta(conta){
+  _contaEditando=conta;
+  el('ecNome').value=conta.nome||'';
+  el('ecValor').value=conta.valor??'';
+  el('ecVenc').value=conta.vencimento?conta.vencimento.slice(0,10):'';
+  el('ecRecorrente').checked=!!conta.recorrente;
+  aviso('avisoEditarConta','');
+  el('modalEditarConta').classList.remove('oculto');el('modalEditarConta').classList.add('modal-aberto');
+}
+
+async function salvarEditarConta(){
+  if(!_contaEditando)return;
+  const nome=el('ecNome').value.trim();
+  if(!nome){aviso('avisoEditarConta','Digite o nome.','erro');return;}
+  const vencimento=el('ecVenc').value;
+  if(!vencimento){aviso('avisoEditarConta','Escolha o vencimento.','erro');return;}
+  el('btnSalvarEditarConta').disabled=true;
+  const valor=el('ecValor').value===''?null:Number(el('ecValor').value);
+  const recorrente=el('ecRecorrente').checked;
+  const{error}=await supa.from('contas').update({
+    nome,valor,vencimento,recorrente,
+    dia_vencimento:recorrente?Number(vencimento.slice(8,10)):null,
+  }).eq('id',_contaEditando.id);
+  el('btnSalvarEditarConta').disabled=false;
+  if(error){aviso('avisoEditarConta','Erro ao salvar.','erro');return;}
+  el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');
+  _contaEditando=null;
+  await carregarContas();
+}
+
+async function removerConta(conta){
+  if(!confirm(`Excluir a conta "${conta.nome}"?`))return;
+  const{error}=await supa.from('contas').delete().eq('id',conta.id);
+  if(!error){
+    supa.from('historico_excluidos').insert({
+      casa_id:usuario.casa_id,usuario_id:usuario.id,
+      modulo:'contas',registro_id:conta.id,dados:conta,
+    });
+    await carregarContas();
+  }
+}
+
 // --- HISTORICO DE CONTAS ---
 async function abrirHistConta(conta) {
   _contaHistAtual = conta;
@@ -656,8 +698,10 @@ async function carregarContas(){
     const dir=document.createElement('div');dir.className='est-controles';
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
+    const btnEditC=document.createElement('button');btnEditC.textContent='✏️';btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
+    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta);};
+    dir.appendChild(btnEditC);dir.appendChild(btnDelC);
     l.appendChild(d);l.appendChild(dir);
-    // Clique na linha abre histórico
     l.style.cursor='pointer';
     l.onclick=()=>abrirHistConta(conta);
     area.appendChild(l);
@@ -689,6 +733,7 @@ async function pagarConta(conta,botao){
 // --- PROJETOS PESSOAIS ---
 let _projetoAtual=null;
 let _tarefaEditando=null;
+let _contaEditando=null;
 
 const STATUS_PROJ={
   nao_iniciado:{label:'Não iniciado',cor:'#6b7280'},
@@ -1191,6 +1236,8 @@ el('btnSalvarItemProjeto').onclick=async()=>{
   toggleInputProjeto('inputItemProjeto');
   await renderizarPainelProjeto(_projetoAtual);
 };
+el('btnFecharEditarConta').onclick=()=>{el('modalEditarConta').classList.add('oculto');el('modalEditarConta').classList.remove('modal-aberto');_contaEditando=null;};
+el('btnSalvarEditarConta').onclick=salvarEditarConta;
 el('btnFecharEditarTarefa').onclick=()=>{el('modalEditarTarefa').classList.add('oculto');el('modalEditarTarefa').classList.remove('modal-aberto');_tarefaEditando=null;};
 el('btnSalvarEditarTarefa').onclick=salvarEditarTarefa;
 el('etRecorrente').addEventListener('change',e=>el('etRecorrenciaBox').classList.toggle('oculto',!e.target.checked));
