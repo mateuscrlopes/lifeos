@@ -14,7 +14,7 @@ import android.speech.tts.TextToSpeech;
 
 import org.json.JSONObject;
 import org.vosk.Model;
-import org.vosk.RecognitionListener;
+import org.vosk.android.RecognitionListener;
 import org.vosk.Recognizer;
 import org.vosk.android.SpeechService;
 import org.vosk.android.StorageService;
