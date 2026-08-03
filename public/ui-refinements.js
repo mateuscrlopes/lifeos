@@ -1,4 +1,4 @@
-// LifeOS — camada de refinamento mobile v1
+// LifeOS — camada de refinamento mobile v2
 // Carregada como efeito colateral por status-estoque.js.
 
 const ICONS = {
@@ -8,11 +8,19 @@ const ICONS = {
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
+  checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.7 2.7L16.5 9"/>',
   cart: '<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H7"/>',
+  cartCheck: '<path d="M3 4h2l2.2 9.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L20.4 8H7"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="m11 10 1.8 1.8L16.5 8"/>',
+  moneyCheck: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h3M16 15h2"/><path d="m8 14 2 2 4-5"/>',
   box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   restore: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   leaf: '<path d="M12 22V12M12 12C12 12 8 10 6 7c-1-1.5-1-4 2-4s4 3 4 3M12 12c0 0 4-2 6-5 1-1.5 1-4-2-4s-4 3-4 3"/>',
+  plant: '<path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/>',
+  house: '<path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+  sparkle: '<path d="M12 2c.7 5.2 4.8 9.3 10 10-5.2.7-9.3 4.8-10 10-.7-5.2-4.8-9.3-10-10 5.2-.7 9.3-4.8 10-10Z"/>',
+  camera: '<path d="M14.5 5 13 3h-2L9.5 5H6a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3Z"/><circle cx="12" cy="12" r="3.5"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   folder: '<path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   meal: '<path d="M7 2v8M4 2v5a3 3 0 0 0 6 0V2M7 10v12M17 2v20M17 2c3 2 4 5 4 8h-4"/>',
   task: '<path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
@@ -31,12 +39,16 @@ let historyFilter = 'todos';
 let historySearch = '';
 let historyCache = [];
 let observerBusy = false;
+let avatarSchemaAvailable = true;
+let profileCardLoading = false;
+let plantTimelineBusy = false;
+let plantTimelineTimer = null;
 
 function loadStyles() {
   if (document.querySelector('link[data-lifeos-refinements]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/ui-refinements.css?v=1';
+  link.href = '/ui-refinements.css?v=2';
   link.dataset.lifeosRefinements = '1';
   document.head.appendChild(link);
 }
@@ -51,13 +63,23 @@ async function getContext() {
   const { data: sessionData } = await uiClient.auth.getSession();
   const session = sessionData?.session;
   if (!session) throw new Error('Faça login novamente para continuar.');
-  const { data: profile, error } = await uiClient
+  let { data: profile, error } = await uiClient
     .from('usuarios')
-    .select('id,nome,casa_id')
+    .select('id,nome,casa_id,avatar_url')
     .eq('auth_id', session.user.id)
     .single();
+  if (error) {
+    avatarSchemaAvailable = false;
+    const fallback = await uiClient
+      .from('usuarios')
+      .select('id,nome,casa_id')
+      .eq('auth_id', session.user.id)
+      .single();
+    profile = fallback.data;
+    error = fallback.error;
+  }
   if (error || !profile) throw new Error('Perfil do LifeOS não encontrado.');
-  uiProfile = profile;
+  uiProfile = { ...profile, auth_id: session.user.id, avatar_url: profile.avatar_url || null };
   return { client: uiClient, profile: uiProfile };
 }
 
@@ -161,7 +183,8 @@ function installModalManager() {
 }
 
 function buttonLabel(button) {
-  return (button.textContent || '').replace(/\s+/g, ' ').trim();
+  const current = (button.textContent || '').replace(/\s+/g, ' ').trim();
+  return current || button.dataset.uiOriginalLabel || '';
 }
 
 function setButtonContent(button, iconName, text = '') {
@@ -174,19 +197,57 @@ function setButtonContent(button, iconName, text = '') {
 
 function enhanceButton(button) {
   if (!(button instanceof HTMLButtonElement)) return;
+  const liveLabel = (button.textContent || '').replace(/\s+/g, ' ').trim();
+  if (liveLabel && !button.dataset.uiOriginalLabel) button.dataset.uiOriginalLabel = liveLabel;
   const label = buttonLabel(button);
   const title = (button.title || '').toLowerCase();
 
   if (button.classList.contains('modal-fechar')) {
     button.classList.add('ui-icon-button');
     button.setAttribute('aria-label', 'Fechar');
+    button.title = 'Fechar';
     setButtonContent(button, 'close');
     return;
   }
 
-  if (title.includes('editar') || button.id?.startsWith('btnEdit')) {
+  if (label === 'Comprei') {
+    button.classList.remove('ui-primary');
+    button.classList.add('ui-icon-button', 'ui-action-icon', 'ui-purchase-action');
+    button.dataset.uiAction = 'purchase';
+    button.setAttribute('aria-label', 'Marcar como comprado');
+    button.title = 'Marcar como comprado';
+    setButtonContent(button, 'cartCheck');
+    return;
+  }
+
+  if (label === 'Paguei') {
+    button.classList.remove('ui-primary');
+    button.classList.add('ui-icon-button', 'ui-action-icon', 'ui-payment-action');
+    button.dataset.uiAction = 'payment';
+    button.setAttribute('aria-label', 'Marcar como pago');
+    button.title = 'Marcar como pago';
+    setButtonContent(button, 'moneyCheck');
+    return;
+  }
+
+  if (button.id === 'btnEditarPlanta' || button.id === 'btnEditarProjeto' || label === 'Editar ficha' || label === 'Editar projeto') {
+    button.classList.add('ui-secondary');
+    if (label) setButtonContent(button, 'edit', label);
+    return;
+  }
+
+  if (button.closest('#mpRotinas') && label === 'Salvar') {
+    button.classList.add('ui-icon-button', 'ui-action-icon', 'ui-routine-save');
+    button.setAttribute('aria-label', 'Salvar intervalo');
+    button.title = 'Salvar intervalo';
+    setButtonContent(button, 'check');
+    return;
+  }
+
+  if (title.includes('editar') || button.id?.startsWith('btnEdit') || (button.closest('#mpEventos') && label === 'Editar')) {
     button.classList.add('ui-icon-button');
     button.setAttribute('aria-label', button.title || 'Editar');
+    button.title = button.title || 'Editar';
     setButtonContent(button, 'edit');
     return;
   }
@@ -194,6 +255,7 @@ function enhanceButton(button) {
   if ((label === '×' || label === '✕') && !button.closest('.linha-ingrediente')) {
     button.classList.add('ui-icon-button', 'ui-delete');
     button.setAttribute('aria-label', 'Excluir');
+    button.title = 'Excluir';
     setButtonContent(button, 'trash');
     return;
   }
@@ -201,18 +263,17 @@ function enhanceButton(button) {
   if (label === '×' && button.closest('.linha-ingrediente')) {
     button.classList.add('ui-icon-button', 'ui-delete');
     button.setAttribute('aria-label', 'Remover ingrediente');
+    button.title = 'Remover ingrediente';
     setButtonContent(button, 'close');
     return;
   }
 
-  if (/^(Comprei|Paguei|Cuidar|Concluir|Entrar|Salvar|Adicionar|Iniciar)/i.test(label)) {
+  if (/^(Cuidar|Concluir|Entrar|Salvar|Adicionar|Iniciar)/i.test(label)) {
     button.classList.add('ui-primary');
-    if (label === 'Comprei') setButtonContent(button, 'check', 'Comprei');
-    else if (label === 'Paguei') setButtonContent(button, 'check', 'Paguei');
     return;
   }
 
-  if (/^(Editar ficha|Gerar lista|Criar tarefa|Restaurar|Reativar|Inventário|Iniciar inventário)/i.test(label)) {
+  if (/^(Gerar lista|Criar tarefa|Restaurar|Reativar|Inventário|Iniciar inventário)/i.test(label)) {
     button.classList.add('ui-secondary');
     return;
   }
@@ -237,13 +298,16 @@ function enhanceButton(button) {
 
 function enhanceUi(root = document) {
   root.querySelectorAll?.('button').forEach(enhanceButton);
-  root.querySelectorAll?.('.sub-abas, .filtros-plantas').forEach(el => el.classList.add('ui-scroll-fade'));
   const addButton = document.getElementById('btnAdd');
   if (addButton) {
     addButton.classList.add('ui-primary');
     addButton.setAttribute('aria-label', 'Adicionar à lista');
+    addButton.title = 'Adicionar à lista';
     setButtonContent(addButton, 'plus');
   }
+  markFormRows();
+  structureDynamicRows();
+  replaceBottomNavigationIcons();
 }
 
 function installUiObserver() {
@@ -893,7 +957,7 @@ async function openPurchaseFlow(row) {
 function installPurchaseFlow() {
   document.addEventListener('click', async event => {
     const button = event.target.closest('button');
-    if (!button || buttonLabel(button) !== 'Comprei') return;
+    if (!button || (button.dataset.uiAction !== 'purchase' && buttonLabel(button) !== 'Comprei')) return;
     const row = button.closest('#itens .item, #itens .lista-item');
     if (!row) return;
     event.preventDefault();
@@ -949,14 +1013,417 @@ function makeMetricsInteractive() {
   });
 }
 
+
+const FORM_ROW_GROUPS = [
+  { ids: ['ctValor', 'ctVenc'], stack: true },
+  { ids: ['ecValor', 'ecVenc'], stack: true },
+  { ids: ['projInicio', 'projTermino'], stack: true },
+  { ids: ['tfResp', 'tfData'], stack: true },
+  { ids: ['etResp', 'etData'], stack: true },
+  { ids: ['hcMes', 'hcValorRetro'], stack: true },
+  { ids: ['refTipo', 'refPorcoes'] },
+  { ids: ['estQtd', 'estMin'] },
+  { ids: ['epComodo', 'epPosicao'] },
+  { ids: ['epMetodo', 'epPerfil'] },
+  { ids: ['npComodo', 'npPosicao'] },
+  { ids: ['npMetodo', 'npPerfil'] },
+  { ids: ['npRotinaT', 'npRotinaI'], stack: true },
+  { ids: ['projStatus', 'projFreq'] },
+  { ids: ['elQtd', 'elUnidade'] },
+];
+
+function markFormRows() {
+  FORM_ROW_GROUPS.forEach(group => {
+    const elements = group.ids.map(id => document.getElementById(id)).filter(Boolean);
+    if (elements.length !== group.ids.length) return;
+    const parent = elements[0].closest('div[style*="display:flex"]');
+    if (!parent || !elements.every(element => parent.contains(element))) return;
+    parent.classList.add('ui-form-row');
+    if (group.stack) parent.classList.add('ui-stack-mobile');
+  });
+
+  ['estTaxaConsumo', 'eeTaxaConsumo'].forEach(id => {
+    const input = document.getElementById(id);
+    input?.parentElement?.classList.add('ui-consumption-row');
+  });
+}
+
+function replaceBottomNavigationIcons() {
+  const icons = {
+    hoje: `<svg class="ui-nav-svg ui-nav-sparkle" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.7 5.2 4.8 9.3 10 10-5.2.7-9.3 4.8-10 10-.7-5.2-4.8-9.3-10-10 5.2-.7 9.3-4.8 10-10Z"/></svg>`,
+    casa: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>`,
+    plantas: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>`,
+  };
+  Object.entries(icons).forEach(([tab, markup]) => {
+    const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (!button || button.dataset.uiNavV2) return;
+    const old = button.querySelector('svg');
+    if (old) old.outerHTML = markup;
+    else button.insertAdjacentHTML('afterbegin', markup);
+    button.dataset.uiNavV2 = '1';
+  });
+}
+
+function centerActiveSubtab(button) {
+  if (!(button instanceof HTMLElement)) return;
+  window.requestAnimationFrame(() => {
+    button.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
+}
+
+function installSubtabScrolling() {
+  document.addEventListener('click', event => {
+    const button = event.target.closest('.sub-aba, .filtro-btn, .ui-history-filter');
+    if (button) centerActiveSubtab(button);
+  });
+  const active = document.querySelector('.sub-abas .sub-aba.ativa');
+  if (active) window.setTimeout(() => centerActiveSubtab(active), 200);
+}
+
+function structureDynamicRows() {
+  document.querySelectorAll('#itens .item').forEach(row => {
+    row.classList.add('ui-purchase-row');
+    row.lastElementChild?.classList.add('ui-row-actions');
+  });
+
+  document.querySelectorAll('#itensContas .item').forEach(row => {
+    row.classList.add('ui-account-row');
+    const desc = row.querySelector(':scope > .desc');
+    const actions = row.querySelector(':scope > .est-controles');
+    if (!desc || !actions) return;
+    actions.classList.add('ui-row-actions');
+    let titleRow = desc.querySelector('.ui-account-title-row');
+    if (!titleRow) {
+      const name = desc.querySelector('.nome');
+      if (name) {
+        titleRow = document.createElement('div');
+        titleRow.className = 'ui-account-title-row';
+        desc.insertBefore(titleRow, name);
+        titleRow.appendChild(name);
+      }
+    }
+    const badge = actions.querySelector('.badge');
+    if (badge && titleRow) titleRow.appendChild(badge);
+  });
+
+  document.querySelectorAll('#listaRituais .ritual-card').forEach(card => {
+    card.classList.add('ui-ritual-card');
+    const top = card.querySelector('.ritual-topo');
+    if (!top) return;
+    top.firstElementChild?.classList.add('ui-ritual-info');
+    top.lastElementChild?.classList.add('ui-ritual-actions');
+  });
+
+  document.querySelectorAll('#listaTokens > div, #listaLocaisEstoque > div').forEach(row => row.classList.add('ui-settings-row'));
+
+  const plantActions = document.getElementById('mpAcoes');
+  plantActions?.querySelectorAll('button').forEach(button => button.classList.add('ui-plant-care-action'));
+  const plantFooter = document.getElementById('btnEditarPlanta')?.parentElement;
+  plantFooter?.classList.add('ui-plant-footer-actions');
+
+  document.querySelectorAll('#mpRotinas > div:not(.titulo-secao)').forEach(row => row.classList.add('ui-plant-routine'));
+}
+
+const PLANT_EVENT_INFO = {
+  cadastro: ['task', 'Cadastro'],
+  rega: ['leaf', 'Rega'],
+  troca_agua: ['restore', 'Troca de água'],
+  imersao: ['box', 'Imersão'],
+  adubacao: ['plant', 'Adubação'],
+  poda: ['edit', 'Poda'],
+  observacao: ['edit', 'Observação'],
+  alteracao_status: ['restore', 'Status'],
+  muda_retirada: ['plant', 'Muda'],
+};
+
+async function getCurrentPlant() {
+  const codeText = document.getElementById('mpCodigo')?.textContent || '';
+  const code = codeText.split('·')[0].trim();
+  if (!code) throw new Error('Não foi possível identificar a planta.');
+  const { client, profile } = await getContext();
+  const { data, error } = await client.from('plantas').select('id,codigo').eq('casa_id', profile.casa_id).eq('codigo', code).single();
+  if (error || !data) throw new Error('Planta não encontrada.');
+  return data;
+}
+
+function openConfirmSheet({ title, message, confirmLabel = 'Confirmar', danger = false, onConfirm }) {
+  openSheet({
+    title,
+    content: `<p class="ui-confirm-message">${escapeHtml(message)}</p><div class="ui-sheet-actions"><button type="button" id="uiConfirmAction" class="${danger ? 'ui-danger' : 'ui-primary'}">${escapeHtml(confirmLabel)}</button><button type="button" id="uiCancelAction" class="ui-quiet">Cancelar</button></div>`,
+    onMount(sheet) {
+      sheet.querySelector('#uiCancelAction').addEventListener('click', closeSheet);
+      sheet.querySelector('#uiConfirmAction').addEventListener('click', async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try { await onConfirm(); closeSheet(); }
+        catch (error) { toast(error.message || 'Não foi possível concluir.', 'erro', 5000); button.disabled = false; }
+      });
+    },
+  });
+}
+
+function openPlantNoteSheet({ plantId, eventId = null, initialValue = '' }) {
+  openSheet({
+    title: eventId ? 'Editar observação' : 'Nova observação',
+    subtitle: eventId ? 'Atualize o texto registrado na linha do tempo.' : 'Registre uma informação sobre esta planta.',
+    content: `<div class="campo"><label>Observação</label><textarea id="uiPlantNote" rows="5" placeholder="Escreva a observação">${escapeHtml(initialValue)}</textarea></div><div class="ui-sheet-actions"><button type="button" id="uiSavePlantNote" class="ui-primary">${icon('check')}<span>Salvar observação</span></button><button type="button" id="uiCancelPlantNote" class="ui-quiet">Cancelar</button></div>`,
+    onMount(sheet) {
+      const input = sheet.querySelector('#uiPlantNote');
+      input.focus();
+      input.setSelectionRange?.(input.value.length, input.value.length);
+      sheet.querySelector('#uiCancelPlantNote').addEventListener('click', closeSheet);
+      sheet.querySelector('#uiSavePlantNote').addEventListener('click', async event => {
+        const note = input.value.trim();
+        if (!note) { toast('Digite uma observação.', 'erro'); return; }
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+          const { client, profile } = await getContext();
+          const result = eventId
+            ? await client.from('planta_eventos').update({ notas: note }).eq('id', eventId)
+            : await client.from('planta_eventos').insert({ planta_id: plantId, tipo: 'observacao', notas: note, usuario_id: profile.id, data: new Date().toISOString() });
+          if (result.error) throw result.error;
+          closeSheet();
+          toast(eventId ? 'Observação atualizada.' : 'Observação registrada.');
+          await renderPlantTimelineV2();
+        } catch (error) {
+          toast(error.message || 'Não foi possível salvar a observação.', 'erro', 5000);
+          button.disabled = false;
+        }
+      });
+    },
+  });
+}
+
+async function renderPlantTimelineV2() {
+  if (plantTimelineBusy) return;
+  const modal = document.getElementById('modalPlanta');
+  const area = document.getElementById('mpEventos');
+  if (!modal?.classList.contains('aberto') || !area) return;
+  plantTimelineBusy = true;
+  try {
+    const plant = await getCurrentPlant();
+    const { client } = await getContext();
+    const { data: events, error } = await client.from('planta_eventos').select('id,tipo,data,notas').eq('planta_id', plant.id).order('data', { ascending: false }).limit(30);
+    if (error) throw error;
+    area.innerHTML = '';
+    area.dataset.uiTimelineV2 = '1';
+    if (!events?.length) {
+      area.innerHTML = '<div class="vazio">Nenhum evento registrado ainda.</div>';
+      return;
+    }
+    events.forEach(item => {
+      const [iconName, label] = PLANT_EVENT_INFO[item.tipo] || ['edit', item.tipo];
+      const date = item.data ? new Date(item.data) : null;
+      const row = document.createElement('article');
+      row.className = 'ui-timeline-item';
+      row.innerHTML = `
+        <div class="ui-timeline-date">${date ? date.toLocaleDateString('pt-BR') : '—'}</div>
+        <div class="ui-timeline-body">
+          <div class="ui-timeline-title"><span class="ui-timeline-icon">${icon(iconName, 17)}</span><strong>${escapeHtml(label)}</strong></div>
+          ${item.notas ? `<div class="ui-timeline-note">${escapeHtml(item.notas)}</div>` : ''}
+        </div>
+        <div class="ui-timeline-actions">
+          ${(item.tipo === 'observacao' || item.notas) ? `<button type="button" class="ui-icon-button ui-event-edit" aria-label="Editar observação" title="Editar observação">${icon('edit')}</button>` : ''}
+          <button type="button" class="ui-icon-button ui-delete ui-event-delete" aria-label="Excluir evento" title="Excluir evento">${icon('trash')}</button>
+        </div>`;
+      row.querySelector('.ui-event-edit')?.addEventListener('click', () => openPlantNoteSheet({ plantId: plant.id, eventId: item.id, initialValue: item.notas || '' }));
+      row.querySelector('.ui-event-delete').addEventListener('click', () => openConfirmSheet({
+        title: 'Excluir evento',
+        message: 'Este registro será removido da linha do tempo da planta.',
+        confirmLabel: 'Excluir evento',
+        danger: true,
+        onConfirm: async () => {
+          const result = await client.from('planta_eventos').delete().eq('id', item.id);
+          if (result.error) throw result.error;
+          toast('Evento removido.');
+          await renderPlantTimelineV2();
+        },
+      }));
+      area.appendChild(row);
+    });
+  } catch (error) {
+    area.innerHTML = `<div class="ui-history-error">${escapeHtml(error.message || 'Não foi possível carregar a linha do tempo.')}</div>`;
+  } finally {
+    plantTimelineBusy = false;
+  }
+}
+
+function schedulePlantTimeline() {
+  window.clearTimeout(plantTimelineTimer);
+  plantTimelineTimer = window.setTimeout(renderPlantTimelineV2, 100);
+}
+
+function installPlantEnhancements() {
+  document.addEventListener('click', async event => {
+    const observationButton = event.target.closest('#mpAcoes button');
+    if (observationButton && normalizeName(buttonLabel(observationButton)).includes('observacao')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      try {
+        const plant = await getCurrentPlant();
+        openPlantNoteSheet({ plantId: plant.id });
+      } catch (error) { toast(error.message, 'erro', 5000); }
+      return;
+    }
+
+    const careButton = event.target.closest('#mpAcoes button, #mpRotinas button');
+    if (careButton) window.setTimeout(schedulePlantTimeline, 650);
+  }, true);
+
+  const modal = document.getElementById('modalPlanta');
+  if (modal) {
+    new MutationObserver(() => {
+      if (modal.classList.contains('aberto')) schedulePlantTimeline();
+    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+  }
+}
+
+function renderHeaderAvatar(profile) {
+  const avatar = document.getElementById('headerAvatar');
+  if (!avatar || !profile) return;
+  avatar.setAttribute('aria-label', `Perfil de ${profile.nome}`);
+  avatar.title = `Perfil de ${profile.nome}`;
+  avatar.innerHTML = profile.avatar_url
+    ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto de ${escapeHtml(profile.nome)}">`
+    : `<span>${escapeHtml(profile.nome?.charAt(0)?.toUpperCase() || '?')}</span>`;
+}
+
+function fileToSquareBlob(file, size = 512) {
+  return new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith('image/')) { reject(new Error('Escolha uma imagem válida.')); return; }
+    if (file.size > 12 * 1024 * 1024) { reject(new Error('Escolha uma imagem de até 12 MB.')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Não foi possível abrir a imagem.'));
+      image.onload = () => {
+        const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+        const sx = (image.naturalWidth - sourceSize) / 2;
+        const sy = (image.naturalHeight - sourceSize) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Não foi possível preparar a imagem.')), 'image/webp', .84);
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadAvatar(file) {
+  if (!avatarSchemaAvailable) throw new Error('Execute a migração 020_avatar_perfil.sql no Supabase antes de enviar a foto.');
+  const { client, profile } = await getContext();
+  const blob = await fileToSquareBlob(file);
+  const path = `${profile.auth_id}/avatar.webp`;
+  const upload = await client.storage.from('avatares').upload(path, blob, { upsert: true, contentType: 'image/webp', cacheControl: '3600' });
+  if (upload.error) throw upload.error;
+  const publicData = client.storage.from('avatares').getPublicUrl(path).data;
+  const url = `${publicData.publicUrl}?v=${Date.now()}`;
+  const update = await client.from('usuarios').update({ avatar_url: url }).eq('id', profile.id);
+  if (update.error) throw update.error;
+  uiProfile = { ...profile, avatar_url: url };
+  renderHeaderAvatar(uiProfile);
+}
+
+async function removeAvatar() {
+  if (!avatarSchemaAvailable) return;
+  const { client, profile } = await getContext();
+  await client.storage.from('avatares').remove([`${profile.auth_id}/avatar.webp`]);
+  const update = await client.from('usuarios').update({ avatar_url: null }).eq('id', profile.id);
+  if (update.error) throw update.error;
+  uiProfile = { ...profile, avatar_url: null };
+  renderHeaderAvatar(uiProfile);
+}
+
+async function ensureProfileCard() {
+  const section = document.querySelector('#secaoConfig .secao');
+  if (!section || document.getElementById('uiProfileCard') || profileCardLoading) return;
+  profileCardLoading = true;
+  try {
+    const { profile } = await getContext();
+    renderHeaderAvatar(profile);
+    const card = document.createElement('div');
+    card.id = 'uiProfileCard';
+    card.className = 'cartao ui-profile-card';
+    card.innerHTML = `
+      <div class="ui-profile-heading">Meu perfil</div>
+      <div class="ui-profile-layout">
+        <div class="ui-profile-preview">${profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="Foto de ${escapeHtml(profile.nome)}">` : `<span>${escapeHtml(profile.nome.charAt(0).toUpperCase())}</span>`}</div>
+        <div class="ui-profile-info"><strong>${escapeHtml(profile.nome)}</strong><span>A foto aparece no cabeçalho do seu LifeOS.</span></div>
+      </div>
+      <input id="uiAvatarInput" type="file" accept="image/*" hidden>
+      <div class="ui-profile-actions">
+        <button type="button" id="uiChooseAvatar" class="ui-secondary">${icon('camera')}<span>${profile.avatar_url ? 'Trocar foto' : 'Escolher foto'}</span></button>
+        ${profile.avatar_url ? `<button type="button" id="uiRemoveAvatar" class="ui-danger">Remover foto</button>` : ''}
+      </div>
+      ${avatarSchemaAvailable ? '' : '<div class="ui-profile-warning">Para enviar a foto, execute a migração 020_avatar_perfil.sql no Supabase.</div>'}`;
+    section.insertBefore(card, section.firstElementChild);
+    const input = card.querySelector('#uiAvatarInput');
+    card.querySelector('#uiChooseAvatar').addEventListener('click', () => input.click());
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const button = card.querySelector('#uiChooseAvatar');
+      button.disabled = true;
+      try {
+        await uploadAvatar(file);
+        toast('Foto de perfil atualizada.');
+        card.remove();
+        await ensureProfileCard();
+      } catch (error) {
+        toast(error.message || 'Não foi possível enviar a foto.', 'erro', 6000);
+        button.disabled = false;
+      }
+    });
+    card.querySelector('#uiRemoveAvatar')?.addEventListener('click', () => openConfirmSheet({
+      title: 'Remover foto',
+      message: 'O avatar voltará a mostrar a inicial do seu nome.',
+      confirmLabel: 'Remover foto',
+      danger: true,
+      onConfirm: async () => {
+        await removeAvatar();
+        toast('Foto removida.');
+        card.remove();
+        await ensureProfileCard();
+      },
+    }));
+  } catch (error) {
+    console.warn('LifeOS: não foi possível preparar o perfil.', error);
+  } finally {
+    profileCardLoading = false;
+  }
+}
+
+function installProfileEnhancements() {
+  window.setTimeout(async () => {
+    try { const { profile } = await getContext(); renderHeaderAvatar(profile); }
+    catch (_) {}
+  }, 500);
+
+  const section = document.getElementById('secaoConfig');
+  if (section) {
+    new MutationObserver(() => {
+      if (isConfigVisible()) window.setTimeout(ensureProfileCard, 100);
+    }).observe(section, { attributes: true, attributeFilter: ['class', 'style'] });
+  }
+}
+
 function installPeriodicEnhancements() {
   let attempts = 0;
   const timer = window.setInterval(() => {
     enhanceUi();
     enhanceMoreMenu();
     makeMetricsInteractive();
+    if (isConfigVisible()) ensureProfileCard();
+    if (document.getElementById('modalPlanta')?.classList.contains('aberto')) schedulePlantTimeline();
     attempts += 1;
-    if (attempts > 30) window.clearInterval(timer);
+    if (attempts > 45) window.clearInterval(timer);
   }, 350);
 }
 
@@ -965,9 +1432,12 @@ function init() {
   enhanceUi();
   installUiObserver();
   installModalManager();
+  installSubtabScrolling();
   installDeletionGuard();
   installPurchaseFlow();
   installHistoryWatcher();
+  installPlantEnhancements();
+  installProfileEnhancements();
   installPeriodicEnhancements();
 }
 
