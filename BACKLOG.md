@@ -3,11 +3,11 @@
 > Sempre que uma nova sessão começar, este arquivo deve ser lido primeiro,
 > junto do Documento Mestre. Ele reflete o estado real do projeto.
 
-Última atualização: 02/08/2026 — Estoque Fatia 4 concluída (v0.23.0)
+Última atualização: 02/08/2026 — Aba de Configurações v0.24+
 
 ---
 
-## ✅ Concluído (Onda 1 + Onda 2)
+## ✅ Concluído
 
 | Versão | Entrega | Testado |
 |--------|---------|---------|
@@ -27,95 +27,23 @@
 | v0.19 | Plantas: cadastro de novas plantas + edição de rotinas | Sim |
 | v0.20 | Plantas: cuidado manual, remover planta, editar/remover eventos | Sim |
 | v0.21 | Contas: histórico mensal, variação mês a mês, retroativo manual | Sim |
-| v0.22 | Projetos pessoais: privado por usuário, objetivos, tarefas, itens, progresso — Onda 2 fechada | Sim |
-| v0.23 | Estoque Fatia 4: taxa de consumo, estimativa de dias, sugestão automática na lista | Sim |
-| — | UptimeRobot (cold start resolvido) | Sim |
-| — | Teste de concorrência | Sim |
-
----
-
-## 📋 O que foi entregue na Onda 2
-
-**Atalhos Siri (v0.17)**
-- Endpoint `/atalho/lista` — adicionar item à lista por voz
-- Endpoint `/atalho/tarefa` — criar tarefa por voz
-- Endpoint `/atalho/estoque` — marcar item como acabou por voz
-- Autenticação por token por usuário
-
-**Módulo Plantas (v0.18–0.20)**
-- 40 plantas reais cadastradas com espécies e rotinas
-- Lista agrupada por cômodo com filtros de urgência
-- Ficha individual com dados, rotinas e linha do tempo
-- Cuidado manual por método (rega, troca de água, imersão, adubação, poda)
-- Cadastro de novas plantas e espécies
-- Edição de intervalos de rotina
-- Remover planta (histórico preservado)
-- Editar e remover eventos da linha do tempo
-- Card na Tela Hoje
-
-**Contas avançadas (v0.21)**
-- Histórico mensal por conta (clicando na conta)
-- Variação mês a mês (▲/▼)
-- Retroativo manual por mês
-
-**Projetos pessoais (v0.22)**
-- Privacidade por usuário (Mateus só vê os seus)
-- Objetivos (metas descritivas)
-- Tarefas com visibilidade pública/privada
-- Itens necessários com envio para lista de compras
-- Progresso em % por tarefas concluídas
-- Separação clara entre tarefas gerais e tarefas de projeto
-
----
-
-## 🕒 Onda 3 — próxima fase (priorizada)
-
-### ✅ 1. Estoque Fatia 4 — estimativa por consumo (v0.23.0)
-- Taxa de consumo manual por item (ex: "1 rolo/semana")
-- Sistema calcula quando o item vai acabar com base na taxa + quantidade atual
-- Badge "Atenção" / "Acabando" no item
-- Sugestão automática na lista com etiqueta "consumo" quando atingir o alerta
-
-### 2. Geolocalização
-- Notificação ao chegar em um local cadastrado (ex: mercado, farmácia)
-- Verifica se há itens na lista com categoria correspondente ao local
-- Se houver, envia notificação: "Você está no mercado. Tem X itens na lista."
-- Requer: permissão de geolocalização no iPhone + lógica de matching por categoria
-- Decisão pendente: como associar item da lista a um local? (por categoria? por tag?)
-
-### 3. Tablet da Casa
-- Sempre aberto no LifeOS, tela grande
-- Exibe basicamente a Tela Hoje — sem projetos pessoais, sem tarefas privadas
-- Layout adaptado para tela maior (definir quando o tablet chegar)
-- Mateus vai revisar o layout quando tiver o hardware em mãos
+| v0.22 | Projetos pessoais — Onda 2 fechada | Sim |
+| v0.23 | Estoque Fatia 4: taxa de consumo, estimativa, sugestão automática | Sim |
+| v0.23+ | Geolocalização: /atalho/chegada + 6 locais mapeados | Sim |
+| v0.24 | Editar e excluir com histórico: Tarefas, Contas, Estoque, Lista, Plantas, Rituais | Sim |
+| v0.25 | Configurações: tokens Siri, locais estoque/compra configuráveis, histórico excluídos | Sim |
+| — | UptimeRobot, teste de concorrência | Sim |
 
 ---
 
 ## 🕒 Onda 3 — restante
 
-### 2. Geolocalização
-- Usar campo `local` já existente no estoque como referência de onde comprar
-- Cadastrar locais físicos (ex: "Supermercado", "Farmácia") e mapear para os locais do estoque
-- Atalho de automação iOS dispara ao chegar no endereço cadastrado
-- Endpoint `/atalho/chegada` verifica itens da lista que vêm de produtos daquele local
-- Envia notificação: "Você está no Supermercado. Tem X itens na lista."
-- Decisão tomada: usar `local` do estoque como chave de associação
+### Tablet da Casa
+- Aguardando hardware (Mateus vai avisar quando chegar)
+- Conteúdo: Tela Hoje sem projetos pessoais e sem tarefas privadas
+- Layout a definir quando o tablet estiver em mãos
 
-### 3. Tablet da Casa
-- Aguardando hardware (chega essa semana)
-- Layout a definir quando Mateus tiver o tablet em mãos
-- Conteúdo: basicamente a Tela Hoje sem projetos pessoais e sem tarefas privadas
-
-### 4. Aba de Configurações (registrado para não perder)
-- Muitas coisas estão hardcoded no código hoje:
-  - Lista de locais do estoque
-  - Locais físicos de compra e seus mapeamentos de categoria
-  - Frequências de acompanhamento
-  - Tokens dos Atalhos Siri
-  - Categorias e labels
-- Ideia: aba de configurações para editar essas coisas sem mexer no código
-- Escopo a definir antes de construir
-- **Nota:** ao implementar, migrar os locais físicos e mapeamentos que hoje estão no SQL (016) para serem editáveis pela interface
+---
 
 ## 💭 Onda 4+ — integrações futuras
 
@@ -123,12 +51,14 @@
 - **NFC** (seção 27.1) — tags em objetos e locais
 - **Gmail** (seção 28) — leitura automática de boletos
 - **Apple Saúde** (seção 29.3)
-- **Contas: Gmail** — leitura automática de boletos
 - **Refinamento de privacidade** — "pessoal protegido" (seção 8)
 
 ---
 
 ## Dívidas técnicas
 
-- Arquivos temporários em `public/`: `locais.js`, `patch_html.txt`, `patch_app.js`, `index_patch.js` podem ser removidos
-- README.md desatualizado (ainda descreve a fundação)
+- Os selects de local nos modais de inventário ainda usam lista hardcoded no HTML
+  (o app.js já atualiza os selects de estoque dinamicamente, mas o modal de
+  inventário precisa ser atualizado para usar a mesma função atualizarSelectsLocais)
+- Arquivos temporários em `public/` podem ser removidos: `locais.js`, `patch_html.txt`, `patch_app.js`, `index_patch.js`
+- README.md desatualizado
