@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GumateService extends Service implements RecognitionListener {
     public static final String ACTION_STATUS = "br.com.lifeos.gumate.STATUS";
@@ -37,6 +38,7 @@ public class GumateService extends Service implements RecognitionListener {
     private SpeechService voskService;
     private SpeechRecognizer androidRecognizer;
     private TextToSpeech textToSpeech;
+    private volatile boolean textToSpeechReady = false;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile boolean busy = false;
     private long lastWakeAt = 0L;
@@ -75,8 +77,18 @@ public class GumateService extends Service implements RecognitionListener {
 
     private void initializeTts() {
         textToSpeech = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                textToSpeech.setLanguage(new Locale("pt", "BR"));
+            if (status != TextToSpeech.SUCCESS) {
+                textToSpeechReady = false;
+                return;
+            }
+
+            int languageStatus = textToSpeech.setLanguage(new Locale("pt", "BR"));
+
+            textToSpeechReady =
+                languageStatus != TextToSpeech.LANG_MISSING_DATA
+                && languageStatus != TextToSpeech.LANG_NOT_SUPPORTED;
+
+            if (textToSpeechReady) {
                 textToSpeech.setSpeechRate(1.02f);
             }
         });
@@ -196,17 +208,52 @@ public class GumateService extends Service implements RecognitionListener {
     }
 
     private void speakThen(String text, Runnable after) {
-        if (textToSpeech == null) {
-            if (after != null) after.run();
+        if (textToSpeech == null || !textToSpeechReady) {
+            runOnMain(after);
             return;
         }
+
+        AtomicBoolean finalizado = new AtomicBoolean(false);
+
+        Runnable continuarUmaVez = () -> {
+            if (finalizado.compareAndSet(false, true) && after != null) {
+                after.run();
+            }
+        };
+
         String utteranceId = "gumate-" + System.nanoTime();
-        textToSpeech.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
-            @Override public void onStart(String id) {}
-            @Override public void onError(String id) { runOnMain(after); }
-            @Override public void onDone(String id) { runOnMain(after); }
-        });
-        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+
+        textToSpeech.setOnUtteranceProgressListener(
+            new android.speech.tts.UtteranceProgressListener() {
+                @Override
+                public void onStart(String id) {}
+
+                @Override
+                public void onError(String id) {
+                    runOnMain(continuarUmaVez);
+                }
+
+                @Override
+                public void onDone(String id) {
+                    runOnMain(continuarUmaVez);
+                }
+            }
+        );
+
+        int resultado = textToSpeech.speak(
+            text,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            utteranceId
+        );
+
+        if (resultado == TextToSpeech.ERROR) {
+            runOnMain(continuarUmaVez);
+            return;
+        }
+
+        new android.os.Handler(getMainLooper())
+            .postDelayed(continuarUmaVez, 2500L);
     }
 
     private void runOnMain(Runnable runnable) {
