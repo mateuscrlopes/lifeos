@@ -1,4 +1,4 @@
-﻿/* LifeOS — Central Financeira v2 */
+/* LifeOS — Central Financeira v5 */
 
 .cf-hoje-card {
   margin-top: 14px;
@@ -603,5 +603,238 @@
 
   .cf-editor-acoes .cf-acao-principal {
     order: -1;
+  }
+}
+
+
+/* ================================================================
+   Central Financeira — pagamento visual para tablet e celular
+================================================================ */
+
+.cf-modal-pagamento {
+  width: min(100%, 640px);
+}
+
+.cf-pagamento-visual {
+  display: grid;
+  gap: 11px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid var(--linha);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.cf-visual-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cf-visual-cabecalho > div {
+  min-width: 0;
+}
+
+.cf-visual-cabecalho span {
+  display: block;
+  color: var(--sage);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+.cf-visual-cabecalho strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 13px;
+}
+
+.cf-visual-cabecalho small {
+  max-width: 170px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 9.5px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.cf-visual-abas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.cf-visual-abas button {
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cf-visual-abas button.ativo {
+  background: #fff;
+  color: var(--sage);
+  box-shadow: 0 1px 5px rgba(38, 48, 43, .08);
+}
+
+.cf-visual-painel {
+  display: none;
+}
+
+.cf-visual-painel.ativo {
+  display: block;
+}
+
+.cf-codigo-moldura {
+  position: relative;
+  display: grid;
+  min-height: 190px;
+  overflow: auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--linha) 78%, transparent);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.cf-codigo-pix {
+  min-height: 310px;
+}
+
+.cf-codigo-pix canvas,
+.cf-codigo-pix img {
+  display: block;
+  width: min(100%, 300px);
+  height: auto;
+  padding: 10px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.cf-codigo-boleto {
+  min-height: 180px;
+  padding: 18px 12px;
+}
+
+.cf-codigo-boleto canvas {
+  display: block;
+  width: min(100%, 920px);
+  height: auto;
+  min-height: 105px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.cf-codigo-status {
+  position: absolute;
+  inset: auto 12px 12px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 10px;
+  text-align: center;
+}
+
+.cf-codigo-status.erro {
+  color: var(--alert);
+}
+
+.cf-visual-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cf-visual-rodape span {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cf-visual-rodape button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.cf-visual-painel.ampliado {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  padding: 24px;
+  align-content: center;
+  background: #fff;
+}
+
+.cf-visual-painel.ampliado .cf-codigo-moldura {
+  max-height: calc(100vh - 110px);
+  border: 0;
+}
+
+.cf-visual-painel.ampliado .cf-codigo-pix canvas,
+.cf-visual-painel.ampliado .cf-codigo-pix img {
+  width: min(78vh, 84vw);
+  max-width: none;
+}
+
+.cf-visual-painel.ampliado .cf-codigo-boleto canvas {
+  width: min(96vw, 1180px);
+  max-width: none;
+}
+
+.cf-visual-painel.ampliado .cf-visual-rodape {
+  width: min(96vw, 1180px);
+  margin: 12px auto 0;
+}
+
+.cf-visual-painel.ampliado .cf-visual-rodape button {
+  min-height: 44px;
+  padding-inline: 18px;
+}
+
+@media (max-width: 520px) {
+  .cf-visual-cabecalho {
+    display: grid;
+  }
+
+  .cf-visual-cabecalho small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .cf-codigo-pix {
+    min-height: 270px;
+  }
+
+  .cf-codigo-pix canvas,
+  .cf-codigo-pix img {
+    width: min(100%, 260px);
+  }
+
+  .cf-visual-painel.ampliado {
+    padding: 14px;
   }
 }

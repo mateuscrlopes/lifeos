@@ -13,7 +13,7 @@ var LIFEOS_REGRAS = [
   },
   {
     fornecedor: 'Naturgy',
-    query: 'newer_than:60d has:attachment from:conta.inteligente@naturgy.com'
+    query: 'newer_than:180d has:attachment from:conta.inteligente@naturgy.com'
   }
 ];
 
@@ -36,7 +36,7 @@ function sincronizarContasLifeOS() {
 
     threads.forEach(function(thread) {
       thread.getMessages().forEach(function(mensagem) {
-        var anexosMensagem = mensagem.getAttachments();
+        var anexosMensagem = filtrarAnexosFinanceiros(regra.fornecedor, mensagem.getAttachments());
         if (!anexosMensagem.length) return;
 
         var id = mensagem.getId();
@@ -71,6 +71,7 @@ function sincronizarContasLifeOS() {
           remetente: mensagem.getFrom(),
           assunto: mensagem.getSubject(),
           recebido_em: mensagem.getDate().toISOString(),
+          corpo_texto: limitarTexto(mensagem.getPlainBody(), 20000),
           anexos: anexos
         };
 
@@ -145,6 +146,27 @@ function sincronizarContasLifeOS() {
     var thread = GmailApp.getThreadById(item.email_thread_id);
     if (thread) thread.addLabel(etiqueta);
   });
+}
+
+function filtrarAnexosFinanceiros(fornecedor, anexos) {
+  return anexos.filter(function(anexo) {
+    var nome = String(anexo.getName() || '');
+    var tipo = String(anexo.getContentType() || '').toLowerCase();
+    var pdf = tipo === 'application/pdf' || /\.pdf$/i.test(nome);
+
+    if (!pdf) return false;
+
+    if (fornecedor === 'Naturgy') {
+      return /^Fatura_.*\.pdf$/i.test(nome);
+    }
+
+    return true;
+  });
+}
+
+function limitarTexto(valor, limite) {
+  var texto = String(valor || '').trim();
+  return texto ? texto.slice(0, limite) : null;
 }
 
 function enviarPdfLifeOS(url, token, chave, indice, anexo) {

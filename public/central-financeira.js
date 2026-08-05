@@ -1,4 +1,4 @@
-﻿// LifeOS — Central Financeira v3
+// LifeOS — Central Financeira v5
 // Integração estável com a tela Hoje, sem navegação involuntária.
 
 let cfClient = null;
@@ -10,6 +10,7 @@ let cfObservadorHoje = null;
 let cfRenderizandoHoje = false;
 let cfAtualizacaoAgendada = false;
 let cfAbaOrigem = null;
+let cfBwipPromise = null;
 
 const cfEscapar = (valor = '') => String(valor)
   .replaceAll('&', '&amp;')
@@ -288,6 +289,208 @@ function cfAbrirEditorPagamento(conta) {
   formulario.querySelector('[name="fornecedor"]')?.focus();
 }
 
+
+function cfSomenteDigitos(valor) {
+  return String(valor || '').replace(/\D/g, '');
+}
+
+function cfCodigoBarrasBoleto(linhaDigitavel) {
+  const digitos = cfSomenteDigitos(linhaDigitavel);
+
+  if (digitos.length === 44) return digitos;
+
+  if (digitos.length === 47) {
+    return [
+      digitos.slice(0, 4),
+      digitos.slice(32, 33),
+      digitos.slice(33, 47),
+      digitos.slice(4, 9),
+      digitos.slice(10, 20),
+      digitos.slice(21, 31),
+    ].join('');
+  }
+
+  if (digitos.length === 48) {
+    return [
+      digitos.slice(0, 11),
+      digitos.slice(12, 23),
+      digitos.slice(24, 35),
+      digitos.slice(36, 47),
+    ].join('');
+  }
+
+  return null;
+}
+
+function cfCarregarGeradorCodigos() {
+  if (window.bwipjs) return Promise.resolve(window.bwipjs);
+  if (cfBwipPromise) return cfBwipPromise;
+
+  cfBwipPromise = new Promise((resolve, reject) => {
+    const existente = document.querySelector('script[data-cf-bwip]');
+
+    if (existente) {
+      existente.addEventListener('load', () => resolve(window.bwipjs), { once: true });
+      existente.addEventListener('error', () => reject(new Error('Gerador visual indisponível.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/bwip-js@4.10.2/dist/bwip-js-min.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.dataset.cfBwip = '1';
+
+    script.addEventListener('load', () => {
+      if (window.bwipjs) resolve(window.bwipjs);
+      else reject(new Error('Gerador visual não foi carregado.'));
+    }, { once: true });
+
+    script.addEventListener('error', () => {
+      cfBwipPromise = null;
+      reject(new Error('Não foi possível carregar o gerador visual.'));
+    }, { once: true });
+
+    document.head.appendChild(script);
+  });
+
+  return cfBwipPromise;
+}
+
+function cfPagamentoVisualHtml(conta) {
+  const codigoBarras = cfCodigoBarrasBoleto(conta.linha_digitavel);
+  const temPix = Boolean(conta.pix_copia_cola || conta.qr_code_url);
+  const temBoleto = Boolean(codigoBarras);
+
+  if (!temPix && !temBoleto) return '';
+
+  const inicial = temPix ? 'pix' : 'boleto';
+  const abas = temPix && temBoleto
+    ? `<div class="cf-visual-abas" role="tablist" aria-label="Forma de pagamento">
+         <button type="button" class="ativo" data-cf-visual-tab="pix">Pix</button>
+         <button type="button" data-cf-visual-tab="boleto">Código de barras</button>
+       </div>`
+    : '';
+
+  return `
+    <section class="cf-pagamento-visual" data-cf-visual-inicial="${inicial}">
+      <div class="cf-visual-cabecalho">
+        <div>
+          <span>Pagamento visual</span>
+          <strong>Escaneie com a câmera do banco</strong>
+        </div>
+        <small>Toque em ampliar para ocupar a tela inteira.</small>
+      </div>
+
+      ${abas}
+
+      ${temPix ? `
+        <div class="cf-visual-painel ${inicial === 'pix' ? 'ativo' : ''}" data-cf-visual-painel="pix">
+          <div class="cf-codigo-moldura cf-codigo-pix">
+            ${conta.qr_code_url
+              ? `<img src="${cfEscapar(conta.qr_code_url)}" alt="QR Code Pix">`
+              : '<canvas data-cf-canvas="pix" aria-label="QR Code Pix"></canvas>'}
+            <div class="cf-codigo-status" data-cf-status="pix">Gerando QR Code…</div>
+          </div>
+          <div class="cf-visual-rodape">
+            <span>Pix</span>
+            <button type="button" data-cf-ampliar="pix">Ampliar QR Code</button>
+          </div>
+        </div>
+      ` : ''}
+
+      ${temBoleto ? `
+        <div class="cf-visual-painel ${inicial === 'boleto' ? 'ativo' : ''}" data-cf-visual-painel="boleto">
+          <div class="cf-codigo-moldura cf-codigo-boleto">
+            <canvas data-cf-canvas="boleto" data-cf-codigo-barras="${codigoBarras}" aria-label="Código de barras do boleto"></canvas>
+            <div class="cf-codigo-status" data-cf-status="boleto">Gerando código de barras…</div>
+          </div>
+          <div class="cf-visual-rodape">
+            <span>Boleto</span>
+            <button type="button" data-cf-ampliar="boleto">Ampliar código</button>
+          </div>
+        </div>
+      ` : ''}
+    </section>`;
+}
+
+function cfVincularPagamentoVisual(modal) {
+  modal.querySelectorAll('[data-cf-visual-tab]').forEach(botao => {
+    botao.addEventListener('click', evento => {
+      evento.preventDefault();
+      evento.stopPropagation();
+
+      const tipo = botao.dataset.cfVisualTab;
+
+      modal.querySelectorAll('[data-cf-visual-tab]').forEach(item => {
+        item.classList.toggle('ativo', item === botao);
+      });
+
+      modal.querySelectorAll('[data-cf-visual-painel]').forEach(painel => {
+        painel.classList.toggle('ativo', painel.dataset.cfVisualPainel === tipo);
+      });
+    });
+  });
+
+  modal.querySelectorAll('[data-cf-ampliar]').forEach(botao => {
+    botao.addEventListener('click', evento => {
+      evento.preventDefault();
+      evento.stopPropagation();
+
+      const painel = botao.closest('[data-cf-visual-painel]');
+      const ampliado = painel.classList.toggle('ampliado');
+      botao.textContent = ampliado ? 'Voltar ao pagamento' : (
+        botao.dataset.cfAmpliar === 'pix' ? 'Ampliar QR Code' : 'Ampliar código'
+      );
+    });
+  });
+}
+
+async function cfRenderizarPagamentoVisual(modal, conta) {
+  const canvasPix = modal.querySelector('[data-cf-canvas="pix"]');
+  const canvasBoleto = modal.querySelector('[data-cf-canvas="boleto"]');
+
+  if (!canvasPix && !canvasBoleto) {
+    modal.querySelector('[data-cf-status="pix"]')?.remove();
+    return;
+  }
+
+  try {
+    const bwipjs = await cfCarregarGeradorCodigos();
+
+    if (canvasPix && conta.pix_copia_cola) {
+      bwipjs.toCanvas(canvasPix, {
+        bcid: 'qrcode',
+        text: conta.pix_copia_cola,
+        scale: 5,
+        padding: 4,
+        eclevel: 'M',
+      });
+
+      modal.querySelector('[data-cf-status="pix"]')?.remove();
+    }
+
+    if (canvasBoleto) {
+      bwipjs.toCanvas(canvasBoleto, {
+        bcid: 'interleaved2of5',
+        text: canvasBoleto.dataset.cfCodigoBarras,
+        scale: 2,
+        height: 18,
+        padding: 4,
+      });
+
+      modal.querySelector('[data-cf-status="boleto"]')?.remove();
+    }
+  } catch (erro) {
+    console.error('[Pagamento Visual]', erro);
+
+    modal.querySelectorAll('.cf-codigo-status').forEach(status => {
+      status.textContent = 'Não foi possível gerar a imagem. Use o botão de copiar código abaixo.';
+      status.classList.add('erro');
+    });
+  }
+}
+
 function cfAbrirConta(conta) {
   document.querySelector('.cf-modal')?.remove();
 
@@ -300,7 +503,7 @@ function cfAbrirConta(conta) {
   modal.className = 'cf-modal';
 
   modal.innerHTML = `
-    <section class="cf-modal-conteudo" role="dialog" aria-modal="true" aria-label="${cfEscapar(conta.nome)}">
+    <section class="cf-modal-conteudo cf-modal-pagamento" role="dialog" aria-modal="true" aria-label="${cfEscapar(conta.nome)}">
       <header class="cf-modal-cabecalho">
         <div>
           <span class="cf-modal-kicker">${conta.paga ? 'Conta paga' : 'Pagamento'}</span>
@@ -321,12 +524,7 @@ function cfAbrirConta(conta) {
         </div>
       </div>
 
-      ${conta.qr_code_url
-        ? `<div class="cf-qr-area">
-             <img class="cf-qr" src="${cfEscapar(conta.qr_code_url)}" alt="QR Code para pagamento">
-             <span>Abra o aplicativo do banco e escaneie o código.</span>
-           </div>`
-        : ''}
+      ${cfPagamentoVisualHtml(conta)}
 
       ${conta.pix_copia_cola
         ? `<div class="cf-pagamento-bloco">
@@ -432,6 +630,8 @@ function cfAbrirConta(conta) {
   });
 
   document.body.appendChild(modal);
+  cfVincularPagamentoVisual(modal);
+  cfRenderizarPagamentoVisual(modal, conta);
 }
 
 function cfLinha(conta, contexto = 'central') {
@@ -739,8 +939,8 @@ function cfCarregarEstilos() {
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/central-financeira.css?v=4';
-  link.dataset.cf = '4';
+  link.href = '/central-financeira.css?v=5';
+  link.dataset.cf = '5';
   document.head.appendChild(link);
 }
 
@@ -775,7 +975,3 @@ if (document.readyState === 'loading') {
 } else {
   cfIniciar();
 }
-
-// Atualizacao solicitada pela caixa de entrada do Gmail.
-window.addEventListener('lifeos:financeiro-atualizar', cfAtualizar);
-

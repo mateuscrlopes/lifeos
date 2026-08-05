@@ -1,4 +1,4 @@
-// Central Financeira — Caixa de entrada do Gmail v2
+// Central Financeira — Caixa de entrada do Gmail v4
 
 let cfeClient = null;
 let cfeUsuario = null;
@@ -76,7 +76,8 @@ function cfeResumoExtracao(item) {
 
   const vencimento = cfeDataCompleta(dados.vencimento);
   if (vencimento) partes.push(`Vencimento ${vencimento}`);
-  if (dados.linha_digitavel) partes.push('Código de pagamento encontrado');
+  if (dados.pix_copia_cola) partes.push('Pix encontrado');
+  if (dados.linha_digitavel) partes.push('Boleto encontrado');
 
   return partes;
 }
@@ -340,6 +341,7 @@ function cfeAbrirConferencia(item) {
         importada_em: new Date().toISOString(),
         revisada: true,
         linha_digitavel: item.dados_extraidos?.linha_digitavel || null,
+        pix_copia_cola: item.dados_extraidos?.pix_copia_cola || null,
         atualizado_em: new Date().toISOString(),
       };
 

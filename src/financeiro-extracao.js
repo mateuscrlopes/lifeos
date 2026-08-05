@@ -4,6 +4,7 @@
 import { CanvasFactory } from 'pdf-parse/worker';
 import { PasswordException, PDFParse } from 'pdf-parse';
 
+export const EXTRACAO_VERSAO = 3;
 const LIMITE_TEXTO = 250000;
 
 function normalizarTexto(valor) {
@@ -134,6 +135,7 @@ function extrairValor(texto) {
     'valor cobrado',
     'valor total',
     'total da fatura',
+    'quanto eu vou pagar',
   ];
 
   for (const rotulo of rotulos) {
@@ -149,40 +151,280 @@ function extrairValor(texto) {
   return null;
 }
 
-function extrairLinhaDigitavel(texto) {
-  const base = semAcentos(texto).toLowerCase();
+function digitoModulo10(valor) {
+  let soma = 0;
+  let multiplicador = 2;
+
+  for (let indice = valor.length - 1; indice >= 0; indice -= 1) {
+    const produto = Number(valor[indice]) * multiplicador;
+    soma += Math.floor(produto / 10) + (produto % 10);
+    multiplicador = multiplicador === 2 ? 1 : 2;
+  }
+
+  return (10 - (soma % 10)) % 10;
+}
+
+function digitoModulo11Arrecadacao(valor) {
+  let soma = 0;
+  let peso = 2;
+
+  for (let indice = valor.length - 1; indice >= 0; indice -= 1) {
+    soma += Number(valor[indice]) * peso;
+    peso = peso === 9 ? 2 : peso + 1;
+  }
+
+  const resto = soma % 11;
+  return resto === 0 || resto === 1 ? 0 : 11 - resto;
+}
+
+function linhaBancariaValida(digitos) {
+  if (digitos.length !== 47) return false;
+
+  return digitoModulo10(digitos.slice(0, 9)) === Number(digitos[9])
+    && digitoModulo10(digitos.slice(10, 20)) === Number(digitos[20])
+    && digitoModulo10(digitos.slice(21, 31)) === Number(digitos[31]);
+}
+
+function linhaArrecadacaoValida(digitos) {
+  if (digitos.length !== 48 || digitos[0] !== '8') return false;
+
+  const referencia = digitos[2];
+  const calcular = referencia === '6' || referencia === '7'
+    ? digitoModulo10
+    : referencia === '8' || referencia === '9'
+      ? digitoModulo11Arrecadacao
+      : null;
+
+  if (!calcular) return false;
+
+  for (let inicio = 0; inicio < 48; inicio += 12) {
+    const bloco = digitos.slice(inicio, inicio + 12);
+    if (calcular(bloco.slice(0, 11)) !== Number(bloco[11])) return false;
+  }
+
+  return true;
+}
+
+function codigoBarrasValido(digitos) {
+  if (digitos.length !== 44) return false;
+  return digitos[0] === '8' || /^\d{3}9/.test(digitos);
+}
+
+function encontrarLinhaEmDigitos(digitosRecebidos, tamanhos = [48, 47, 44]) {
+  const digitos = String(digitosRecebidos || '').replace(/\D/g, '');
+
+  for (const tamanho of tamanhos) {
+    if (digitos.length < tamanho) continue;
+
+    for (let inicio = 0; inicio <= digitos.length - tamanho; inicio += 1) {
+      const candidato = digitos.slice(inicio, inicio + tamanho);
+
+      if (
+        (tamanho === 48 && linhaArrecadacaoValida(candidato))
+        || (tamanho === 47 && linhaBancariaValida(candidato))
+        || (tamanho === 44 && codigoBarrasValido(candidato))
+      ) {
+        return candidato;
+      }
+    }
+  }
+
+  return null;
+}
+
+function extrairLinhaEnel(original, base) {
+  // A fatura da Enel também traz uma chave/QR da nota fiscal no topo.
+  // Para não confundi-la com o pagamento, a busca fica restrita ao bloco
+  // bancário e aceita somente a linha digitável validada de 47 ou 48 dígitos.
+  const ancoras = [
+    'banco bradesco',
+    'ficha de compensacao',
+    'pagavel em qualquer banco',
+    'linha digitavel',
+    'codigo de barras',
+  ];
+
+  const indices = ancoras
+    .flatMap(ancora => ocorrencias(base, ancora))
+    .sort((a, b) => b - a);
+
+  for (const indice of indices) {
+    const trecho = original.slice(
+      Math.max(0, indice - 260),
+      Math.min(original.length, indice + 1800)
+    );
+    const linha = encontrarLinhaEmDigitos(trecho, [47, 48]);
+    if (linha) return linha;
+  }
+
+  // Reserva: o boleto costuma estar no rodapé da primeira página. Mesmo aqui,
+  // códigos de 44 dígitos são recusados para não aceitar a chave da nota fiscal.
+  const rodape = original.slice(Math.floor(original.length * 0.55));
+  return encontrarLinhaEmDigitos(rodape, [47, 48]);
+}
+
+function extrairLinhaDigitavel(texto, contexto = {}) {
+  const original = String(texto || '');
+  const base = semAcentos(original).toLowerCase();
+  const tamanhos = contexto.fornecedor ? [48, 47] : [48, 47, 44];
+
+  if (contexto.fornecedor === 'Enel') {
+    return extrairLinhaEnel(original, base);
+  }
+
   const rotulos = [
     'linha digitavel',
     'codigo de barras',
     'codigo para pagamento',
+    'ficha de compensacao',
   ];
-
-  const validar = trecho => {
-    const candidatos = trecho.match(/(?:\d[\s.\-]?){44,58}/g) || [];
-
-    for (const candidato of candidatos) {
-      const digitos = candidato.replace(/\D/g, '');
-      if ([44, 46, 47, 48].includes(digitos.length)) return digitos;
-    }
-
-    return null;
-  };
 
   for (const rotulo of rotulos) {
     for (const indice of ocorrencias(base, rotulo)) {
-      const linha = validar(texto.slice(indice, indice + 300));
+      const trecho = original.slice(
+        Math.max(0, indice - 220),
+        Math.min(original.length, indice + 520)
+      );
+      const linha = encontrarLinhaEmDigitos(trecho, tamanhos);
       if (linha) return linha;
     }
   }
 
-  return validar(texto);
+  const linhas = original.split(/\n+/);
+
+  for (let indice = 0; indice < linhas.length; indice += 1) {
+    const combinacoes = [
+      linhas[indice],
+      `${linhas[indice] || ''} ${linhas[indice + 1] || ''}`,
+      `${linhas[indice] || ''} ${linhas[indice + 1] || ''} ${linhas[indice + 2] || ''}`,
+    ];
+
+    for (const trecho of combinacoes) {
+      const linha = encontrarLinhaEmDigitos(trecho, tamanhos);
+      if (linha) return linha;
+    }
+  }
+
+  const blocos = original.match(/[\d.\-\s]{40,180}/g) || [];
+
+  for (const bloco of blocos) {
+    const linha = encontrarLinhaEmDigitos(bloco, tamanhos);
+    if (linha) return linha;
+  }
+
+  return null;
+}
+
+function crc16Pix(valor) {
+  let crc = 0xFFFF;
+
+  for (const byte of Buffer.from(String(valor || ''), 'utf8')) {
+    crc ^= byte << 8;
+
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000)
+        ? ((crc << 1) ^ 0x1021) & 0xFFFF
+        : (crc << 1) & 0xFFFF;
+    }
+  }
+
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function pixValido(valor) {
+  const candidato = String(valor || '').trim();
+  const final = candidato.match(/6304([0-9A-Fa-f]{4})$/);
+  if (!final) return false;
+
+  const informado = final[1].toUpperCase();
+  const calculado = crc16Pix(candidato.slice(0, -4));
+  return informado === calculado;
+}
+
+function extrairPixCopiaCola(texto) {
+  const original = String(texto || '');
+  const variantes = [
+    original,
+    original.replace(/[\r\n\t]+/g, ''),
+  ];
+
+  for (const variante of variantes) {
+    let inicio = variante.indexOf('000201');
+
+    while (inicio >= 0) {
+      let fim = variante.indexOf('6304', inicio + 6);
+
+      while (fim >= 0 && fim - inicio <= 1500) {
+        const candidato = variante.slice(inicio, fim + 8).trim();
+
+        if (candidato.length >= 30 && pixValido(candidato)) {
+          return candidato;
+        }
+
+        fim = variante.indexOf('6304', fim + 4);
+      }
+
+      inicio = variante.indexOf('000201', inicio + 6);
+    }
+  }
+
+  return null;
+}
+
+export function extrairDadosTexto(textoRecebido, contexto = {}) {
+  const texto = normalizarTexto(textoRecebido);
+
+  if (!texto || texto.replace(/\s/g, '').length < 20) {
+    return {
+      versao: EXTRACAO_VERSAO,
+      valor: null,
+      vencimento: null,
+      linha_digitavel: null,
+      pix_copia_cola: null,
+      fornecedor: contexto.fornecedor || null,
+      caracteres_lidos: texto.length,
+      status: 'falha',
+      codigo: 'sem_texto',
+      erro: 'O documento nao possui texto suficiente para leitura.',
+    };
+  }
+
+  const pixCopiaCola = extrairPixCopiaCola(texto);
+  const textoSemPix = pixCopiaCola ? texto.replace(pixCopiaCola, ' ') : texto;
+  let valor = extrairValor(textoSemPix);
+
+  if (!valor && contexto.origem === 'email') {
+    const base = semAcentos(textoSemPix).toLowerCase();
+
+    for (const indice of ocorrencias(base, 'valor')) {
+      valor = encontrarMoeda(textoSemPix.slice(indice, indice + 300));
+      if (valor) break;
+    }
+  }
+
+  const dados = {
+    versao: EXTRACAO_VERSAO,
+    valor,
+    vencimento: extrairVencimento(textoSemPix),
+    linha_digitavel: extrairLinhaDigitavel(textoSemPix, contexto),
+    pix_copia_cola: pixCopiaCola,
+    fornecedor: contexto.fornecedor || null,
+    caracteres_lidos: texto.length,
+  };
+
+  return {
+    ...dados,
+    status: consolidarStatus(dados),
+    codigo: null,
+    erro: null,
+  };
 }
 
 function consolidarStatus(dados) {
   const principais = Number(Boolean(dados.valor)) + Number(Boolean(dados.vencimento));
 
   if (principais === 2) return 'sucesso';
-  if (principais === 1 || dados.linha_digitavel) return 'parcial';
+  if (principais === 1 || dados.linha_digitavel || dados.pix_copia_cola) return 'parcial';
   return 'falha';
 }
 
@@ -201,28 +443,7 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
     const resultado = await parser.getText({ first: 8 });
     const texto = normalizarTexto(resultado?.text);
 
-    if (!texto || texto.replace(/\s/g, '').length < 20) {
-      return {
-        status: 'falha',
-        codigo: 'sem_texto',
-        erro: 'O PDF nao possui texto selecionavel suficiente.',
-        fornecedor: contexto.fornecedor || null,
-      };
-    }
-
-    const dados = {
-      valor: extrairValor(texto),
-      vencimento: extrairVencimento(texto),
-      linha_digitavel: extrairLinhaDigitavel(texto),
-      fornecedor: contexto.fornecedor || null,
-      caracteres_lidos: texto.length,
-    };
-
-    return {
-      ...dados,
-      status: consolidarStatus(dados),
-      erro: null,
-    };
+    return extrairDadosTexto(texto, contexto);
   } catch (erro) {
     const senhaPdf = String(contexto.senhaPdf || '');
     const erroDeSenha = erro instanceof PasswordException
@@ -230,6 +451,7 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
 
     if (erroDeSenha) {
       return {
+        versao: EXTRACAO_VERSAO,
         status: 'falha',
         codigo: senhaPdf ? 'senha_incorreta' : 'senha_necessaria',
         erro: senhaPdf
@@ -240,6 +462,7 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
     }
 
     return {
+      versao: EXTRACAO_VERSAO,
       status: 'falha',
       codigo: 'erro_leitura',
       erro: String(erro?.message || erro || 'Falha desconhecida.').slice(0, 300),
@@ -265,22 +488,26 @@ export function consolidarExtracoes(anexos = []) {
   const valores = extracoes.map(item => item.valor).filter(valor => Number.isFinite(valor));
   const vencimentos = extracoes.map(item => item.vencimento).filter(Boolean);
   const linhas = extracoes.map(item => item.linha_digitavel).filter(Boolean);
+  const pix = extracoes.map(item => item.pix_copia_cola).filter(Boolean);
 
   const valor = valores[0] ?? null;
   const vencimento = vencimentos[0] ?? null;
   const linhaDigitavel = linhas[0] ?? null;
+  const pixCopiaCola = pix[0] ?? null;
 
   const dados = {
     valor,
     vencimento,
     linha_digitavel: linhaDigitavel,
+    pix_copia_cola: pixCopiaCola,
     fontes: extracoes
-      .filter(item => item.valor || item.vencimento || item.linha_digitavel)
+      .filter(item => item.valor || item.vencimento || item.linha_digitavel || item.pix_copia_cola)
       .map(item => item.nome)
       .filter(Boolean),
     divergencias: {
       valor: new Set(valores.map(String)).size > 1,
       vencimento: new Set(vencimentos).size > 1,
+      pix: new Set(pix).size > 1,
     },
   };
 
