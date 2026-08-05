@@ -9,7 +9,7 @@
 // A camada abaixo concentra refinamentos visuais e comportamentais sem
 // alterar a arquitetura ou a estrutura de navegacao do LifeOS.
 import './ui-refinements.js?v=4';
-import './central-financeira.js?v=3';
+import './central-financeira.js?v=4';
 import './purchase-destination-create.js?v=2';
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).

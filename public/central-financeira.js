@@ -1,4 +1,4 @@
-// LifeOS — Central Financeira v3
+﻿// LifeOS — Central Financeira v3
 // Integração estável com a tela Hoje, sem navegação involuntária.
 
 let cfClient = null;
@@ -150,6 +150,144 @@ function cfRestaurarAbaOrigem() {
   }
 }
 
+function cfMeiosPagamento(conta) {
+  const meios = [];
+  if (conta.pix_copia_cola) meios.push('Pix');
+  if (conta.linha_digitavel) meios.push('Boleto');
+  if (conta.qr_code_url) meios.push('QR Code');
+  if (conta.documento_url) meios.push('Documento');
+  if (conta.descricao_pagamento && !meios.length) meios.push('Instruções');
+  return meios;
+}
+
+function cfValorCampo(valor) {
+  return cfEscapar(valor || '');
+}
+
+async function cfSalvarDadosPagamento(conta, formulario, botao) {
+  const dados = new FormData(formulario);
+  const limpar = nome => {
+    const valor = String(dados.get(nome) || '').trim();
+    return valor || null;
+  };
+
+  botao.disabled = true;
+  botao.textContent = 'Salvando…';
+
+  try {
+    const resultado = await cfClient
+      .from('contas')
+      .update({
+        fornecedor: limpar('fornecedor'),
+        pix_copia_cola: limpar('pix_copia_cola'),
+        linha_digitavel: limpar('linha_digitavel'),
+        descricao_pagamento: limpar('descricao_pagamento'),
+        qr_code_url: limpar('qr_code_url'),
+        documento_url: limpar('documento_url'),
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', conta.id);
+
+    if (resultado.error) throw resultado.error;
+
+    document.querySelector('.cf-editor-modal')?.remove();
+    await cfAtualizar();
+
+    const atualizada = cfContas.find(item => String(item.id) === String(conta.id));
+    if (atualizada) cfAbrirConta(atualizada);
+  } catch (erro) {
+    console.error('[Central Financeira]', erro);
+    botao.disabled = false;
+    botao.textContent = 'Salvar dados';
+    alert('Não foi possível salvar os dados de pagamento.');
+  }
+}
+
+function cfAbrirEditorPagamento(conta) {
+  document.querySelector('.cf-editor-modal')?.remove();
+  document.querySelector('.cf-modal:not(.cf-editor-modal)')?.remove();
+
+  const modal = document.createElement('div');
+  modal.className = 'cf-modal cf-editor-modal';
+
+  modal.innerHTML = `
+    <section class="cf-modal-conteudo cf-editor-conteudo" role="dialog" aria-modal="true" aria-label="Editar dados de pagamento">
+      <header class="cf-modal-cabecalho">
+        <div>
+          <span class="cf-modal-kicker">Configuração da conta</span>
+          <h3>Dados de pagamento</h3>
+          <p>${cfEscapar(conta.nome)}</p>
+        </div>
+        <button type="button" class="cf-modal-fechar" data-cf-editor-fechar aria-label="Fechar">×</button>
+      </header>
+
+      <p class="cf-editor-intro">
+        Preencha somente os dados usados nesta conta. Os campos vazios não aparecem no momento do pagamento.
+      </p>
+
+      <form class="cf-editor-form" data-cf-editor-form>
+        <label class="cf-editor-campo">
+          <span>Fornecedor ou beneficiário</span>
+          <input name="fornecedor" type="text" maxlength="160" value="${cfValorCampo(conta.fornecedor)}" placeholder="Ex.: Enel, condomínio, imobiliária">
+        </label>
+
+        <label class="cf-editor-campo">
+          <span>Pix copia e cola</span>
+          <textarea name="pix_copia_cola" rows="3" placeholder="Cole aqui o código Pix completo">${cfValorCampo(conta.pix_copia_cola)}</textarea>
+        </label>
+
+        <label class="cf-editor-campo">
+          <span>Linha digitável do boleto</span>
+          <textarea name="linha_digitavel" rows="2" inputmode="numeric" placeholder="Cole a linha digitável">${cfValorCampo(conta.linha_digitavel)}</textarea>
+        </label>
+
+        <label class="cf-editor-campo">
+          <span>Como pagar</span>
+          <textarea name="descricao_pagamento" rows="3" placeholder="Ex.: pagar pelo aplicativo da administradora">${cfValorCampo(conta.descricao_pagamento)}</textarea>
+        </label>
+
+        <label class="cf-editor-campo">
+          <span>Endereço da imagem do QR Code</span>
+          <input name="qr_code_url" type="url" value="${cfValorCampo(conta.qr_code_url)}" placeholder="https://...">
+          <small>Use quando a imagem do QR Code já estiver hospedada.</small>
+        </label>
+
+        <label class="cf-editor-campo">
+          <span>Endereço do boleto ou documento</span>
+          <input name="documento_url" type="url" value="${cfValorCampo(conta.documento_url)}" placeholder="https://...">
+        </label>
+
+        <div class="cf-editor-acoes">
+          <button type="button" class="cf-acao-secundaria" data-cf-editor-cancelar>Cancelar</button>
+          <button type="submit" class="cf-acao-principal">Salvar dados</button>
+        </div>
+      </form>
+    </section>`;
+
+  const fechar = () => {
+    modal.remove();
+    cfAbrirConta(conta);
+  };
+
+  modal.addEventListener('click', evento => {
+    if (evento.target === modal || evento.target.closest('[data-cf-editor-fechar], [data-cf-editor-cancelar]')) {
+      evento.preventDefault();
+      evento.stopPropagation();
+      fechar();
+    }
+  });
+
+  const formulario = modal.querySelector('[data-cf-editor-form]');
+  formulario.addEventListener('submit', evento => {
+    evento.preventDefault();
+    evento.stopPropagation();
+    cfSalvarDadosPagamento(conta, formulario, formulario.querySelector('[type="submit"]'));
+  });
+
+  document.body.appendChild(modal);
+  formulario.querySelector('[name="fornecedor"]')?.focus();
+}
+
 function cfAbrirConta(conta) {
   document.querySelector('.cf-modal')?.remove();
 
@@ -221,6 +359,9 @@ function cfAbrirConta(conta) {
         : ''}
 
       <div class="cf-modal-acoes">
+        <button type="button" class="cf-acao-secundaria" data-cf-editar-pagamento>
+          Editar dados de pagamento
+        </button>
         ${conta.documento_url
           ? `<a href="${cfEscapar(conta.documento_url)}" target="_blank" rel="noopener" class="cf-acao-secundaria">Abrir documento</a>`
           : ''}
@@ -237,6 +378,12 @@ function cfAbrirConta(conta) {
       modal.remove();
       cfRestaurarAbaOrigem();
     }
+  });
+
+  modal.querySelector('[data-cf-editar-pagamento]')?.addEventListener('click', evento => {
+    evento.preventDefault();
+    evento.stopPropagation();
+    cfAbrirEditorPagamento(conta);
   });
 
   modal.querySelectorAll('[data-cf-copiar]').forEach(botao => {
@@ -311,6 +458,7 @@ function cfLinha(conta, contexto = 'central') {
         <span class="cf-conta-meta">
           ${cfEscapar(situacao.texto)}
           ${conta.fornecedor ? ` · ${cfEscapar(conta.fornecedor)}` : ''}
+          ${cfMeiosPagamento(conta).length ? ` · ${cfEscapar(cfMeiosPagamento(conta).join(' + '))}` : ''}
         </span>
       </button>
       <div class="cf-conta-lateral">
@@ -591,8 +739,8 @@ function cfCarregarEstilos() {
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/central-financeira.css?v=3';
-  link.dataset.cf = '3';
+  link.href = '/central-financeira.css?v=4';
+  link.dataset.cf = '4';
   document.head.appendChild(link);
 }
 

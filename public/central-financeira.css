@@ -1,4 +1,4 @@
-/* LifeOS — Central Financeira v2 */
+﻿/* LifeOS — Central Financeira v2 */
 
 .cf-hoje-card {
   margin-top: 14px;
@@ -516,5 +516,92 @@
 
   .cf-modal-resumo {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ================================================================
+   Central Financeira — editor de dados de pagamento
+================================================================ */
+
+.cf-editor-conteudo {
+  width: min(100%, 560px);
+}
+
+.cf-editor-intro {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cf-editor-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.cf-editor-campo {
+  display: grid;
+  gap: 6px;
+}
+
+.cf-editor-campo > span {
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.cf-editor-campo input,
+.cf-editor-campo textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-sm);
+  outline: none;
+  background: var(--paper);
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.cf-editor-campo input:focus,
+.cf-editor-campo textarea:focus {
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-soft);
+}
+
+.cf-editor-campo small {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.cf-editor-acoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+.cf-editor-acoes button {
+  border: 0;
+}
+
+@media (max-width: 430px) {
+  .cf-editor-acoes {
+    grid-template-columns: 1fr;
+  }
+
+  .cf-editor-acoes .cf-acao-principal {
+    order: -1;
   }
 }
