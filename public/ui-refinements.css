@@ -1,4 +1,4 @@
-/* LifeOS — camada de refinamento mobile v2 */
+﻿/* LifeOS — camada de refinamento mobile v2 */
 :root {
   /* Compatibilidade com estilos legados ainda presentes no app.js */
   --acao: var(--sage);
@@ -1074,3 +1074,233 @@ label:has(> input[type="checkbox"]) {
   cursor: pointer;
 }
 .ui-purchase-destination:active { transform: scale(.97); }
+
+
+/* ================================================================
+   Tela Hoje — hierarquia visual v1
+   Mantém serifas em títulos editoriais e usa sans para números/dados.
+================================================================ */
+
+/* Saudação: editorial, mas com leitura mais limpa */
+#abaHoje .greeting-periodo {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .115em;
+}
+
+#abaHoje .greeting-nome {
+  color: var(--texto);
+  font-size: clamp(26px, 7vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+#abaHoje .greeting-meta {
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Destaque do dia */
+#abaHoje .hero-hoje {
+  padding: 21px 20px 22px;
+}
+
+#abaHoje .hero-kicker {
+  margin-bottom: 7px;
+  color: rgba(255,255,255,.68);
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+#abaHoje .hero-titulo {
+  max-width: 31ch;
+  margin-bottom: 7px;
+  font-size: 21px;
+  line-height: 1.18;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+#abaHoje .hero-sub {
+  max-width: 44ch;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Cards numéricos: números deixam de usar a fonte serifada */
+#metricasHoje {
+  gap: 11px;
+}
+
+#metricasHoje .metrica {
+  position: relative;
+  min-height: 116px;
+  padding: 15px;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--linha) 88%, transparent);
+}
+
+#metricasHoje .metrica-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 11px;
+  border-radius: 11px;
+}
+
+#metricasHoje .metrica-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+#metricasHoje .metrica-num {
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: .98;
+  letter-spacing: -.045em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+#metricasHoje .metrica-label {
+  max-width: 15ch;
+  margin-top: 6px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.005em;
+  text-wrap: balance;
+}
+
+/* Títulos dos blocos: deixam de parecer rótulos técnicos */
+#cardsHoje .card-hoje-head {
+  min-height: 32px;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+#cardsHoje .card-hoje-titulo-txt {
+  color: var(--texto);
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  text-transform: none;
+}
+
+#cardsHoje .card-hoje-abrir {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#cardsHoje .cartao {
+  padding: 17px 18px;
+}
+
+/* Conteúdo interno dos blocos */
+#cardsHoje .mini-item {
+  min-height: 48px;
+  gap: 14px;
+  padding: 10px 0;
+  color: var(--texto);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+#cardsHoje .mini-meta {
+  flex: 0 1 auto;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 1.35;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Central Financeira dentro da tela Hoje */
+#cfToday .cf-hoje-subtitulo {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+#cfToday .cf-hoje-item {
+  min-height: 60px;
+}
+
+#cfToday .cf-hoje-nome {
+  color: var(--texto);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -.008em;
+}
+
+#cfToday .cf-hoje-meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+#cfToday .cf-hoje-acao {
+  min-width: 64px;
+  min-height: 34px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Estados vazios mais discretos */
+#cardsHoje .tudo-em-dia,
+#cfToday .cf-hoje-vazio {
+  color: var(--sage);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* Pequenos aparelhos */
+@media (max-width: 370px) {
+  #metricasHoje .metrica {
+    min-height: 110px;
+    padding: 13px;
+  }
+
+  #metricasHoje .metrica-num {
+    font-size: 26px;
+  }
+
+  #cardsHoje .card-hoje-titulo-txt {
+    font-size: 16px;
+  }
+
+  #cardsHoje .mini-item,
+  #cfToday .cf-hoje-item {
+    align-items: flex-start;
+  }
+}

@@ -64,6 +64,7 @@ async function aoEntrar(){
   const{data:p,error}=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',s.session.user.id).single();
   if(error||!p){aviso('avisoLogin','Perfil não encontrado.','erro');return;}
   usuario=p;
+  window.lifeosContext={supa,usuario};window.dispatchEvent(new CustomEvent('lifeos:ready'));
   // Atualizar header avatar
   const av=el('headerAvatar');if(av)av.textContent=p.nome.charAt(0).toUpperCase();
   // Atualizar data/hora/clima no Hoje
@@ -1309,8 +1310,7 @@ async function carregarHoje(){
   }
 
   if(dados.tudoEmDia&&!dados.cardapioHoje&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);return;}
-  if(dados.contasAtencao.length){const card=criarCartaoHoje('Contas próximas','contas');for(const c of dados.contasAtencao){const q=c.status==='vencida'?'venceu':c.status==='vence_hoje'?'vence hoje':`vence em ${c.dias} ${c.dias===1?'dia':'dias'}`;card.corpo.appendChild(miniItem(c.nome,q,formatarValor(c.valor)));}area.appendChild(card.cartao);}
-  if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
+if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
   if(dados.estoqueAtencao.length){const card=criarCartaoHoje('Estoque em atenção','estoque');for(const i of dados.estoqueAtencao)card.corpo.appendChild(miniItem(i.nome,`${i.quantidade} · ${i.status==='acabou'?'acabou':'baixo'}`,''));area.appendChild(card.cartao);}
   if(dados.compras.total){const card=criarCartaoHoje('Compras','compras');for(const n of dados.compras.primeiros)card.corpo.appendChild(miniItem(n,'',''));if(dados.compras.total>dados.compras.primeiros.length){const r=document.createElement('div');r.className='mini-item';r.style.color='var(--suave)';r.textContent=`+ mais ${dados.compras.total-dados.compras.primeiros.length} na lista`;card.corpo.appendChild(r);}area.appendChild(card.cartao);}
 }
@@ -1820,5 +1820,9 @@ window.trocarAba = trocarAba;
 window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
-window.mudarPagina = mudarPagina;
+if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
+
+
+
+
 

@@ -58,7 +58,7 @@ function loadStyles() {
   if (document.querySelector('link[data-lifeos-refinements]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/ui-refinements.css?v=2';
+  link.href = '/ui-refinements.css?v=4';
   link.dataset.lifeosRefinements = '1';
   document.head.appendChild(link);
 }
@@ -1036,6 +1036,14 @@ function makeMetricsInteractive() {
   });
 
   document.querySelectorAll('#cardsHoje .card-hoje, #cardsHoje .cartao.clicavel').forEach(card => {
+    // A Central Financeira possui cliques próprios em Pagar e Ver todas.
+    // Não transforme o cartão financeiro em um atalho global para Casa > Contas.
+    if (card.id === 'cfToday' || card.closest('#cfToday')) {
+      delete card.dataset.uiDestination;
+      card.removeAttribute('tabindex');
+      card.removeAttribute('role');
+      return;
+    }
     const title = card.querySelector('.card-hoje-titulo-txt, .secao-titulo, b')?.textContent || card.textContent || '';
     const destination = destinationFromText(title);
     if (!destination) return;
@@ -1510,6 +1518,11 @@ function installStableNavigation() {
       return;
     }
 
+    // Deixe a Central Financeira tratar seus próprios controles.
+    // Este listener roda em captura e, sem esta exceção, intercepta Pagar
+    // antes que o módulo financeiro consiga abrir o modal.
+    if (event.target.closest('#cfToday [data-cf-abrir], #cfToday [data-cf-ver-todas]')) return;
+
     const destinationTarget = event.target.closest('[data-ui-destination]');
     if (destinationTarget) {
       event.preventDefault();
@@ -1530,6 +1543,7 @@ function installStableNavigation() {
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.target.closest('#cfToday')) return;
     const target = event.target.closest('.header-logo, [data-ui-destination]');
     if (!target) return;
     event.preventDefault();
