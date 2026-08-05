@@ -1,4 +1,4 @@
-﻿// server.js — LifeOS v0.27.0 + Gumate Lab
+// server.js — LifeOS v0.27.0 + Gumate Lab
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
@@ -9,7 +9,10 @@ import { buscarClima } from './clima.js';
 
 const app = express();
 app.disable('x-powered-by');
-app.use(express.json({ limit: '32kb' }));
+
+// A importação financeira pode receber até 50 e-mails com trechos do corpo.
+// 2 MB mantém o limite controlado e comporta o máximo já aceito pela rota.
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 app.get('/config', (req, res) => {
@@ -52,4 +55,3 @@ app.listen(config.porta, '0.0.0.0', () => {
   console.log(`\nLifeOS v0.27.0 — porta ${config.porta}`);
   console.log(`Gumate: ${config.gumateEnabled ? 'habilitado' : 'desabilitado'}\n`);
 });
-
