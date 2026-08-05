@@ -1,4 +1,4 @@
-﻿// config.js
+// config.js
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -28,10 +28,13 @@ export const config = {
   gmailImportToken: process.env.GMAIL_IMPORT_TOKEN || '',
   lifeosCasaId: process.env.LIFEOS_CASA_ID || '',
 
+  // Senha usada somente no backend para abrir PDFs protegidos da Enel.
+  // Configure ENEL_PDF_PASSWORD diretamente no Render. Nunca envie ao navegador.
+  enelPdfPassword: process.env.ENEL_PDF_PASSWORD || '',
+
   // Gumate: a API de IA e opcional. Comandos simples continuam funcionando
   // pelas regras locais mesmo quando GEMINI_API_KEY nao estiver configurada.
   gumateEnabled: process.env.GUMATE_ENABLED !== 'false',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
 };
-

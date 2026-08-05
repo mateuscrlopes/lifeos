@@ -80,6 +80,28 @@ function clienteAdmin() {
   });
 }
 
+function senhaPdfPorFornecedor(fornecedor) {
+  if (fornecedor === 'Enel') {
+    return String(config.enelPdfPassword || '');
+  }
+
+  return '';
+}
+
+function deveExtrairAnexo(anexo, fornecedor) {
+  if (!anexo?.path) return false;
+
+  const extracao = anexo?.extracao;
+  if (!extracao?.status) return true;
+
+  const senhaConfigurada = Boolean(senhaPdfPorFornecedor(fornecedor));
+
+  return fornecedor === 'Enel'
+    && senhaConfigurada
+    && extracao.status === 'falha'
+    && (!extracao.codigo || extracao.codigo === 'senha_necessaria');
+}
+
 function decodificarBase64Url(valor) {
   const recebido = String(valor || '').trim();
   if (!recebido) return null;
@@ -303,6 +325,7 @@ export function registrarRotasFinanceiroEmail(app) {
     const extracao = await extrairDadosPdf(req.body, {
       fornecedor: registro.fornecedor,
       competencia: registro.competencia,
+      senhaPdf: senhaPdfPorFornecedor(registro.fornecedor),
     });
 
     const anexoAtualizado = {
@@ -380,7 +403,7 @@ export function registrarRotasFinanceiroEmail(app) {
 
     const pendentes = (registros || []).filter(registro => {
       const anexos = Array.isArray(registro.anexos) ? registro.anexos : [];
-      return anexos.some(anexo => anexo?.path && !anexo?.extracao?.status);
+      return anexos.some(anexo => deveExtrairAnexo(anexo, registro.fornecedor));
     });
 
     let processados = 0;
@@ -393,7 +416,7 @@ export function registrarRotasFinanceiroEmail(app) {
 
       for (let indice = 0; indice < anexos.length; indice += 1) {
         const anexo = anexos[indice];
-        if (!anexo?.path || anexo?.extracao?.status) continue;
+        if (!deveExtrairAnexo(anexo, registro.fornecedor)) continue;
 
         const { data: arquivo, error: erroDownload } = await admin.storage
           .from(BUCKET_CONTAS)
@@ -402,6 +425,7 @@ export function registrarRotasFinanceiroEmail(app) {
         if (erroDownload || !arquivo) {
           anexos[indice].extracao = {
             status: 'falha',
+            codigo: 'download',
             erro: erroDownload?.message || 'Nao foi possivel baixar o PDF.',
           };
           falhas += 1;
@@ -412,6 +436,7 @@ export function registrarRotasFinanceiroEmail(app) {
         anexos[indice].extracao = await extrairDadosPdf(buffer, {
           fornecedor: registro.fornecedor,
           competencia: registro.competencia,
+          senhaPdf: senhaPdfPorFornecedor(registro.fornecedor),
         });
 
         if (anexos[indice].extracao.status === 'falha') falhas += 1;

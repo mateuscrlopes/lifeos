@@ -2,7 +2,7 @@
 // Leitura local de PDFs financeiros. Nenhum documento e enviado para uma IA externa.
 
 import { CanvasFactory } from 'pdf-parse/worker';
-import { PDFParse } from 'pdf-parse';
+import { PasswordException, PDFParse } from 'pdf-parse';
 
 const LIMITE_TEXTO = 250000;
 
@@ -190,9 +190,12 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
   let parser;
 
   try {
+    const senhaPdf = String(contexto.senhaPdf || '');
+
     parser = new PDFParse({
       data: buffer,
       CanvasFactory,
+      ...(senhaPdf ? { password: senhaPdf } : {}),
     });
 
     const resultado = await parser.getText({ first: 8 });
@@ -201,6 +204,7 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
     if (!texto || texto.replace(/\s/g, '').length < 20) {
       return {
         status: 'falha',
+        codigo: 'sem_texto',
         erro: 'O PDF nao possui texto selecionavel suficiente.',
         fornecedor: contexto.fornecedor || null,
       };
@@ -220,8 +224,24 @@ export async function extrairDadosPdf(buffer, contexto = {}) {
       erro: null,
     };
   } catch (erro) {
+    const senhaPdf = String(contexto.senhaPdf || '');
+    const erroDeSenha = erro instanceof PasswordException
+      || erro?.name === 'PasswordException';
+
+    if (erroDeSenha) {
+      return {
+        status: 'falha',
+        codigo: senhaPdf ? 'senha_incorreta' : 'senha_necessaria',
+        erro: senhaPdf
+          ? 'A senha configurada nao abriu o PDF.'
+          : 'O PDF exige uma senha para leitura.',
+        fornecedor: contexto.fornecedor || null,
+      };
+    }
+
     return {
       status: 'falha',
+      codigo: 'erro_leitura',
       erro: String(erro?.message || erro || 'Falha desconhecida.').slice(0, 300),
       fornecedor: contexto.fornecedor || null,
     };
