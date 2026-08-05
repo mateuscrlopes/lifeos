@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
+import { consolidarExtracoes, extrairDadosPdf } from './financeiro-extracao.js';
 
 const FORNECEDORES = new Set(['Enel', 'EI Fiber', 'QuintoAndar', 'Naturgy']);
 const BUCKET_CONTAS = 'contas-email';
@@ -265,7 +266,7 @@ export function registrarRotasFinanceiroEmail(app) {
 
     const { data: registro, error: erroRegistro } = await admin
       .from('contas_email_caixa')
-      .select('id,fornecedor,competencia,anexos')
+      .select('id,fornecedor,competencia,anexos,dados_extraidos,extracao_status')
       .eq('casa_id', config.lifeosCasaId)
       .eq('chave_cobranca', chave)
       .single();
@@ -299,6 +300,11 @@ export function registrarRotasFinanceiroEmail(app) {
       indiceDoAnexo(anexo, indicePadrao) === indice
     );
 
+    const extracao = await extrairDadosPdf(req.body, {
+      fornecedor: registro.fornecedor,
+      competencia: registro.competencia,
+    });
+
     const anexoAtualizado = {
       ...(posicao >= 0 ? anexos[posicao] : {}),
       indice,
@@ -307,6 +313,7 @@ export function registrarRotasFinanceiroEmail(app) {
       tamanho: req.body.length,
       path: caminho,
       enviado_em: new Date().toISOString(),
+      extracao,
     };
 
     if (posicao >= 0) anexos[posicao] = anexoAtualizado;
@@ -314,10 +321,16 @@ export function registrarRotasFinanceiroEmail(app) {
 
     anexos.sort((a, b) => indiceDoAnexo(a, 0) - indiceDoAnexo(b, 0));
 
+    const consolidado = consolidarExtracoes(anexos);
+
     const { error: erroAtualizacao } = await admin
       .from('contas_email_caixa')
       .update({
         anexos,
+        dados_extraidos: consolidado.dados,
+        extracao_status: consolidado.status,
+        extracao_em: new Date().toISOString(),
+        extracao_erro: consolidado.erro,
         atualizado_em: new Date().toISOString(),
       })
       .eq('id', registro.id);
@@ -334,6 +347,102 @@ export function registrarRotasFinanceiroEmail(app) {
       ok: true,
       indice,
       nome: nomeOriginal || nomeArquivo,
+      extracao_status: consolidado.status,
+      dados_extraidos: consolidado.dados,
+    });
+  });
+
+  app.post('/integracoes/gmail/contas/extrair-pendentes', async (req, res) => {
+    if (!tokenValido(req.get('x-lifeos-token'))) {
+      return res.status(401).json({ ok: false, erro: 'Nao autorizado.' });
+    }
+
+    if (!config.supabaseServiceKey || !config.lifeosCasaId) {
+      return res.status(503).json({
+        ok: false,
+        erro: 'Integracao financeira nao configurada no servidor.',
+      });
+    }
+
+    const admin = clienteAdmin();
+
+    const { data: registros, error } = await admin
+      .from('contas_email_caixa')
+      .select('id,fornecedor,competencia,anexos,extracao_status')
+      .eq('casa_id', config.lifeosCasaId)
+      .eq('status', 'aguardando')
+      .limit(12);
+
+    if (error) {
+      console.error('[Financeiro Extracao]', error.message);
+      return res.status(500).json({ ok: false, erro: 'Nao foi possivel consultar os PDFs.' });
+    }
+
+    const pendentes = (registros || []).filter(registro => {
+      const anexos = Array.isArray(registro.anexos) ? registro.anexos : [];
+      return anexos.some(anexo => anexo?.path && !anexo?.extracao?.status);
+    });
+
+    let processados = 0;
+    let falhas = 0;
+
+    for (const registro of pendentes) {
+      const anexos = Array.isArray(registro.anexos)
+        ? registro.anexos.map(anexo => ({ ...anexo }))
+        : [];
+
+      for (let indice = 0; indice < anexos.length; indice += 1) {
+        const anexo = anexos[indice];
+        if (!anexo?.path || anexo?.extracao?.status) continue;
+
+        const { data: arquivo, error: erroDownload } = await admin.storage
+          .from(BUCKET_CONTAS)
+          .download(anexo.path);
+
+        if (erroDownload || !arquivo) {
+          anexos[indice].extracao = {
+            status: 'falha',
+            erro: erroDownload?.message || 'Nao foi possivel baixar o PDF.',
+          };
+          falhas += 1;
+          continue;
+        }
+
+        const buffer = Buffer.from(await arquivo.arrayBuffer());
+        anexos[indice].extracao = await extrairDadosPdf(buffer, {
+          fornecedor: registro.fornecedor,
+          competencia: registro.competencia,
+        });
+
+        if (anexos[indice].extracao.status === 'falha') falhas += 1;
+        processados += 1;
+      }
+
+      const consolidado = consolidarExtracoes(anexos);
+
+      const { error: erroAtualizacao } = await admin
+        .from('contas_email_caixa')
+        .update({
+          anexos,
+          dados_extraidos: consolidado.dados,
+          extracao_status: consolidado.status,
+          extracao_em: new Date().toISOString(),
+          extracao_erro: consolidado.erro,
+          atualizado_em: new Date().toISOString(),
+        })
+        .eq('id', registro.id);
+
+      if (erroAtualizacao) {
+        console.error('[Financeiro Extracao]', erroAtualizacao.message);
+        falhas += 1;
+      }
+    }
+
+    return res.json({
+      ok: true,
+      cobrancas_pendentes: pendentes.length,
+      pdfs_processados: processados,
+      falhas,
     });
   });
 }

@@ -44,6 +44,43 @@ function cfeCategoriaPadrao(item) {
   return item.fornecedor === 'QuintoAndar' ? 'moradia' : 'utilidades';
 }
 
+function cfeDataInput(valor) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(valor || '')) ? valor : '';
+}
+
+function cfeValorInput(valor) {
+  const numero = Number(valor);
+  return Number.isFinite(numero)
+    ? numero.toFixed(2).replace('.', ',')
+    : '';
+}
+
+function cfeDataCompleta(valor) {
+  const data = cfeDataInput(valor);
+  if (!data) return null;
+
+  const [ano, mes, dia] = data.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function cfeResumoExtracao(item) {
+  const dados = item.dados_extraidos || {};
+  const partes = [];
+
+  if (dados.valor != null && Number.isFinite(Number(dados.valor))) {
+    partes.push(`Valor R$ ${Number(dados.valor).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`);
+  }
+
+  const vencimento = cfeDataCompleta(dados.vencimento);
+  if (vencimento) partes.push(`Vencimento ${vencimento}`);
+  if (dados.linha_digitavel) partes.push('Código de pagamento encontrado');
+
+  return partes;
+}
+
 async function cfeAbrirPdf(anexo, botao) {
   if (!anexo?.path || !cfeClient) return;
 
@@ -87,7 +124,7 @@ async function cfeCarregar() {
   try {
     const { data, error } = await cfeClient
       .from('contas_email_caixa')
-      .select('id,fornecedor,competencia,email_message_id,remetente,assunto,recebido_em,anexos,status')
+      .select('id,fornecedor,competencia,email_message_id,remetente,assunto,recebido_em,anexos,status,dados_extraidos,extracao_status,extracao_erro')
       .eq('casa_id', cfeUsuario.casa_id)
       .eq('status', 'aguardando')
       .order('recebido_em', { ascending: false });
@@ -176,6 +213,20 @@ function cfeAbrirConferencia(item) {
         <button type="button" class="cf-modal-fechar" data-cfe-fechar aria-label="Fechar">×</button>
       </header>
 
+      ${cfeResumoExtracao(item).length ? `
+        <div class="cfe-leitura">
+          <span>Leitura automática</span>
+          <div>${cfeResumoExtracao(item).map(parte => `<strong>${cfeEscapar(parte)}</strong>`).join('')}</div>
+          <small>Confira os dados antes de adicionar a conta.</small>
+        </div>
+      ` : item.extracao_status === 'falha' ? `
+        <div class="cfe-leitura cfe-leitura-falha">
+          <span>Leitura automática</span>
+          <strong>Não foi possível preencher esta conta automaticamente.</strong>
+          <small>O PDF continua disponível para conferência manual.</small>
+        </div>
+      ` : ''}
+
       ${anexos.length ? `
         <div class="cfe-anexos">
           <span>Documentos da conta</span>
@@ -212,12 +263,12 @@ function cfeAbrirConferencia(item) {
         <div class="cfe-form-linha">
           <label>
             <span>Valor</span>
-            <input name="valor" inputmode="decimal" placeholder="0,00">
+            <input name="valor" inputmode="decimal" placeholder="0,00" value="${cfeEscapar(cfeValorInput(item.dados_extraidos?.valor))}">
           </label>
 
           <label>
             <span>Vencimento</span>
-            <input name="vencimento" type="date" required>
+            <input name="vencimento" type="date" required value="${cfeEscapar(cfeDataInput(item.dados_extraidos?.vencimento))}">
           </label>
         </div>
 
@@ -288,6 +339,7 @@ function cfeAbrirConferencia(item) {
         email_assunto: item.assunto,
         importada_em: new Date().toISOString(),
         revisada: true,
+        linha_digitavel: item.dados_extraidos?.linha_digitavel || null,
         atualizado_em: new Date().toISOString(),
       };
 
@@ -333,7 +385,7 @@ function cfeGarantirPainel() {
 function cfeIniciar() {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/central-financeira-email.css?v=2';
+  link.href = '/central-financeira-email.css?v=3';
   link.dataset.cfe = '1';
   document.head.appendChild(link);
 

@@ -137,6 +137,8 @@ function sincronizarContasLifeOS() {
 
   console.log('PDFs enviados nesta execucao: ' + enviados);
 
+  extrairPendentesLifeOS(url, token);
+
   var etiqueta = obterOuCriarEtiqueta('LifeOS/Financeiro/Detectado');
 
   itens.forEach(function(item) {
@@ -171,6 +173,27 @@ function enviarPdfLifeOS(url, token, chave, indice, anexo) {
 
   if (codigo < 200 || codigo >= 300) {
     throw new Error('Falha ao enviar o PDF ' + anexo.getName() + ': ' + codigo);
+  }
+}
+
+function extrairPendentesLifeOS(url, token) {
+  var resposta = UrlFetchApp.fetch(url + '/integracoes/gmail/contas/extrair-pendentes', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'X-LifeOS-Token': token
+    },
+    payload: '{}',
+    muteHttpExceptions: true
+  });
+
+  var codigo = resposta.getResponseCode();
+  var corpo = resposta.getContentText();
+
+  console.log('Leitura dos PDFs -> ' + codigo + ': ' + corpo);
+
+  if (codigo < 200 || codigo >= 300) {
+    throw new Error('Falha na leitura automatica dos PDFs: ' + codigo);
   }
 }
 

@@ -233,3 +233,47 @@
     width: 100%;
   }
 }
+
+
+.cfe-leitura {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--sage) 28%, var(--linha));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--sage-soft) 68%, white);
+}
+
+.cfe-leitura > span {
+  color: var(--sage);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cfe-leitura > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cfe-leitura strong {
+  width: fit-content;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: white;
+  color: var(--texto);
+  font-size: 10.5px;
+}
+
+.cfe-leitura small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.cfe-leitura-falha {
+  border-color: var(--linha);
+  background: white;
+}
