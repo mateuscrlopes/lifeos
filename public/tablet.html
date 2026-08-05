@@ -1168,16 +1168,149 @@ function atualizarHeroKicker(agora) {
 }
 
 // ---- CLIMA ----
-async function carregarClima() {
+const CLIMA_DIRETO_URL = 'https://api.open-meteo.com/v1/forecast?latitude=-22.8269&longitude=-43.0539&current=temperature_2m,weather_code,wind_speed_10m&forecast_days=1&timezone=America%2FSao_Paulo';
+const CLIMA_CACHE_KEY = 'lifeos:clima:ultimo';
+const CLIMA_CACHE_MAX_MS = 6 * 60 * 60 * 1000;
+
+const CLIMA_DESCRICOES = {
+  0: 'Céu limpo',
+  1: 'Principalmente limpo',
+  2: 'Parcialmente nublado',
+  3: 'Nublado',
+  45: 'Neblina',
+  48: 'Neblina com geada',
+  51: 'Garoa leve',
+  53: 'Garoa moderada',
+  55: 'Garoa intensa',
+  61: 'Chuva leve',
+  63: 'Chuva moderada',
+  65: 'Chuva forte',
+  71: 'Neve leve',
+  73: 'Neve moderada',
+  75: 'Neve forte',
+  80: 'Pancadas de chuva leves',
+  81: 'Pancadas de chuva moderadas',
+  82: 'Pancadas de chuva fortes',
+  95: 'Trovoada',
+  96: 'Trovoada com granizo',
+  99: 'Trovoada com granizo forte',
+};
+
+const CLIMA_EMOJIS = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  71: '❄️', 73: '❄️', 75: '❄️',
+  80: '🌦️', 81: '🌧️', 82: '⛈️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️',
+};
+
+function climaValido(clima) {
+  return Number.isFinite(Number(clima?.temperatura));
+}
+
+function salvarClimaLocal(clima) {
+  if (!climaValido(clima)) return;
+
   try {
-    const r = await fetch('/clima');
-    const c = await r.json();
-    const txt = `${c.emoji} ${c.temperatura}°`;
-    document.getElementById('esperaTemp').textContent = c.temperatura ? `${c.temperatura}°` : '--°';
-    document.getElementById('esperaClimaDesc').textContent = c.descricao;
-    document.getElementById('headerTemp').textContent = c.temperatura ? `${c.temperatura}°` : '--°';
-    document.getElementById('headerClimaDesc').textContent = c.descricao || '';
-  } catch(e) {}
+    localStorage.setItem(CLIMA_CACHE_KEY, JSON.stringify({
+      salvo_em: Date.now(),
+      clima,
+    }));
+  } catch {
+    // O cache local e apenas uma camada de seguranca.
+  }
+}
+
+function lerClimaLocal() {
+  try {
+    const registro = JSON.parse(localStorage.getItem(CLIMA_CACHE_KEY) || 'null');
+    const idade = Date.now() - Number(registro?.salvo_em || 0);
+
+    if (idade < 0 || idade > CLIMA_CACHE_MAX_MS) return null;
+    return climaValido(registro?.clima) ? registro.clima : null;
+  } catch {
+    return null;
+  }
+}
+
+function converterClimaDireto(dados) {
+  const atual = dados?.current || {};
+  const temperatura = Number(atual.temperature_2m);
+  const codigo = Number(atual.weather_code);
+  const vento = Number(atual.wind_speed_10m);
+
+  if (!Number.isFinite(temperatura) || !Number.isFinite(codigo)) {
+    throw new Error('Resposta de clima sem os campos esperados.');
+  }
+
+  return {
+    temperatura: Math.round(temperatura),
+    descricao: CLIMA_DESCRICOES[codigo] || 'Tempo variável',
+    emoji: CLIMA_EMOJIS[codigo] || '🌡️',
+    vento: Number.isFinite(vento) ? Math.round(vento) : null,
+    atualizado_em: new Date().toISOString(),
+  };
+}
+
+async function buscarClimaDireto() {
+  const resposta = await fetch(CLIMA_DIRETO_URL, {
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  });
+
+  if (!resposta.ok) {
+    throw new Error(`Clima direto respondeu HTTP ${resposta.status}.`);
+  }
+
+  return converterClimaDireto(await resposta.json());
+}
+
+async function buscarClimaBackend() {
+  const resposta = await fetch('/clima', { cache: 'no-store' });
+  if (!resposta.ok) return null;
+
+  const clima = await resposta.json();
+  return climaValido(clima) ? clima : null;
+}
+
+function exibirClima(clima) {
+  const valido = climaValido(clima);
+  const temperatura = valido ? `${Math.round(Number(clima.temperatura))}°` : '--°';
+  const descricao = valido ? String(clima.descricao || 'Tempo variável') : 'Indisponível';
+
+  document.getElementById('esperaTemp').textContent = temperatura;
+  document.getElementById('esperaClimaDesc').textContent = descricao;
+  document.getElementById('headerTemp').textContent = temperatura;
+  document.getElementById('headerClimaDesc').textContent = descricao;
+}
+
+async function carregarClima() {
+  let clima = null;
+
+  // Primeiro consulta pelo proprio tablet. Assim a chamada nao sai pelo IP
+  // compartilhado do Render, que pode estar temporariamente limitado.
+  try {
+    clima = await buscarClimaDireto();
+  } catch (erroDireto) {
+    console.warn('[Clima Tablet] Consulta direta falhou:', erroDireto?.message || erroDireto);
+  }
+
+  // O backend continua como segunda opcao.
+  if (!clima) {
+    try {
+      clima = await buscarClimaBackend();
+    } catch (erroBackend) {
+      console.warn('[Clima Tablet] Backend falhou:', erroBackend?.message || erroBackend);
+    }
+  }
+
+  // Se as duas fontes estiverem indisponiveis, usa a ultima leitura valida.
+  if (!clima) clima = lerClimaLocal();
+
+  if (climaValido(clima)) salvarClimaLocal(clima);
+  exibirClima(clima);
 }
 
 // ---- SAUDAÇÃO ----
