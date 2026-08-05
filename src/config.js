@@ -1,4 +1,4 @@
-// config.js
+﻿// config.js
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -24,9 +24,14 @@ export const config = {
   // Nunca vai para o navegador, aplicativo Android ou Git.
   supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
 
+  // Integracao Gmail -> Central Financeira.
+  gmailImportToken: process.env.GMAIL_IMPORT_TOKEN || '',
+  lifeosCasaId: process.env.LIFEOS_CASA_ID || '',
+
   // Gumate: a API de IA e opcional. Comandos simples continuam funcionando
   // pelas regras locais mesmo quando GEMINI_API_KEY nao estiver configurada.
   gumateEnabled: process.env.GUMATE_ENABLED !== 'false',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
 };
+

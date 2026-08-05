@@ -775,3 +775,7 @@ if (document.readyState === 'loading') {
 } else {
   cfIniciar();
 }
+
+// Atualizacao solicitada pela caixa de entrada do Gmail.
+window.addEventListener('lifeos:financeiro-atualizar', cfAtualizar);
+

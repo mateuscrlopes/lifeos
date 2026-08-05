@@ -10,6 +10,7 @@
 // alterar a arquitetura ou a estrutura de navegacao do LifeOS.
 import './ui-refinements.js?v=4';
 import './central-financeira.js?v=4';
+import './central-financeira-email.js?v=1';
 import './purchase-destination-create.js?v=2';
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
@@ -99,6 +100,7 @@ export function descricaoQuantidade(item) {
       return item.quantidade != null ? String(item.quantidade) : '—';
   }
 }
+
 
 
 
