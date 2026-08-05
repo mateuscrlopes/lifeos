@@ -1,4 +1,4 @@
-// status-estoque.js
+﻿// status-estoque.js
 // Calcula o STATUS de um item de estoque conforme seu TIPO de medicao.
 // Tres tipos ativos (Documento Mestre, secao 18.4):
 //   contavel     — numero de unidades (ex.: 3 rolos)
@@ -9,6 +9,7 @@
 // A camada abaixo concentra refinamentos visuais e comportamentais sem
 // alterar a arquitetura ou a estrutura de navegacao do LifeOS.
 import './ui-refinements.js?v=2';
+import './purchase-destination-create.js?v=2';
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
@@ -97,3 +98,5 @@ export function descricaoQuantidade(item) {
       return item.quantidade != null ? String(item.quantidade) : '—';
   }
 }
+
+

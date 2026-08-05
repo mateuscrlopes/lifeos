@@ -1,4 +1,4 @@
-// LifeOS — camada de refinamento mobile v2
+﻿// LifeOS — camada de refinamento mobile v2
 // Carregada como efeito colateral por status-estoque.js.
 
 const ICONS = {
@@ -43,6 +43,16 @@ let avatarSchemaAvailable = true;
 let profileCardLoading = false;
 let plantTimelineBusy = false;
 let plantTimelineTimer = null;
+let historyLoadTimer = null;
+let marketOverlay = null;
+let marketCurrentLocal = null;
+let marketItemsCache = [];
+let marketStocksCache = [];
+let marketLocationsCache = [];
+let stockConferenceLoading = false;
+let marketDestinationsCache = [];
+let purchaseRowsDecorating = false;
+const LAST_SUBTAB_KEY = 'lifeos:last-casa-subtab';
 
 function loadStyles() {
   if (document.querySelector('link[data-lifeos-refinements]')) return;
@@ -106,7 +116,8 @@ function closeSheet() {
 function openSheet({ title, subtitle = '', content = '', onMount }) {
   closeSheet();
   const overlay = document.createElement('div');
-  overlay.className = 'ui-sheet-overlay';
+  const overMarket = Boolean(marketOverlay);
+  overlay.className = `ui-sheet-overlay${overMarket ? ' ui-sheet-over-market ui-sheet-center' : ''}`;
   overlay.innerHTML = `
     <section class="ui-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
       <div class="ui-sheet-handle"></div>
@@ -308,6 +319,8 @@ function enhanceUi(root = document) {
   markFormRows();
   structureDynamicRows();
   replaceBottomNavigationIcons();
+  makeMetricsInteractive();
+  applyInputHints(root);
 }
 
 function installUiObserver() {
@@ -708,18 +721,22 @@ async function restoreHistoryItem(item) {
   if (markError) throw new Error(markError.message);
 }
 
+function scheduleHistoryLoad(delay = 180) {
+  window.clearTimeout(historyLoadTimer);
+  historyLoadTimer = window.setTimeout(() => {
+    if (isConfigVisible()) loadHistory();
+  }, delay);
+}
+
 function installHistoryWatcher() {
   const section = document.getElementById('secaoConfig');
   if (!section) return;
   const observer = new MutationObserver(() => {
-    if (isConfigVisible()) { window.setTimeout(loadHistory, 120); window.setTimeout(loadHistory, 700); }
+    if (isConfigVisible()) scheduleHistoryLoad();
   });
   observer.observe(section, { attributes: true, attributeFilter: ['class', 'style'] });
   document.addEventListener('click', event => {
-    if (event.target.closest('[onclick*="config"], .tab-btn[data-tab="mais"]')) {
-      window.setTimeout(() => { if (isConfigVisible()) loadHistory(); }, 250);
-      window.setTimeout(() => { if (isConfigVisible()) loadHistory(); }, 850);
-    }
+    if (event.target.closest('[onclick*="config"], .tab-btn[data-tab="mais"]')) scheduleHistoryLoad(300);
   });
 }
 
@@ -997,19 +1014,34 @@ function enhanceMoreMenu() {
   });
 }
 
+function destinationFromText(value = '') {
+  const text = normalizeName(value);
+  if (text.includes('tarefa')) return 'tarefas';
+  if (text.includes('conta')) return 'contas';
+  if (text.includes('compra') || text.includes('lista')) return 'compras';
+  if (text.includes('estoque') || text.includes('item')) return 'estoque';
+  return '';
+}
+
 function makeMetricsInteractive() {
-  const destinations = ['tarefas', 'contas', 'compras', 'estoque'];
+  const fallback = ['tarefas', 'contas', 'compras', 'estoque'];
   document.querySelectorAll('#metricasHoje .metrica').forEach((metric, index) => {
-    if (metric.dataset.uiInteractive) return;
-    metric.dataset.uiInteractive = '1';
+    const label = metric.querySelector('.metrica-label')?.textContent || metric.textContent || '';
+    const destination = destinationFromText(label) || fallback[index] || '';
+    if (!destination) return;
+    metric.dataset.uiDestination = destination;
     metric.tabIndex = 0;
     metric.setAttribute('role', 'button');
-    const open = () => {
-      window.trocarAba?.('casa');
-      window.trocarSub?.(destinations[index], null);
-    };
-    metric.addEventListener('click', open);
-    metric.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') open(); });
+    metric.setAttribute('aria-label', `Abrir ${label.trim() || destination}`);
+  });
+
+  document.querySelectorAll('#cardsHoje .card-hoje, #cardsHoje .cartao.clicavel').forEach(card => {
+    const title = card.querySelector('.card-hoje-titulo-txt, .secao-titulo, b')?.textContent || card.textContent || '';
+    const destination = destinationFromText(title);
+    if (!destination) return;
+    card.dataset.uiDestination = destination;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
   });
 }
 
@@ -1414,17 +1446,732 @@ function installProfileEnhancements() {
   }
 }
 
+
+function isVisible(element) {
+  return Boolean(element && getComputedStyle(element).display !== 'none' && !element.classList.contains('oculto'));
+}
+
+function openCasaSubtab(destination, { remember = true } = {}) {
+  if (!destination) return;
+  if (remember) localStorage.setItem(LAST_SUBTAB_KEY, destination);
+  window.trocarAba?.('casa');
+  window.requestAnimationFrame(() => {
+    window.trocarSub?.(destination, document.querySelector(`.sub-aba[data-sub="${destination}"]`));
+    const button = document.querySelector(`.sub-aba[data-sub="${destination}"]`);
+    if (button) centerActiveSubtab(button);
+  });
+}
+
+function goToToday() {
+  closeSheet();
+  marketOverlay?.remove();
+  marketOverlay = null;
+  window.trocarAba?.('hoje');
+  document.getElementById('appBody')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function syncBottomNavigationState() {
+  const moreSections = ['secaoProjetos', 'secaoRituais', 'secaoConfig', 'abaPainelProjeto'];
+  const moreVisible = moreSections.some(id => isVisible(document.getElementById(id)));
+  if (!moreVisible) return;
+  document.querySelectorAll('.tab-btn').forEach(button => button.classList.toggle('ativa', button.dataset.tab === 'mais'));
+}
+
+function applyInputHints(root = document) {
+  const decimalIds = ['ctValor','ecValor','hcValorRetro','estQtd','estMin','estTaxaConsumo','eeMin','eeTaxaConsumo','elQtd','refPorcoes','npRotinaI'];
+  decimalIds.forEach(id => {
+    const input = root.getElementById?.(id) || root.querySelector?.(`#${id}`);
+    if (input instanceof HTMLInputElement) input.inputMode = 'decimal';
+  });
+  root.querySelectorAll?.('input[type="number"]').forEach(input => { input.inputMode = 'decimal'; });
+}
+
+function focusModal(modal) {
+  window.setTimeout(() => {
+    const target = modal.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])');
+    target?.focus({ preventScroll: true });
+  }, 180);
+}
+
+function installStableNavigation() {
+  const logo = document.querySelector('.header-logo');
+  if (logo) {
+    logo.tabIndex = 0;
+    logo.setAttribute('role', 'button');
+    logo.setAttribute('aria-label', 'Voltar para a página inicial');
+    logo.title = 'Voltar para Hoje';
+  }
+
+  document.addEventListener('click', event => {
+    const logoTarget = event.target.closest('.header-logo');
+    if (logoTarget) {
+      event.preventDefault();
+      goToToday();
+      return;
+    }
+
+    const destinationTarget = event.target.closest('[data-ui-destination]');
+    if (destinationTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      openCasaSubtab(destinationTarget.dataset.uiDestination);
+      return;
+    }
+
+    const subtab = event.target.closest('.sub-aba[data-sub]');
+    if (subtab) localStorage.setItem(LAST_SUBTAB_KEY, subtab.dataset.sub);
+
+    const casaTab = event.target.closest('.tab-btn[data-tab="casa"]');
+    if (casaTab) {
+      const last = localStorage.getItem(LAST_SUBTAB_KEY) || 'compras';
+      window.setTimeout(() => openCasaSubtab(last, { remember: false }), 0);
+    }
+  }, true);
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = event.target.closest('.header-logo, [data-ui-destination]');
+    if (!target) return;
+    event.preventDefault();
+    if (target.classList.contains('header-logo')) goToToday();
+    else openCasaSubtab(target.dataset.uiDestination);
+  });
+
+  const appBody = document.getElementById('appBody');
+  if (appBody) {
+    new MutationObserver(() => {
+      syncBottomNavigationState();
+      makeMetricsInteractive();
+      ensureMarketLauncher();
+      ensureStockConferenceCard();
+    }).observe(appBody, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
+  }
+}
+
+function installModalAccessibility() {
+  const observer = new MutationObserver(records => {
+    records.forEach(record => {
+      const modal = record.target;
+      if (modal instanceof HTMLElement && modal.classList.contains('aberto')) focusModal(modal);
+    });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (document.querySelector('.ui-sheet-overlay')) { closeSheet(); return; }
+    if (marketOverlay) { closeMarketMode(); return; }
+    const open = [...document.querySelectorAll('.modal-overlay.aberto')].pop();
+    open?.classList.remove('aberto');
+  });
+}
+
+function money(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+async function getMarketData(localId = null) {
+  const { client, profile } = await getContext();
+  const [itemsResult, stocksResult, locationsResult, destinationsResult] = await Promise.all([
+    client.from('lista_compras')
+      .select('id,nome,quantidade,unidade,categoria,estoque_id,criado_em,no_carrinho,preco_compra,aguardando_conferencia,destino_compra_id,compra_destinos(id,nome,tipo,entra_lista_mercado)')
+      .eq('casa_id', profile.casa_id).eq('status', 'pendente').order('criado_em', { ascending: true }),
+    client.from('estoque').select('id,nome,local,critico,tipo,quantidade,unidade,nivel').eq('casa_id', profile.casa_id),
+    client.from('locais_compra').select('id,nome,ativo').eq('casa_id', profile.casa_id).eq('ativo', true).order('nome'),
+    client.from('compra_destinos').select('id,nome,tipo,entra_lista_mercado,padrao,ativo,ordem').eq('casa_id', profile.casa_id).eq('ativo', true).order('ordem').order('nome'),
+  ]);
+  if (itemsResult.error) {
+    if (/destino_compra_id|compra_destinos|compra_sessao_id/i.test(itemsResult.error.message || '')) {
+      throw new Error('Execute a migração 023_compras_praticas.sql no Supabase.');
+    }
+    if (/no_carrinho|preco_compra|aguardando_conferencia/i.test(itemsResult.error.message || '')) {
+      throw new Error('Execute a migração 022_lista_mercado.sql no Supabase.');
+    }
+    throw itemsResult.error;
+  }
+  if (stocksResult.error) throw stocksResult.error;
+  marketStocksCache = stocksResult.data || [];
+  marketLocationsCache = locationsResult.data || [];
+  marketDestinationsCache = destinationsResult.data || [];
+  marketCurrentLocal = localId ? marketLocationsCache.find(local => local.id === localId) || null : null;
+  const byId = new Map(marketStocksCache.map(stock => [stock.id, stock]));
+  const byName = new Map(marketStocksCache.map(stock => [normalizeName(stock.nome), stock]));
+  marketItemsCache = (itemsResult.data || []).map(item => {
+    const stock = byId.get(item.estoque_id) || byName.get(normalizeName(item.nome)) || null;
+    const destination = item.compra_destinos || marketDestinationsCache.find(option => option.id === item.destino_compra_id) || null;
+    const belongsToMarket = !destination || destination.entra_lista_mercado !== false;
+    return { ...item, stock, destination, critical: Boolean(stock?.critico), compatible: belongsToMarket };
+  }).filter(item => item.compatible)
+    .sort((a, b) => Number(b.critical) - Number(a.critical) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  return marketItemsCache;
+}
+
+function closeMarketMode() {
+  marketOverlay?.remove();
+  marketOverlay = null;
+  document.body.classList.remove('ui-modal-open');
+}
+
+function marketSummary(items) {
+  const cart = items.filter(item => item.no_carrinho);
+  const total = cart.reduce((sum, item) => sum + Number(item.preco_compra || 0), 0);
+  const withoutPrice = cart.filter(item => item.preco_compra === null || item.preco_compra === undefined).length;
+  return { cart, total, withoutPrice, pending: items.length - cart.length };
+}
+
+function marketItemMarkup(item, inCart) {
+  const quantity = item.quantidade ? `${item.quantidade}${item.unidade ? ` ${item.unidade}` : ''}` : '';
+  return `<article class="ui-market-item${inCart ? ' is-cart' : ''}" data-market-id="${item.id}">
+    <button type="button" class="ui-market-toggle" data-market-action="${inCart ? 'remove' : 'add'}" aria-label="${inCart ? 'Retirar do carrinho' : 'Adicionar ao carrinho'}">
+      ${inCart ? icon('check', 18) : ''}
+    </button>
+    <div class="ui-market-item-info">
+      <div class="ui-market-item-name">${escapeHtml(item.nome)} ${item.critical ? '<span class="ui-market-critical">Crítico</span>' : ''}</div>
+      <div class="ui-market-item-meta">${escapeHtml(quantity || item.stock?.local || 'Item da lista')}</div>
+    </div>
+    ${inCart ? `<button type="button" class="ui-market-price" data-market-action="price">${item.preco_compra == null ? 'Sem preço' : money(item.preco_compra)}</button>` : ''}
+  </article>`;
+}
+
+function renderMarketMode() {
+  if (!marketOverlay) return;
+  const { cart, total, withoutPrice, pending } = marketSummary(marketItemsCache);
+  const waiting = marketItemsCache.filter(item => !item.no_carrinho);
+  marketOverlay.innerHTML = `
+    <section class="ui-market-panel" role="dialog" aria-modal="true" aria-label="Lista do mercado">
+      <header class="ui-market-header">
+        <button type="button" class="ui-icon-button" data-market-action="close" aria-label="Fechar">${icon('back')}</button>
+        <div class="ui-market-heading"><strong>${escapeHtml(marketCurrentLocal?.nome || 'Lista do mercado')}</strong><span>${pending} restantes · ${cart.length} no carrinho</span></div>
+        <button type="button" class="ui-quiet ui-market-change" data-market-action="change">Trocar</button>
+      </header>
+      <div class="ui-market-total"><span>Total informado</span><strong>${money(total)}</strong><small>${withoutPrice ? `${withoutPrice} ${withoutPrice === 1 ? 'item sem preço' : 'itens sem preço'}` : 'Todos os itens com preço'}</small></div>
+      <div class="ui-market-actions-top"><button type="button" class="ui-secondary" data-market-action="extra">${icon('plus')}<span>Adicionar item inesperado</span></button></div>
+      <main class="ui-market-content">
+        <section><h3>Para pegar</h3>${waiting.length ? waiting.map(item => marketItemMarkup(item, false)).join('') : '<div class="vazio">Tudo que estava na lista já foi para o carrinho.</div>'}</section>
+        <section><h3>No carrinho</h3>${cart.length ? cart.map(item => marketItemMarkup(item, true)).join('') : '<div class="vazio">Nenhum item no carrinho ainda.</div>'}</section>
+      </main>
+      <footer class="ui-market-footer"><button type="button" class="ui-primary" data-market-action="finish" ${cart.length ? '' : 'disabled'}>${icon('check')}<span>Finalizar compra</span></button></footer>
+    </section>`;
+  enhanceUi(marketOverlay);
+}
+
+async function refreshMarketMode() {
+  await getMarketData(marketCurrentLocal?.id || null);
+  renderMarketMode();
+}
+
+function openMarketPriceSheet(item) {
+  const editing = Boolean(item.no_carrinho);
+  openSheet({
+    title: item.nome,
+    subtitle: 'O valor é opcional. Você pode informar depois ou deixar sem preço.',
+    content: `<div class="campo"><label>Valor do item</label><input id="uiMarketPriceInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" value="${item.preco_compra ?? ''}"></div>
+      <div class="ui-sheet-actions"><button type="button" id="uiMarketSavePrice" class="ui-primary">${icon('cartCheck')}<span>${editing ? 'Atualizar item' : 'Adicionar ao carrinho'}</span></button><button type="button" id="uiMarketNoPrice" class="ui-secondary">Continuar sem preço</button><button type="button" id="uiMarketCancel" class="ui-quiet">Cancelar</button></div>`,
+    onMount(sheet) {
+      const input = sheet.querySelector('#uiMarketPriceInput');
+      input.focus();
+      const save = async price => {
+        const { client } = await getContext();
+        const result = await client.from('lista_compras').update({ no_carrinho: true, preco_compra: price }).eq('id', item.id);
+        if (result.error) throw result.error;
+        closeSheet();
+        await refreshMarketMode();
+      };
+      sheet.querySelector('#uiMarketSavePrice').addEventListener('click', async event => {
+        const button = event.currentTarget; button.disabled = true;
+        try { await save(input.value === '' ? null : Number(input.value)); }
+        catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+      sheet.querySelector('#uiMarketNoPrice').addEventListener('click', async event => {
+        const button = event.currentTarget; button.disabled = true;
+        try { await save(null); }
+        catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+      sheet.querySelector('#uiMarketCancel').addEventListener('click', closeSheet);
+    },
+  });
+}
+
+function openUnexpectedMarketItemSheet() {
+  openSheet({
+    title: 'Adicionar item',
+    subtitle: 'Para algo que você decidiu comprar e não estava na lista.',
+    content: `<div class="campo"><label>Item</label><input id="uiUnexpectedName" type="text" placeholder="Ex.: biscoito"></div><div class="campo"><label>Valor — opcional</label><input id="uiUnexpectedPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00"></div><div class="ui-sheet-actions"><button type="button" id="uiUnexpectedSave" class="ui-primary">${icon('plus')}<span>Adicionar ao carrinho</span></button><button type="button" id="uiUnexpectedCancel" class="ui-quiet">Cancelar</button></div>`,
+    onMount(sheet) {
+      const name = sheet.querySelector('#uiUnexpectedName');
+      name.focus();
+      sheet.querySelector('#uiUnexpectedCancel').addEventListener('click', closeSheet);
+      sheet.querySelector('#uiUnexpectedSave').addEventListener('click', async event => {
+        const itemName = name.value.trim();
+        if (!itemName) { toast('Digite o nome do item.', 'erro'); return; }
+        const button = event.currentTarget; button.disabled = true;
+        try {
+          const { client, profile } = await getContext();
+          const priceInput = sheet.querySelector('#uiUnexpectedPrice').value;
+          const marketDestination = marketDestinationsCache.find(option => option.entra_lista_mercado && option.padrao) || marketDestinationsCache.find(option => option.entra_lista_mercado) || null;
+          const result = await client.from('lista_compras').insert({ casa_id: profile.casa_id, nome: itemName, status: 'pendente', origem: 'mercado', criado_por: profile.id, no_carrinho: true, preco_compra: priceInput === '' ? null : Number(priceInput), destino_compra_id: marketDestination?.id || null });
+          if (result.error) throw result.error;
+          closeSheet();
+          await refreshMarketMode();
+        } catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+    },
+  });
+}
+
+async function removeMarketItemFromCart(item) {
+  const { client } = await getContext();
+  const result = await client.from('lista_compras').update({ no_carrinho: false, preco_compra: null }).eq('id', item.id);
+  if (result.error) throw result.error;
+  await refreshMarketMode();
+}
+
+function finishMarketPurchase() {
+  const summary = marketSummary(marketItemsCache);
+  if (!summary.cart.length) return;
+  openConfirmSheet({
+    title: 'Finalizar compra',
+    message: `Finalizar ${summary.cart.length} ${summary.cart.length === 1 ? 'item' : 'itens'}${summary.withoutPrice ? `, com ${summary.withoutPrice} sem preço` : ''}?`,
+    confirmLabel: 'Finalizar compra',
+    onConfirm: async () => {
+      const { client, profile } = await getContext();
+      const ids = summary.cart.map(item => item.id);
+      const sessionResult = await client.from('compras_sessoes').insert({
+        casa_id: profile.casa_id,
+        local_compra_id: marketCurrentLocal?.id || null,
+        local_nome: marketCurrentLocal?.nome || 'Mercado não informado',
+        usuario_id: profile.id,
+        iniciada_em: new Date().toISOString(),
+        finalizada_em: new Date().toISOString(),
+        total_informado: summary.total,
+        itens_sem_preco: summary.withoutPrice,
+        quantidade_itens: summary.cart.length,
+      }).select('id').single();
+      if (sessionResult.error) throw sessionResult.error;
+      const sessionId = sessionResult.data.id;
+      const historyItems = summary.cart.map(item => ({
+        sessao_id: sessionId,
+        lista_compra_id: item.id,
+        nome: item.nome,
+        quantidade: item.quantidade || null,
+        unidade: item.unidade || null,
+        preco: item.preco_compra == null ? null : Number(item.preco_compra),
+        destino_nome: item.destination?.nome || 'Mercado',
+        estoque_id: item.estoque_id || item.stock?.id || null,
+      }));
+      const historyResult = await client.from('compras_sessao_itens').insert(historyItems);
+      if (historyResult.error) throw historyResult.error;
+      const result = await client.from('lista_compras').update({ status: 'comprado', no_carrinho: false, aguardando_conferencia: true, compra_sessao_id: sessionId, comprado_por: profile.id, comprado_em: new Date().toISOString() }).in('id', ids);
+      if (result.error) throw result.error;
+      closeMarketMode();
+      toast('Compra finalizada. Você pode revisar o estoque depois.');
+      ensureStockConferenceCard(true);
+      ensurePurchaseHistoryLauncher(true);
+    },
+  });
+}
+
+async function openMarketMode(localId = null) {
+  closeSheet();
+  await getMarketData(localId);
+  marketOverlay?.remove();
+  marketOverlay = document.createElement('div');
+  marketOverlay.className = 'ui-market-overlay';
+  marketOverlay.addEventListener('click', async event => {
+    const action = event.target.closest('[data-market-action]')?.dataset.marketAction;
+    if (!action) return;
+    if (action === 'close') { closeMarketMode(); return; }
+    if (action === 'change') { closeMarketMode(); chooseMarketLocation(); return; }
+    if (action === 'extra') { openUnexpectedMarketItemSheet(); return; }
+    if (action === 'finish') { finishMarketPurchase(); return; }
+    const row = event.target.closest('[data-market-id]');
+    const item = marketItemsCache.find(candidate => candidate.id === row?.dataset.marketId);
+    if (!item) return;
+    if (action === 'add' || action === 'price') openMarketPriceSheet(item);
+    if (action === 'remove') {
+      try { await removeMarketItemFromCart(item); }
+      catch (error) { toast(error.message, 'erro', 5000); }
+    }
+  });
+  document.body.appendChild(marketOverlay);
+  document.body.classList.add('ui-modal-open');
+  renderMarketMode();
+}
+
+async function chooseMarketLocation() {
+  try {
+    const { client, profile } = await getContext();
+    const { data, error } = await client.from('locais_compra').select('id,nome').eq('casa_id', profile.casa_id).eq('ativo', true).order('nome');
+    if (error) throw error;
+    const locations = data || [];
+    openSheet({
+      title: 'Lista do mercado',
+      subtitle: 'Escolha onde você está para mostrar os itens compatíveis e os críticos.',
+      content: `<div class="ui-market-location-list">${locations.map(location => `<button type="button" class="ui-market-location" data-location-id="${location.id}">${icon('cart')}<span>${escapeHtml(location.nome)}</span></button>`).join('')}${locations.length ? '' : '<div class="vazio">Nenhum mercado cadastrado.</div>'}<button type="button" class="ui-market-location ui-market-all" data-location-id="">${icon('task')}<span>Continuar sem informar o mercado</span></button></div>`,
+      onMount(sheet) {
+        sheet.querySelectorAll('[data-location-id]').forEach(button => button.addEventListener('click', async () => {
+          const id = button.dataset.locationId || null;
+          button.disabled = true;
+          try { closeSheet(); await openMarketMode(id); }
+          catch (error) { toast(error.message, 'erro', 6000); }
+        }));
+      },
+    });
+  } catch (error) { toast(error.message || 'Não foi possível abrir a lista do mercado.', 'erro', 6000); }
+}
+
+function ensureMarketLauncher() {
+  const section = document.querySelector('#subCompras .secao');
+  if (!section || document.getElementById('uiMarketLauncher')) return;
+  const card = document.createElement('div');
+  card.id = 'uiMarketLauncher';
+  card.className = 'cartao ui-market-launcher';
+  card.innerHTML = `<div><strong>Lista do mercado</strong><span>Marque os itens e informe os preços que souber.</span></div><button type="button" class="ui-secondary">${icon('cart')}<span>Abrir</span></button>`;
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  card.setAttribute('aria-label', 'Abrir Lista do Mercado');
+  const abrirLista = event => {
+    if (event?.type === 'click' && event.target.closest('button')) return;
+    chooseMarketLocation();
+  };
+  card.addEventListener('click', abrirLista);
+  card.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    chooseMarketLocation();
+  });
+  card.querySelector('button').addEventListener('click', event => {
+    event.stopPropagation();
+    chooseMarketLocation();
+  });
+  section.insertBefore(card, section.firstElementChild);
+  enhanceUi(card);
+}
+
+async function getStockConferenceItems() {
+  const { client, profile } = await getContext();
+  const result = await client.from('lista_compras').select('id,nome,quantidade,unidade,estoque_id,preco_compra,comprado_em').eq('casa_id', profile.casa_id).eq('status', 'comprado').eq('aguardando_conferencia', true).order('comprado_em', { ascending: false });
+  if (result.error) {
+    if (/aguardando_conferencia/i.test(result.error.message || '')) return [];
+    throw result.error;
+  }
+  return result.data || [];
+}
+
+async function markConferenceDone(itemId) {
+  const { client } = await getContext();
+  const result = await client.from('lista_compras').update({ aguardando_conferencia: false }).eq('id', itemId);
+  if (result.error) throw result.error;
+}
+
+async function openConferenceItem(item, stock = null) {
+  const { client, profile } = await getContext();
+  const { data: locations } = await client.from('locais_estoque').select('nome').eq('casa_id', profile.casa_id).eq('ativo', true).order('ordem');
+  let type = stock?.tipo || 'contavel';
+  openSheet({
+    title: item.nome,
+    subtitle: stock ? 'Confirme quanto deve entrar no estoque.' : 'Crie um controle simples ou ignore este item.',
+    content: stock ? `<div class="campo"><label>${stock.tipo === 'nivel_visual' ? 'Nível após a compra' : 'Quantidade que entrou'}</label>${stock.tipo === 'nivel_visual' ? '<select id="uiConferenceLevel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option></select>' : `<input id="uiConferenceQuantity" type="number" inputmode="decimal" min="0" step="any" value="${Number(item.quantidade) || 1}">`}</div><div class="ui-sheet-actions"><button type="button" id="uiConferenceConfirm" class="ui-primary">${icon('check')}<span>Atualizar estoque</span></button><button type="button" id="uiConferenceIgnore" class="ui-quiet">Não controlar esta compra</button></div>` : `<div class="ui-sheet-grid" role="group" aria-label="Tipo de controle"><button type="button" class="ui-choice ativo" data-conference-type="contavel">Unidades</button><button type="button" class="ui-choice" data-conference-type="peso_volume">Peso ou volume</button><button type="button" class="ui-choice" data-conference-type="nivel_visual">Nível visual</button></div><div id="uiConferenceFields"></div><div class="campo"><label>Local — opcional</label><select id="uiConferenceLocation"><option value="">Sem local</option>${(locations || []).map(location => `<option value="${escapeHtml(location.nome)}">${escapeHtml(location.nome)}</option>`).join('')}</select></div><div class="ui-sheet-actions"><button type="button" id="uiConferenceCreate" class="ui-primary">${icon('box')}<span>Criar no estoque</span></button><button type="button" id="uiConferenceIgnore" class="ui-quiet">Não controlar este item</button></div>`,
+    onMount(sheet) {
+      const finish = async callback => {
+        await callback();
+        await markConferenceDone(item.id);
+        closeSheet();
+        toast(`${item.nome} foi conferido.`);
+        await openStockConference();
+        ensureStockConferenceCard(true);
+      };
+      sheet.querySelector('#uiConferenceIgnore').addEventListener('click', async event => {
+        const button = event.currentTarget; button.disabled = true;
+        try { await finish(async () => {}); }
+        catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+      if (stock) {
+        sheet.querySelector('#uiConferenceConfirm').addEventListener('click', async event => {
+          const button = event.currentTarget; button.disabled = true;
+          try {
+            await finish(async () => {
+              const payload = stock.tipo === 'nivel_visual'
+                ? { nivel: sheet.querySelector('#uiConferenceLevel').value, atualizado_por: profile.id, atualizado_em: new Date().toISOString() }
+                : { quantidade: Number(stock.quantidade || 0) + (Number(sheet.querySelector('#uiConferenceQuantity').value) || 1), atualizado_por: profile.id, atualizado_em: new Date().toISOString() };
+              const result = await client.from('estoque').update(payload).eq('id', stock.id);
+              if (result.error) throw result.error;
+            });
+          } catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+        });
+      } else {
+        const fields = sheet.querySelector('#uiConferenceFields');
+        const renderFields = () => {
+          fields.innerHTML = type === 'nivel_visual' ? '<div class="campo"><label>Nível atual</label><select id="uiConferenceNewLevel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option></select></div>' : `<div class="campo"><label>Quantidade</label><input id="uiConferenceNewQuantity" type="number" inputmode="decimal" min="0" step="any" value="${Number(item.quantidade) || 1}"></div><div class="campo"><label>Unidade</label><select id="uiConferenceNewUnit">${type === 'peso_volume' ? '<option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="L">L</option>' : '<option value="un">un</option><option value="pacote">pacote</option><option value="caixa">caixa</option>'}</select></div>`;
+        };
+        renderFields();
+        sheet.querySelectorAll('[data-conference-type]').forEach(button => button.addEventListener('click', () => {
+          type = button.dataset.conferenceType;
+          sheet.querySelectorAll('[data-conference-type]').forEach(choice => choice.classList.toggle('ativo', choice === button));
+          renderFields();
+        }));
+        sheet.querySelector('#uiConferenceCreate').addEventListener('click', async event => {
+          const button = event.currentTarget; button.disabled = true;
+          try {
+            await finish(async () => {
+              const payload = { casa_id: profile.casa_id, nome: item.nome, tipo, local: sheet.querySelector('#uiConferenceLocation').value || null, critico: false, atualizado_por: profile.id };
+              if (type === 'nivel_visual') Object.assign(payload, { nivel: sheet.querySelector('#uiConferenceNewLevel').value, minimo_nivel: '25', quantidade: 0, minimo: 0 });
+              else Object.assign(payload, { quantidade: Number(sheet.querySelector('#uiConferenceNewQuantity').value) || 1, minimo: 1, unidade: sheet.querySelector('#uiConferenceNewUnit').value });
+              const created = await client.from('estoque').insert(payload).select('id').single();
+              if (created.error) throw created.error;
+              await client.from('lista_compras').update({ estoque_id: created.data.id }).eq('id', item.id);
+            });
+          } catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+        });
+      }
+    },
+  });
+}
+
+async function openStockConference() {
+  try {
+    const items = await getStockConferenceItems();
+    if (!items.length) { closeSheet(); toast('Não há compras aguardando conferência.'); return; }
+    const { client, profile } = await getContext();
+    const { data: stocks } = await client.from('estoque').select('*').eq('casa_id', profile.casa_id);
+    const byId = new Map((stocks || []).map(stock => [stock.id, stock]));
+    const byName = new Map((stocks || []).map(stock => [normalizeName(stock.nome), stock]));
+    openSheet({
+      title: 'Conferir compras',
+      subtitle: 'A compra já terminou. Agora ajuste somente o que vale controlar no estoque.',
+      content: `<div class="ui-conference-list">${items.map(item => { const stock = byId.get(item.estoque_id) || byName.get(normalizeName(item.nome)); return `<button type="button" class="ui-conference-item" data-conference-id="${item.id}"><span><strong>${escapeHtml(item.nome)}</strong><small>${stock ? `Ligado a ${escapeHtml(stock.nome)}` : 'Ainda não está no estoque'}</small></span>${icon('back')}</button>`; }).join('')}</div>`,
+      onMount(sheet) {
+        sheet.querySelectorAll('[data-conference-id]').forEach(button => button.addEventListener('click', () => {
+          const item = items.find(candidate => candidate.id === button.dataset.conferenceId);
+          const stock = byId.get(item.estoque_id) || byName.get(normalizeName(item.nome)) || null;
+          openConferenceItem(item, stock);
+        }));
+      },
+    });
+  } catch (error) { toast(error.message || 'Não foi possível carregar a conferência.', 'erro', 6000); }
+}
+
+async function ensureStockConferenceCard(force = false) {
+  const section = document.querySelector('#subEstoque .secao');
+  if (!section || stockConferenceLoading) return;
+  const existing = document.getElementById('uiStockConferenceCard');
+  if (existing && !force) return;
+  stockConferenceLoading = true;
+  try {
+    const items = await getStockConferenceItems();
+    existing?.remove();
+    if (!items.length) return;
+    const card = document.createElement('div');
+    card.id = 'uiStockConferenceCard';
+    card.className = 'cartao ui-stock-conference-card';
+    card.innerHTML = `<div><strong>${items.length} ${items.length === 1 ? 'compra aguarda' : 'compras aguardam'} conferência</strong><span>Ajuste o estoque com calma depois do mercado.</span></div><button type="button" class="ui-secondary">Conferir</button>`;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', 'Abrir conferência das compras');
+    card.addEventListener('click', openStockConference);
+    card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openStockConference(); } });
+    section.insertBefore(card, section.firstElementChild);
+    enhanceUi(card);
+  } catch (_) {
+    existing?.remove();
+  } finally { stockConferenceLoading = false; }
+}
+
+
+function openPurchaseDestinationPicker(item) {
+  openSheet({
+    title: 'Onde comprar',
+    subtitle: item.nome,
+    content: `<div class="ui-market-location-list">${marketDestinationsCache.filter(option => option.ativo !== false).map(option => `<button type="button" class="ui-market-location" data-purchase-destination="${option.id}">${icon(option.tipo === 'farmacia' ? 'bill' : option.tipo === 'mercado' ? 'cart' : 'folder')}<span>${escapeHtml(option.nome)}</span></button>`).join('')}</div>`,
+    onMount(sheet) {
+      sheet.querySelectorAll('[data-purchase-destination]').forEach(button => button.addEventListener('click', async () => {
+        try {
+          const { client } = await getContext();
+          const result = await client.from('lista_compras').update({ destino_compra_id: button.dataset.purchaseDestination }).eq('id', item.id);
+          if (result.error) throw result.error;
+          closeSheet(); toast('Destino atualizado.'); await decoratePurchaseRows();
+        } catch (error) { toast(error.message, 'erro', 5000); }
+      }));
+    },
+  });
+}
+
+async function decoratePurchaseRows() {
+  if (purchaseRowsDecorating) return;
+  const container = document.getElementById('itens');
+  if (!container || !uiProfile) return;
+  purchaseRowsDecorating = true;
+  try {
+    const { client, profile } = await getContext();
+    if (!marketDestinationsCache.length) {
+      const destinations = await client.from('compra_destinos').select('*').eq('casa_id', profile.casa_id).eq('ativo', true).order('ordem').order('nome');
+      marketDestinationsCache = destinations.data || [];
+    }
+    const result = await client.from('lista_compras')
+      .select('id,nome,destino_compra_id,compra_destinos(nome,tipo)')
+      .eq('casa_id', profile.casa_id).eq('status', 'pendente').order('criado_em', { ascending: false });
+    if (result.error) return;
+    const available = [...(result.data || [])];
+    container.querySelectorAll('.item').forEach(row => {
+      row.querySelector('.ui-purchase-destination')?.remove();
+      const name = rowName(row);
+      const index = available.findIndex(item => normalizeName(item.nome) === normalizeName(name));
+      if (index < 0) return;
+      const item = available.splice(index, 1)[0];
+      const badge = document.createElement('button');
+      badge.type = 'button';
+      badge.className = 'ui-purchase-destination';
+      badge.textContent = item.compra_destinos?.nome || 'Mercado';
+      badge.setAttribute('aria-label', `Alterar destino de ${item.nome}`);
+      badge.addEventListener('click', event => { event.stopPropagation(); openPurchaseDestinationPicker(item); });
+      row.querySelector('.desc')?.appendChild(badge);
+    });
+  } finally { purchaseRowsDecorating = false; }
+}
+
+function destinationEditorContent(option = null) {
+  return `<div class="campo"><label>Nome</label><input id="uiDestinationName" type="text" value="${escapeHtml(option?.nome || '')}" placeholder="Ex.: Pet shop"></div>
+    <div class="campo"><label>Grupo</label><select id="uiDestinationType"><option value="mercado" ${option?.tipo === 'mercado' ? 'selected' : ''}>Mercado</option><option value="farmacia" ${option?.tipo === 'farmacia' ? 'selected' : ''}>Farmácia</option><option value="outros" ${option?.tipo === 'outros' ? 'selected' : ''}>Outros</option></select></div>
+    <label class="toggle-label"><input id="uiDestinationMarket" type="checkbox" ${option?.entra_lista_mercado !== false ? 'checked' : ''}><span>Mostrar na Lista do Mercado</span></label>
+    <label class="toggle-label"><input id="uiDestinationDefault" type="checkbox" ${option?.padrao ? 'checked' : ''}><span>Usar como opção padrão</span></label>
+    <div class="ui-sheet-actions"><button type="button" id="uiDestinationSave" class="ui-primary">Salvar</button>${option ? '<button type="button" id="uiDestinationDeactivate" class="ui-danger">Desativar opção</button>' : ''}<button type="button" id="uiDestinationCancel" class="ui-quiet">Cancelar</button></div>`;
+}
+
+function openDestinationEditor(option = null) {
+  openSheet({
+    title: option ? 'Editar destino de compra' : 'Novo destino de compra',
+    subtitle: 'As opções desativadas continuam preservadas nos registros antigos.',
+    content: destinationEditorContent(option),
+    onMount(sheet) {
+      sheet.querySelector('#uiDestinationCancel').addEventListener('click', closeSheet);
+      sheet.querySelector('#uiDestinationSave').addEventListener('click', async event => {
+        const name = sheet.querySelector('#uiDestinationName').value.trim();
+        if (!name) { toast('Digite um nome.', 'erro'); return; }
+        const button = event.currentTarget; button.disabled = true;
+        try {
+          const { client, profile } = await getContext();
+          const payload = { casa_id: profile.casa_id, nome: name, tipo: sheet.querySelector('#uiDestinationType').value, entra_lista_mercado: sheet.querySelector('#uiDestinationMarket').checked, padrao: sheet.querySelector('#uiDestinationDefault').checked, ativo: true };
+          if (payload.padrao) await client.from('compra_destinos').update({ padrao: false }).eq('casa_id', profile.casa_id);
+          const result = option ? await client.from('compra_destinos').update(payload).eq('id', option.id) : await client.from('compra_destinos').insert(payload);
+          if (result.error) throw result.error;
+          closeSheet(); toast('Opção salva.'); await ensurePurchaseOptionsSettings(true); decoratePurchaseRows();
+        } catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+      sheet.querySelector('#uiDestinationDeactivate')?.addEventListener('click', async event => {
+        const button = event.currentTarget; button.disabled = true;
+        try {
+          const { client } = await getContext();
+          const result = await client.from('compra_destinos').update({ ativo: false, padrao: false }).eq('id', option.id);
+          if (result.error) throw result.error;
+          closeSheet(); toast('Opção desativada. Os registros antigos foram mantidos.'); await ensurePurchaseOptionsSettings(true);
+        } catch (error) { toast(error.message, 'erro', 5000); button.disabled = false; }
+      });
+    },
+  });
+}
+
+async function ensurePurchaseOptionsSettings(force = false) {
+  const section = document.getElementById('secaoConfig');
+  if (!section || section.dataset.purchaseOptionsLoading === '1') return;
+  document.querySelectorAll('#uiPurchaseOptionsSettings').forEach((duplicate, index) => {
+    if (index > 0) duplicate.remove();
+  });
+  let card = document.getElementById('uiPurchaseOptionsSettings');
+  if (card && !force) return;
+  section.dataset.purchaseOptionsLoading = '1';
+  try {
+    const { client, profile } = await getContext();
+    const result = await client.from('compra_destinos').select('*').eq('casa_id', profile.casa_id).order('ativo', { ascending: false }).order('ordem').order('nome');
+    if (result.error) return;
+    card?.remove();
+    card = document.createElement('div');
+    card.id = 'uiPurchaseOptionsSettings';
+    card.className = 'cartao ui-settings-card';
+    card.innerHTML = `<div class="ui-settings-card-head"><div><strong>Destinos de compra</strong><span>Defina o que aparece na Lista do Mercado.</span></div><button type="button" class="ui-secondary" data-destination-new>${icon('plus')}<span>Novo</span></button></div><div class="ui-destination-list">${(result.data || []).map(option => `<button type="button" class="ui-destination-row${option.ativo ? '' : ' is-inactive'}" data-destination-id="${option.id}"><span><strong>${escapeHtml(option.nome)}</strong><small>${option.entra_lista_mercado ? 'Aparece na Lista do Mercado' : option.tipo === 'farmacia' ? 'Farmácia' : 'Fora da Lista do Mercado'}${option.padrao ? ' · padrão' : ''}${option.ativo ? '' : ' · desativado'}</small></span>${icon('edit')}</button>`).join('')}</div>`;
+    const configContent = section.querySelector(':scope > .secao') || section.querySelector('.secao');
+    if (!configContent) return;
+    configContent.appendChild(card);
+    card.querySelector('[data-destination-new]').addEventListener('click', () => openDestinationEditor());
+    card.querySelectorAll('[data-destination-id]').forEach(button => button.addEventListener('click', () => openDestinationEditor((result.data || []).find(option => option.id === button.dataset.destinationId))));
+    enhanceUi(card);
+  } catch (_) {
+  } finally {
+    delete section.dataset.purchaseOptionsLoading;
+  }
+}
+
+function purchaseHistoryMarkup(session) {
+  const date = new Date(session.finalizada_em || session.criado_em);
+  return `<button type="button" class="ui-purchase-history-row" data-session-id="${session.id}"><span><strong>${escapeHtml(session.local_nome || 'Compra')}</strong><small>${date.toLocaleDateString('pt-BR')} · ${session.quantidade_itens || 0} itens${session.itens_sem_preco ? ` · ${session.itens_sem_preco} sem preço` : ''}</small></span><b>${money(session.total_informado)}</b></button>`;
+}
+
+async function openPurchaseHistory() {
+  try {
+    const { client, profile } = await getContext();
+    const sessions = await client.from('compras_sessoes').select('*').eq('casa_id', profile.casa_id).order('finalizada_em', { ascending: false }).limit(50);
+    if (sessions.error) throw sessions.error;
+    openSheet({
+      title: 'Histórico de compras',
+      subtitle: 'Valores informados durante as compras.',
+      content: `<div class="ui-purchase-history-list">${sessions.data?.length ? sessions.data.map(purchaseHistoryMarkup).join('') : '<div class="vazio">Nenhuma compra finalizada ainda.</div>'}</div>`,
+      onMount(sheet) {
+        sheet.querySelectorAll('[data-session-id]').forEach(button => button.addEventListener('click', async () => {
+          const session = sessions.data.find(item => item.id === button.dataset.sessionId);
+          const items = await client.from('compras_sessao_itens').select('*').eq('sessao_id', session.id).order('criado_em');
+          if (items.error) { toast(items.error.message, 'erro'); return; }
+          openSheet({ title: session.local_nome || 'Compra', subtitle: new Date(session.finalizada_em).toLocaleString('pt-BR'), content: `<div class="ui-purchase-history-items">${(items.data || []).map(item => `<div><span>${escapeHtml(item.nome)}</span><b>${item.preco == null ? 'Sem preço' : money(item.preco)}</b></div>`).join('')}</div><div class="ui-history-total"><span>Total informado</span><strong>${money(session.total_informado)}</strong></div>` });
+        }));
+      },
+    });
+  } catch (error) { toast(error.message || 'Não foi possível abrir o histórico.', 'erro', 5000); }
+}
+
+async function ensurePurchaseHistoryLauncher(force = false) {
+  const section = document.querySelector('#subCompras .secao');
+  if (!section) return;
+  let card = document.getElementById('uiPurchaseHistoryLauncher');
+  if (card && !force) return;
+  card?.remove();
+  card = document.createElement('div');
+  card.id = 'uiPurchaseHistoryLauncher';
+  card.className = 'cartao ui-purchase-history-launcher';
+  card.tabIndex = 0; card.setAttribute('role','button');
+  card.innerHTML = `<div><strong>Histórico de compras</strong><span>Consulte as idas e os valores informados.</span></div>${icon('back')}`;
+  card.addEventListener('click', openPurchaseHistory);
+  card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPurchaseHistory(); } });
+  const launcher = document.getElementById('uiMarketLauncher');
+  if (launcher) launcher.after(card); else section.prepend(card);
+}
+
+function installMarketAndConference() {
+  ensureMarketLauncher();
+  ensurePurchaseHistoryLauncher();
+  ensureStockConferenceCard();
+  ensurePurchaseOptionsSettings();
+  decoratePurchaseRows();
+  document.addEventListener('click', event => {
+    if (event.target.closest('.sub-aba[data-sub="compras"]')) window.setTimeout(() => { ensureMarketLauncher(); ensurePurchaseHistoryLauncher(); decoratePurchaseRows(); }, 80);
+    if (event.target.closest('.sub-aba[data-sub="estoque"]')) window.setTimeout(() => ensureStockConferenceCard(true), 120);
+  });
+}
+
 function installPeriodicEnhancements() {
   let attempts = 0;
   const timer = window.setInterval(() => {
     enhanceUi();
     enhanceMoreMenu();
     makeMetricsInteractive();
+    ensureMarketLauncher();
+    ensurePurchaseHistoryLauncher();
+    ensureStockConferenceCard();
+    ensurePurchaseOptionsSettings();
+    decoratePurchaseRows();
+    syncBottomNavigationState();
     if (isConfigVisible()) ensureProfileCard();
     if (document.getElementById('modalPlanta')?.classList.contains('aberto')) schedulePlantTimeline();
     attempts += 1;
-    if (attempts > 45) window.clearInterval(timer);
-  }, 350);
+    if (attempts > 14) window.clearInterval(timer);
+  }, 500);
 }
 
 function init() {
@@ -1432,14 +2179,19 @@ function init() {
   enhanceUi();
   installUiObserver();
   installModalManager();
+  installModalAccessibility();
+  installStableNavigation();
   installSubtabScrolling();
   installDeletionGuard();
   installPurchaseFlow();
   installHistoryWatcher();
   installPlantEnhancements();
   installProfileEnhancements();
+  installMarketAndConference();
   installPeriodicEnhancements();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 else init();
+
+
