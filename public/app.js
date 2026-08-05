@@ -1,4 +1,4 @@
-// app.js — LifeOS v0.18.0
+﻿// app.js — LifeOS v0.18.0
 import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
@@ -227,8 +227,11 @@ async function removerItemLista(item){
 
 async function adicionar(){
   const nome=el('novoItem').value.trim();if(!nome){aviso('avisoAdd','Digite o nome.','erro');return;}
+  const destinoCompraId=el('novoItemDestino')?.value||null;
   el('btnAdd').disabled=true;
-  const{data,error}=await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id}).select().single();
+  const payload={casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id};
+  if(destinoCompraId)payload.destino_compra_id=destinoCompraId;
+  const{data,error}=await supa.from('lista_compras').insert(payload).select().single();
   if(data)supa.from('eventos').insert({tipo:'item_adicionado',entidade:'lista_compras',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome});
   el('btnAdd').disabled=false;
   if(error){aviso('avisoAdd','Erro.','erro');return;}
@@ -1818,3 +1821,4 @@ window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
 window.mudarPagina = mudarPagina;
+

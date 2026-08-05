@@ -1,4 +1,4 @@
-// LifeOS — camada de refinamento mobile v2
+﻿// LifeOS — camada de refinamento mobile v2
 // Carregada como efeito colateral por status-estoque.js.
 
 const ICONS = {
@@ -2072,9 +2072,13 @@ function openDestinationEditor(option = null) {
 
 async function ensurePurchaseOptionsSettings(force = false) {
   const section = document.getElementById('secaoConfig');
-  if (!section) return;
+  if (!section || section.dataset.purchaseOptionsLoading === '1') return;
+  document.querySelectorAll('#uiPurchaseOptionsSettings').forEach((duplicate, index) => {
+    if (index > 0) duplicate.remove();
+  });
   let card = document.getElementById('uiPurchaseOptionsSettings');
   if (card && !force) return;
+  section.dataset.purchaseOptionsLoading = '1';
   try {
     const { client, profile } = await getContext();
     const result = await client.from('compra_destinos').select('*').eq('casa_id', profile.casa_id).order('ativo', { ascending: false }).order('ordem').order('nome');
@@ -2084,12 +2088,16 @@ async function ensurePurchaseOptionsSettings(force = false) {
     card.id = 'uiPurchaseOptionsSettings';
     card.className = 'cartao ui-settings-card';
     card.innerHTML = `<div class="ui-settings-card-head"><div><strong>Destinos de compra</strong><span>Defina o que aparece na Lista do Mercado.</span></div><button type="button" class="ui-secondary" data-destination-new>${icon('plus')}<span>Novo</span></button></div><div class="ui-destination-list">${(result.data || []).map(option => `<button type="button" class="ui-destination-row${option.ativo ? '' : ' is-inactive'}" data-destination-id="${option.id}"><span><strong>${escapeHtml(option.nome)}</strong><small>${option.entra_lista_mercado ? 'Aparece na Lista do Mercado' : option.tipo === 'farmacia' ? 'Farmácia' : 'Fora da Lista do Mercado'}${option.padrao ? ' · padrão' : ''}${option.ativo ? '' : ' · desativado'}</small></span>${icon('edit')}</button>`).join('')}</div>`;
-    const firstConfigTitle = section.querySelector('.config-section-titulo');
-    if (firstConfigTitle) firstConfigTitle.before(card); else section.prepend(card);
+    const configContent = section.querySelector(':scope > .secao') || section.querySelector('.secao');
+    if (!configContent) return;
+    configContent.appendChild(card);
     card.querySelector('[data-destination-new]').addEventListener('click', () => openDestinationEditor());
     card.querySelectorAll('[data-destination-id]').forEach(button => button.addEventListener('click', () => openDestinationEditor((result.data || []).find(option => option.id === button.dataset.destinationId))));
     enhanceUi(card);
-  } catch (_) {}
+  } catch (_) {
+  } finally {
+    delete section.dataset.purchaseOptionsLoading;
+  }
 }
 
 function purchaseHistoryMarkup(session) {
@@ -2185,3 +2193,5 @@ function init() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
 else init();
+
+
