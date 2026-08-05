@@ -1,5 +1,5 @@
 // clima.js
-// Busca previsao do tempo atual via Open-Meteo (sem chave de API).
+// Busca o clima atual via Open-Meteo (sem chave de API).
 // Coordenadas: São Gonçalo - RJ (-22.8269, -43.0539)
 
 const LAT = -22.8269;
@@ -39,30 +39,67 @@ const EMOJI_CLIMA = {
   95: '⛈️', 96: '⛈️', 99: '⛈️',
 };
 
-let _cache = null;
-let _cacheTs = 0;
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+let cache = null;
+let cacheTs = 0;
+const CACHE_TTL = 30 * 60 * 1000;
+const TIMEOUT_MS = 10000;
+
+function numeroOuNulo(valor) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
+}
 
 export async function buscarClima() {
   const agora = Date.now();
-  if (_cache && agora - _cacheTs < CACHE_TTL) return _cache;
+  if (cache && agora - cacheTs < CACHE_TTL) return cache;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weathercode,windspeed_10m&timezone=America%2FSao_Paulo`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('Falha na API de clima');
+    const campos = 'temperature_2m,weather_code,wind_speed_10m';
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=${campos}&timezone=America%2FSao_Paulo`;
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: { accept: 'application/json' },
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Falha na API de clima: HTTP ${resp.status}`);
+    }
+
     const data = await resp.json();
-    const cur = data.current;
-    const code = cur.weathercode;
-    _cache = {
-      temperatura: Math.round(cur.temperature_2m),
-      descricao: DESCRICAO_CLIMA[code] || 'Tempo variável',
-      emoji: EMOJI_CLIMA[code] || '🌡️',
-      vento: Math.round(cur.windspeed_10m),
+    const atual = data?.current || {};
+
+    // Os nomes com sublinhado são os campos atuais da API.
+    // Os nomes antigos ficam como compatibilidade de segurança.
+    const temperatura = numeroOuNulo(atual.temperature_2m);
+    const codigo = numeroOuNulo(atual.weather_code ?? atual.weathercode);
+    const vento = numeroOuNulo(atual.wind_speed_10m ?? atual.windspeed_10m);
+
+    if (temperatura === null || codigo === null) {
+      throw new Error('A API de clima respondeu sem os campos esperados.');
+    }
+
+    cache = {
+      temperatura: Math.round(temperatura),
+      descricao: DESCRICAO_CLIMA[codigo] || 'Tempo variável',
+      emoji: EMOJI_CLIMA[codigo] || '🌡️',
+      vento: vento === null ? null : Math.round(vento),
+      atualizado_em: new Date().toISOString(),
     };
-    _cacheTs = agora;
-    return _cache;
-  } catch (e) {
-    return _cache || { temperatura: null, descricao: 'Indisponível', emoji: '🌡️', vento: null };
+    cacheTs = agora;
+    return cache;
+  } catch (erro) {
+    console.error('[Clima]', String(erro?.message || erro));
+    return cache || {
+      temperatura: null,
+      descricao: 'Indisponível',
+      emoji: '🌡️',
+      vento: null,
+      atualizado_em: null,
+    };
+  } finally {
+    clearTimeout(timeout);
   }
 }

@@ -1,0 +1,539 @@
+/* LifeOS — otimização do painel Casa para tablet 1280 × 800 */
+
+:root {
+  --tablet-vh: 1vh;
+}
+
+html,
+body {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#appRoot {
+  width: 100vw;
+  height: calc(var(--tablet-vh) * 100);
+  min-height: 0;
+}
+
+#painelCasa,
+.painel-main,
+.painel-body,
+.conteudo-grid,
+.col-esq,
+.col-mid,
+.col-dir {
+  min-width: 0;
+}
+
+.painel-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha) transparent;
+}
+
+.painel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.painel-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--linha);
+}
+
+/* Controles exibidos somente durante a configuração inicial. */
+.tablet-setup-actions {
+  position: fixed;
+  top: 72px;
+  right: 18px;
+  z-index: 10020;
+  display: flex;
+  gap: 8px;
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.tablet-setup-actions.oculto {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+}
+
+.tablet-setup-btn {
+  min-height: 38px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,255,255,.20);
+  border-radius: 999px;
+  background: rgba(20,32,24,.76);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font: 700 11px/1 var(--sans);
+}
+
+.tablet-setup-btn[hidden] {
+  display: none;
+}
+
+/* Escurecimento visual depois de um período sem interação. */
+.tablet-dimmer {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(0,0,0,.70);
+  transition: opacity 1.2s ease;
+}
+
+html.tablet-dimmed .tablet-dimmer {
+  opacity: 1;
+}
+
+html.tablet-dimmed .espera-status-dot {
+  box-shadow: none;
+}
+
+.tablet-orientation-alert {
+  display: none;
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .tablet-orientation-alert {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: grid;
+    place-items: center;
+    padding: 30px;
+    background: #1a2620;
+    color: #fff;
+    text-align: center;
+  }
+
+  .tablet-orientation-alert > div {
+    max-width: 380px;
+    font-family: var(--sans);
+  }
+
+  .tablet-orientation-alert strong {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--serif);
+    font-size: 28px;
+  }
+
+  .tablet-orientation-alert span {
+    font-size: 14px;
+    line-height: 1.5;
+    opacity: .75;
+  }
+}
+
+/* Densidade principal: tablet Android em paisagem, referência 1280 × 800. */
+@media (orientation: landscape) and (max-height: 900px) {
+  .sidebar {
+    width: 64px;
+    padding: 12px 0 14px;
+  }
+
+  .sidebar-logo {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+  }
+
+  .sidebar-logo svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sidebar-nav {
+    gap: 2px;
+  }
+
+  .sidebar-btn,
+  .sidebar-espera {
+    width: 46px;
+    height: 44px;
+    gap: 2px;
+    border-radius: 11px;
+    font-size: 8px;
+  }
+
+  .sidebar-btn svg,
+  .sidebar-espera svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .sidebar-sep {
+    width: 28px;
+    margin: 5px 0;
+  }
+
+  .painel-header {
+    height: 52px;
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .header-logo-text {
+    font-size: 15px;
+  }
+
+  .header-titulo,
+  .header-clima,
+  .header-data {
+    font-size: 11px;
+  }
+
+  .header-hora {
+    font-size: 14px;
+  }
+
+  .header-right {
+    gap: 12px;
+  }
+
+  .header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .painel-body {
+    padding: 12px 16px 16px;
+  }
+
+  .hero-banner {
+    height: 108px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+  }
+
+  .hero-banner-content {
+    padding: 15px 20px;
+  }
+
+  .hero-kicker {
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+
+  .hero-titulo {
+    margin-bottom: 3px;
+    font-size: 21px;
+  }
+
+  .hero-subtitulo {
+    max-width: 520px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .metricas-grid {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .metrica-card {
+    min-height: 91px;
+    padding: 9px 11px;
+    border-radius: 15px;
+  }
+
+  .metrica-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+  }
+
+  .metrica-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .metrica-link {
+    width: 22px;
+    height: 22px;
+  }
+
+  .metrica-num {
+    margin-top: 4px;
+    font-size: 25px;
+  }
+
+  .metrica-label {
+    margin-top: 1px;
+    font-size: 10px;
+  }
+
+  .metrica-mini {
+    max-width: 100%;
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--faint);
+    font-size: 8.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .conteudo-grid {
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr) minmax(0, .88fr);
+    gap: 10px;
+  }
+
+  .col-esq,
+  .col-mid,
+  .col-dir {
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 11px 12px;
+    border-radius: 15px;
+  }
+
+  .panel-head {
+    margin-bottom: 7px;
+  }
+
+  .panel-titulo {
+    font-size: 14px;
+  }
+
+  .panel-link {
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  .time-row {
+    grid-template-columns: 38px 8px 1fr;
+    gap: 7px;
+    padding: 6px 0;
+  }
+
+  .time-hora,
+  .ev-sub {
+    font-size: 9px;
+  }
+
+  .ev-titulo,
+  .task-nome {
+    font-size: 11px;
+  }
+
+  .task-row {
+    gap: 8px;
+    padding: 7px 0;
+  }
+
+  .task-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+  }
+
+  .task-meta,
+  .destaque-sub,
+  .conta-venc,
+  .estoque-local,
+  .planta-meta {
+    font-size: 8.5px;
+  }
+
+  .destaque-list {
+    gap: 6px;
+  }
+
+  .destaque {
+    gap: 8px;
+    padding: 7px 8px;
+  }
+
+  .destaque-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .destaque-titulo,
+  .conta-nome,
+  .conta-valor,
+  .estoque-nome,
+  .planta-nome {
+    font-size: 10.5px;
+  }
+
+  .conta-row,
+  .estoque-row,
+  .planta-row {
+    gap: 7px;
+    padding: 5px 0;
+  }
+
+  .conta-icon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .estoque-badge,
+  .planta-tag,
+  .quem-tag {
+    font-size: 8px;
+  }
+
+  .espera-logo {
+    top: 20px;
+    left: 28px;
+  }
+
+  .espera-status {
+    top: 20px;
+    right: 22px;
+  }
+
+  .espera-esq {
+    left: 36px;
+  }
+
+  .espera-hora {
+    font-size: clamp(68px, 8vw, 84px);
+  }
+
+  .espera-data {
+    margin-top: 4px;
+    font-size: 17px;
+  }
+
+  .espera-clima {
+    gap: 9px;
+    margin-top: 14px;
+    padding: 9px 13px;
+  }
+
+  .espera-clima-temp {
+    font-size: 23px;
+  }
+
+  .espera-dir {
+    right: 28px;
+    bottom: 40px;
+    gap: 8px;
+  }
+
+  .espera-widget {
+    min-width: 205px;
+    gap: 10px;
+    padding: 10px 13px;
+  }
+
+  .espera-widget-icon {
+    width: 31px;
+    height: 31px;
+  }
+
+  .espera-widget-num {
+    font-size: 19px;
+  }
+
+  .espera-hint {
+    bottom: 18px;
+    font-size: 10px;
+  }
+}
+
+/* Quando a altura útil ainda é menor, prioriza o que precisa estar visível. */
+@media (orientation: landscape) and (max-height: 700px) {
+  .painel-header {
+    height: 46px;
+  }
+
+  .painel-body {
+    padding-top: 9px;
+  }
+
+  .hero-banner {
+    height: 84px;
+    margin-bottom: 8px;
+  }
+
+  .hero-subtitulo,
+  .metrica-mini,
+  .header-data {
+    display: none;
+  }
+
+  .metricas-grid {
+    margin-bottom: 8px;
+  }
+
+  .metrica-card {
+    min-height: 72px;
+    padding: 7px 10px;
+  }
+
+  .metrica-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .metrica-num {
+    margin-top: 2px;
+    font-size: 22px;
+  }
+
+  .panel {
+    padding: 9px 10px;
+  }
+
+  .task-row,
+  .time-row,
+  .conta-row,
+  .estoque-row,
+  .planta-row {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
+/* Segurança para telas menores ou navegador ainda com barras visíveis. */
+@media (orientation: landscape) and (max-width: 1080px) {
+  .sidebar {
+    width: 58px;
+  }
+
+  .sidebar-btn,
+  .sidebar-espera {
+    width: 42px;
+  }
+
+  .header-logo-text,
+  .header-sep,
+  .header-data {
+    display: none;
+  }
+
+  .painel-header {
+    padding-inline: 12px;
+  }
+
+  .painel-body {
+    padding-inline: 12px;
+  }
+
+  .conteudo-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+
+  .col-dir {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
