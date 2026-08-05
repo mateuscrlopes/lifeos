@@ -96,7 +96,7 @@
 
 .cfe-anexos {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 14px 0;
   padding: 12px;
   border-radius: 13px;
@@ -113,9 +113,62 @@
   text-transform: uppercase;
 }
 
-.cfe-anexos small {
+.cfe-anexo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--linha) 75%, transparent);
+  border-radius: 11px;
+  background: white;
+}
+
+.cfe-anexo-linha > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.cfe-anexo-linha strong,
+.cfe-anexo-linha small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfe-anexo-linha strong {
+  color: var(--texto);
+  font-size: 11px;
+}
+
+.cfe-anexo-linha small {
   color: var(--muted);
-  line-height: 1.4;
+  font-size: 9.5px;
+}
+
+.cfe-anexo-linha button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sage);
+  color: white;
+  font: 800 10px var(--sans);
+  cursor: pointer;
+}
+
+.cfe-anexo-linha button:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.cfe-anexo-pendente {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 800;
 }
 
 .cfe-form {
@@ -161,6 +214,10 @@
 
 @media (max-width: 560px) {
   .cfe-item {
+    align-items: flex-start;
+  }
+
+  .cfe-anexo-linha {
     align-items: flex-start;
   }
 

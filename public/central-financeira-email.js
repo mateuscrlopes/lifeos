@@ -1,4 +1,4 @@
-// Central Financeira — Caixa de entrada do Gmail v1
+// Central Financeira — Caixa de entrada do Gmail v2
 
 let cfeClient = null;
 let cfeUsuario = null;
@@ -42,6 +42,41 @@ function cfeNomePadrao(item) {
 
 function cfeCategoriaPadrao(item) {
   return item.fornecedor === 'QuintoAndar' ? 'moradia' : 'utilidades';
+}
+
+async function cfeAbrirPdf(anexo, botao) {
+  if (!anexo?.path || !cfeClient) return;
+
+  const textoOriginal = botao.textContent;
+  const aba = window.open('about:blank', '_blank');
+
+  botao.disabled = true;
+  botao.textContent = 'Abrindo…';
+
+  try {
+    const { data, error } = await cfeClient.storage
+      .from('contas-email')
+      .createSignedUrl(anexo.path, 300);
+
+    if (error) throw error;
+
+    const url = data?.signedUrl || data?.signedURL;
+    if (!url) throw new Error('URL temporária não foi criada.');
+
+    if (aba) {
+      aba.opener = null;
+      aba.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (erro) {
+    if (aba) aba.close();
+    console.error('[Caixa Financeira PDF]', erro);
+    alert('Não foi possível abrir este PDF.');
+  } finally {
+    botao.disabled = false;
+    botao.textContent = textoOriginal;
+  }
 }
 
 async function cfeCarregar() {
@@ -143,9 +178,18 @@ function cfeAbrirConferencia(item) {
 
       ${anexos.length ? `
         <div class="cfe-anexos">
-          <span>Anexos encontrados</span>
-          ${anexos.map(anexo => `<div>${cfeEscapar(anexo.nome)}</div>`).join('')}
-          <small>Nesta primeira versão, o LifeOS registra a existência do PDF. O envio do arquivo será adicionado na próxima etapa.</small>
+          <span>Documentos da conta</span>
+          ${anexos.map((anexo, indice) => `
+            <div class="cfe-anexo-linha">
+              <div>
+                <strong>${cfeEscapar(anexo.nome || `Anexo ${indice + 1}`)}</strong>
+                <small>${anexo.path ? 'PDF disponível no LifeOS' : 'Arquivo aguardando envio pelo Gmail'}</small>
+              </div>
+              ${anexo.path
+                ? `<button type="button" data-cfe-pdf="${indice}">Abrir PDF</button>`
+                : '<span class="cfe-anexo-pendente">Pendente</span>'}
+            </div>
+          `).join('')}
         </div>
       ` : ''}
 
@@ -183,6 +227,13 @@ function cfeAbrirConferencia(item) {
         </div>
       </form>
     </section>`;
+
+  modal.querySelectorAll('[data-cfe-pdf]').forEach(botao => {
+    botao.addEventListener('click', () => {
+      const anexo = anexos[Number(botao.dataset.cfePdf)];
+      cfeAbrirPdf(anexo, botao);
+    });
+  });
 
   modal.addEventListener('click', evento => {
     if (evento.target === modal || evento.target.closest('[data-cfe-fechar]')) {
@@ -282,7 +333,7 @@ function cfeGarantirPainel() {
 function cfeIniciar() {
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = '/central-financeira-email.css?v=1';
+  link.href = '/central-financeira-email.css?v=2';
   link.dataset.cfe = '1';
   document.head.appendChild(link);
 

@@ -1,4 +1,4 @@
-﻿// status-estoque.js
+// status-estoque.js
 // Calcula o STATUS de um item de estoque conforme seu TIPO de medicao.
 // Tres tipos ativos (Documento Mestre, secao 18.4):
 //   contavel     — numero de unidades (ex.: 3 rolos)
@@ -10,7 +10,7 @@
 // alterar a arquitetura ou a estrutura de navegacao do LifeOS.
 import './ui-refinements.js?v=4';
 import './central-financeira.js?v=4';
-import './central-financeira-email.js?v=1';
+import './central-financeira-email.js?v=2';
 import './purchase-destination-create.js?v=2';
 
 // Ordem dos niveis visuais (do mais cheio ao mais vazio).
