@@ -3,26 +3,35 @@ import assert from 'node:assert/strict';
 import { registrarCuidado, urgenciaPlanta } from '../public/plantas.js';
 import { excluirContaPorId } from '../public/contas.js';
 
-function criarSupa({ erroRotina = null, erroEvento = null } = {}) {
+function criarSupa({ erro = null, rotinaPertence = true } = {}) {
   const chamadas = [];
+  const banco = {
+    rotina: { id: 'rotina-1', planta_id: 'planta-1', ultima_realizacao: null, proxima_realizacao: '2026-08-01' },
+    eventos: [],
+  };
   return {
     chamadas,
-    from(tabela) {
-      return {
-        update(dados) {
-          chamadas.push({ tabela, operacao: 'update', dados });
-          return { eq: async () => ({ error: erroRotina }) };
-        },
-        insert(dados) {
-          chamadas.push({ tabela, operacao: 'insert', dados });
-          return Promise.resolve({ error: erroEvento });
-        },
-      };
+    banco,
+    async rpc(nome, parametros) {
+      chamadas.push({ nome, parametros });
+      if (erro) return { data: null, error: erro };
+      if (!rotinaPertence || parametros.p_planta_id !== banco.rotina.planta_id || parametros.p_rotina_id !== banco.rotina.id) {
+        return { data: null, error: { message: 'A rotina não pertence à planta informada.' } };
+      }
+      banco.rotina.ultima_realizacao = parametros.p_realizado_em.slice(0, 10);
+      banco.rotina.proxima_realizacao = parametros.p_proxima_realizacao;
+      banco.eventos.push({
+        planta_id: parametros.p_planta_id,
+        tipo: parametros.p_tipo_evento,
+        notas: parametros.p_notas,
+        usuario_id: parametros.p_usuario_id,
+      });
+      return { data: parametros.p_proxima_realizacao, error: null };
     },
   };
 }
 
-test('registrarCuidado atualiza a rotina e registra o evento', async () => {
+test('registrarCuidado atualiza rotina e cria evento pela RPC atômica', async () => {
   const supa = criarSupa();
   const resultado = await registrarCuidado(
     supa,
@@ -32,14 +41,15 @@ test('registrarCuidado atualiza a rotina e registra o evento', async () => {
   );
 
   assert.equal(resultado.ok, true);
-  assert.equal(supa.chamadas[0].tabela, 'planta_rotinas');
-  assert.equal(supa.chamadas[0].dados.ultima_realizacao, new Date().toISOString().slice(0, 10));
-  assert.equal(supa.chamadas[1].tabela, 'planta_eventos');
-  assert.equal(supa.chamadas[1].dados.planta_id, 'planta-1');
+  assert.equal(supa.chamadas[0].nome, 'registrar_cuidado_planta');
+  assert.equal(supa.chamadas[0].parametros.p_planta_id, 'planta-1');
+  assert.equal(supa.banco.rotina.ultima_realizacao, new Date().toISOString().slice(0, 10));
+  assert.equal(supa.banco.eventos.length, 1);
+  assert.equal(supa.banco.eventos[0].planta_id, 'planta-1');
 });
 
-test('registrarCuidado não cria evento quando a rotina falha', async () => {
-  const supa = criarSupa({ erroRotina: { message: 'sem acesso' } });
+test('registrarCuidado falha sem deixar atualização parcial', async () => {
+  const supa = criarSupa({ erro: { message: 'falha no banco' } });
   const resultado = await registrarCuidado(
     supa,
     { id: 'usuario-1' },
@@ -47,12 +57,15 @@ test('registrarCuidado não cria evento quando a rotina falha', async () => {
     { id: 'rotina-1', tipo: 'Verificar e regar', intervalo_dias: 3 },
   );
 
-  assert.deepEqual(resultado, { ok: false, motivo: 'sem acesso' });
+  assert.deepEqual(resultado, { ok: false, motivo: 'falha no banco' });
   assert.equal(supa.chamadas.length, 1);
+  assert.equal(supa.banco.rotina.ultima_realizacao, null);
+  assert.equal(supa.banco.rotina.proxima_realizacao, '2026-08-01');
+  assert.deepEqual(supa.banco.eventos, []);
 });
 
-test('registrarCuidado informa falha ao registrar o evento', async () => {
-  const supa = criarSupa({ erroEvento: { message: 'falha no histórico' } });
+test('registrarCuidado rejeita rotina que não pertence à planta', async () => {
+  const supa = criarSupa({ rotinaPertence: false });
   const resultado = await registrarCuidado(
     supa,
     { id: 'usuario-1' },
@@ -60,7 +73,9 @@ test('registrarCuidado informa falha ao registrar o evento', async () => {
     { id: 'rotina-1', tipo: 'Verificar e regar', intervalo_dias: 3 },
   );
 
-  assert.deepEqual(resultado, { ok: false, motivo: 'falha no histórico' });
+  assert.deepEqual(resultado, { ok: false, motivo: 'A rotina não pertence à planta informada.' });
+  assert.equal(supa.banco.rotina.ultima_realizacao, null);
+  assert.deepEqual(supa.banco.eventos, []);
 });
 
 test('urgenciaPlanta prioriza rotina vencida', () => {

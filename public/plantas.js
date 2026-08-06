@@ -132,19 +132,19 @@ export async function registrarCuidado(supa, usuario, planta, rotina) {
   const proxima = new Date(hoje);
   proxima.setDate(proxima.getDate() + rotina.intervalo_dias);
   const proximaStr = proxima.toISOString().slice(0, 10);
-  const { error: erroRot } = await supa
-    .from('planta_rotinas')
-    .update({ ultima_realizacao: hoje, proxima_realizacao: proximaStr })
-    .eq('id', rotina.id);
-  if (erroRot) return { ok: false, motivo: erroRot.message };
   const tipoEvento = rotina.tipo === 'Trocar a água' ? 'troca_agua'
     : rotina.tipo === 'Fazer imersão' ? 'imersao' : 'rega';
-  const { error: erroEvento } = await supa.from('planta_eventos').insert({
-    planta_id: planta.id, tipo: tipoEvento, data: agora,
-    notas: `${rotina.tipo} registrada via LifeOS`, usuario_id: usuario.id,
+  const { data, error } = await supa.rpc('registrar_cuidado_planta', {
+    p_planta_id: planta.id,
+    p_rotina_id: rotina.id,
+    p_usuario_id: usuario.id,
+    p_realizado_em: agora,
+    p_proxima_realizacao: proximaStr,
+    p_tipo_evento: tipoEvento,
+    p_notas: `${rotina.tipo} registrada via LifeOS`,
   });
-  if (erroEvento) return { ok: false, motivo: erroEvento.message };
-  return { ok: true, proxima: proximaStr };
+  if (error) return { ok: false, motivo: error.message };
+  return { ok: true, proxima: data || proximaStr };
 }
 
 // Registra um cuidado manual (sem rotina vinculada) e atualiza a rotina principal se existir.

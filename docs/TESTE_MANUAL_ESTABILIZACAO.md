@@ -1,6 +1,6 @@
 # Roteiro manual — estabilização
 
-Execute os casos com dois dispositivos autenticados na mesma Casa quando o roteiro indicar atualização externa.
+Antes deste roteiro, aplique a migration `db/029_registrar_cuidado_planta_rpc.sql` no SQL Editor do Supabase. Execute os casos com dois dispositivos autenticados na mesma Casa quando o roteiro indicar atualização externa.
 
 | Fluxo | Ação | Resultado esperado | Sinal de falha |
 | --- | --- | --- | --- |
