@@ -378,10 +378,12 @@ const SIMPLE_DELETE_MAP = {
 async function deleteSimple(module, row) {
   const config = SIMPLE_DELETE_MAP[module];
   if (!config) return;
+  const recordId = row.dataset.recordId;
   const name = rowName(row);
-  if (!name) throw new Error('Não foi possível identificar o item selecionado.');
+  if (!recordId && !name) throw new Error('Não foi possível identificar o item selecionado.');
   const { client, profile } = await getContext();
-  let query = client.from(config.table).select(config.select).eq(config.nameField, name);
+  let query = client.from(config.table).select(config.select);
+  query = recordId ? query.eq('id', recordId) : query.eq(config.nameField, name);
   if (module !== 'refeicoes' && module !== 'rituais') query = query.eq('casa_id', profile.casa_id);
   else query = query.eq('casa_id', profile.casa_id);
   const { data: records, error } = await query.limit(1);
@@ -465,7 +467,6 @@ function moduleFromDeleteTarget(button) {
     ['#itens', 'lista_compras'],
     ['#itensEstoque', 'estoque'],
     ['#itensTarefas', 'tarefas'],
-    ['#itensContas', 'contas'],
     ['#listaRituais', 'rituais'],
     ['#listaRefeicoes', 'refeicoes'],
   ];
@@ -487,6 +488,7 @@ function isDeleteControl(button) {
 function installDeletionGuard() {
   document.addEventListener('click', async event => {
     const button = event.target.closest('button');
+    if (button?.dataset.lifeosDeleteFlow === 'app') return;
     if (!button || !isDeleteControl(button)) return;
     const target = moduleFromDeleteTarget(button);
     if (!target) return;

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 
-const arquivos = ['public/app.js', 'public/plantas.js', 'public/tablet-enhancements.js'];
+const arquivos = ['public/app.js', 'public/contas.js', 'public/plantas.js', 'public/tablet-enhancements.js'];
 
 function verificarSintaxe(arquivo, input) {
   const resultado = spawnSync(process.execPath, ['--check', arquivo || '-'], {

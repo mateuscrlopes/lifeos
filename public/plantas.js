@@ -139,10 +139,11 @@ export async function registrarCuidado(supa, usuario, planta, rotina) {
   if (erroRot) return { ok: false, motivo: erroRot.message };
   const tipoEvento = rotina.tipo === 'Trocar a água' ? 'troca_agua'
     : rotina.tipo === 'Fazer imersão' ? 'imersao' : 'rega';
-  await supa.from('planta_eventos').insert({
+  const { error: erroEvento } = await supa.from('planta_eventos').insert({
     planta_id: planta.id, tipo: tipoEvento, data: agora,
     notas: `${rotina.tipo} registrada via LifeOS`, usuario_id: usuario.id,
   });
+  if (erroEvento) return { ok: false, motivo: erroEvento.message };
   return { ok: true, proxima: proximaStr };
 }
 

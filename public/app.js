@@ -2,6 +2,7 @@
 import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
+import { excluirContaPorId } from './contas.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
@@ -542,14 +543,47 @@ async function abrirFichaPlanta(planta){
     // Linha principal
     const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
     topo.innerHTML=`<span style="font-size:13px">${r.tipo} · <strong>${quando}</strong></span>`;
-    if(dias===null||dias<=0){const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';btn.onclick=async()=>{btn.disabled=true;await registrarCuidado(supa,usuario,planta,r);await atualizarPlantas();btn.innerHTML=iconeSvg('check',13);btn.title='Concluído';};topo.appendChild(btn);}
+    if(dias===null||dias<=0){
+      const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';
+      btn.onclick=async()=>{
+        btn.disabled=true;btn.textContent='Registrando…';
+        try{
+          const resultado=await registrarCuidado(supa,usuario,planta,r);
+          if(!resultado.ok){alert('Não foi possível registrar o cuidado agora. Tente novamente.');return;}
+          await atualizarPlantas();
+          await carregarHoje();
+          const plantaAtualizada=_plantasCache.find(item=>item.id===planta.id);
+          if(plantaAtualizada)await abrirFichaPlanta(plantaAtualizada);
+        }catch(e){
+          alert('Não foi possível registrar o cuidado agora. Tente novamente.');
+        }finally{
+          btn.disabled=false;
+          if(btn.isConnected&&btn.textContent==='Registrando…')btn.textContent='Cuidar';
+        }
+      };
+      topo.appendChild(btn);
+    }
     div.appendChild(topo);
     // Linha de edição do intervalo
     const edit=document.createElement('div');edit.style.cssText='display:flex;align-items:center;gap:8px;font-size:12px;color:var(--suave)';
     const inp=document.createElement('input');inp.type='number';inp.min='1';inp.value=r.intervalo_dias;inp.style.cssText='width:56px;padding:4px 8px;font-size:12px';
     const lbl=document.createElement('span');lbl.textContent='dias entre cuidados';
     const btnSalvar=document.createElement('button');btnSalvar.textContent='Salvar';btnSalvar.style.cssText='padding:4px 10px;font-size:12px';
-    btnSalvar.onclick=async()=>{btnSalvar.disabled=true;const ok=await editarRotina(supa,r,inp.value);if(ok){await atualizarPlantas();btnSalvar.innerHTML=iconeSvg('check',13);btnSalvar.title='Salvo';}else{btnSalvar.disabled=false;}};
+    btnSalvar.onclick=async()=>{
+      btnSalvar.disabled=true;btnSalvar.textContent='Salvando…';
+      try{
+        const ok=await editarRotina(supa,r,inp.value);
+        if(!ok){alert('Não foi possível salvar o intervalo. Tente novamente.');return;}
+        await atualizarPlantas();
+        const plantaAtualizada=_plantasCache.find(item=>item.id===planta.id);
+        if(plantaAtualizada)await abrirFichaPlanta(plantaAtualizada);
+      }catch(e){
+        alert('Não foi possível salvar o intervalo. Tente novamente.');
+      }finally{
+        btnSalvar.disabled=false;
+        if(btnSalvar.isConnected&&btnSalvar.textContent==='Salvando…')btnSalvar.textContent='Salvar';
+      }
+    };
     edit.appendChild(inp);edit.appendChild(lbl);edit.appendChild(btnSalvar);
     div.appendChild(edit);
     rotDiv.appendChild(div);
@@ -808,7 +842,7 @@ async function removerConta(conta,botao){
   if(!confirm(`Excluir a conta "${conta.nome}"?`))return;
   if(botao)botao.disabled=true;
   try{
-    const{error}=await supa.from('contas').delete().eq('id',conta.id);
+    const{error}=await excluirContaPorId(supa,conta.id);
     if(error){
       aviso('avisoConta','Não foi possível excluir a conta.','erro');
       return;
@@ -819,6 +853,7 @@ async function removerConta(conta,botao){
     });
     if(erroHistorico)console.error('Conta excluída, mas não foi possível registrar no histórico.',erroHistorico);
     await Promise.all([carregarContas(),carregarHoje()]);
+    window.dispatchEvent(new CustomEvent('lifeos:contas-atualizadas'));
   }catch(e){
     aviso('avisoConta','Não foi possível excluir a conta.','erro');
   }finally{
@@ -971,7 +1006,7 @@ async function carregarContas(){
   if(!contas||!contas.length){area.innerHTML='<div class="vazio">Nenhuma conta.</div>';return;}
   for(const conta of contas){
     const status=calcularStatusConta(conta),info=rotuloStatusConta(status);
-    const l=document.createElement('div');l.className='item';
+    const l=document.createElement('div');l.className='item';l.dataset.recordId=conta.id;
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=conta.nome+(conta.recorrente?' ↻':'');d.appendChild(n);
     const venc=conta.vencimento.slice(0,10).split('-').reverse().join('/');
@@ -980,7 +1015,7 @@ async function carregarContas(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
     const btnEditC=document.createElement('button');btnEditC.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
-    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta,btnDelC);};
+    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.dataset.recordId=conta.id;btnDelC.dataset.lifeosDeleteFlow='app';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta,btnDelC);};
     dir.appendChild(btnEditC);dir.appendChild(btnDelC);
     l.appendChild(d);l.appendChild(dir);
     l.style.cursor='pointer';

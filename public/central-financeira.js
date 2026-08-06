@@ -965,6 +965,8 @@ function cfIniciar() {
     cfAtualizar();
   });
 
+  window.addEventListener('lifeos:contas-atualizadas', cfAtualizar);
+
   window.setInterval(() => {
     if (cfObterContexto()) cfAtualizar();
   }, 60000);
