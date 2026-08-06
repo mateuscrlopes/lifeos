@@ -473,13 +473,23 @@ function renderizarPlantas(){
 
 async function cuidarPlanta(planta,botao){
   botao.disabled=true;
-  const rotinas=(planta.planta_rotinas||[]).filter(r=>r.ativa);
-  const hoje=new Date().toISOString().slice(0,10);
-  const vencidas=rotinas.filter(r=>!r.proxima_realizacao||r.proxima_realizacao<=hoje);
-  for(const rotina of vencidas){await registrarCuidado(supa,usuario,planta,rotina);}
-  botao.disabled=false;
-  await atualizarPlantas();
-  await carregarHoje();
+  try{
+    const rotinas=(planta.planta_rotinas||[]).filter(r=>r.ativa);
+    const hoje=new Date().toISOString().slice(0,10);
+    const vencidas=rotinas.filter(r=>!r.proxima_realizacao||r.proxima_realizacao<=hoje);
+    const resultados=[];
+    for(const rotina of vencidas){resultados.push(await registrarCuidado(supa,usuario,planta,rotina));}
+    if(resultados.some(resultado=>!resultado.ok)){
+      alert('Não foi possível registrar o cuidado agora. Tente novamente.');
+      return;
+    }
+    await atualizarPlantas();
+    await carregarHoje();
+  }catch(e){
+    alert('Não foi possível registrar o cuidado agora. Tente novamente.');
+  }finally{
+    botao.disabled=false;
+  }
 }
 
 async function abrirFichaPlanta(planta){
@@ -794,15 +804,25 @@ async function salvarEditarConta(){
   await carregarContas();
 }
 
-async function removerConta(conta){
+async function removerConta(conta,botao){
   if(!confirm(`Excluir a conta "${conta.nome}"?`))return;
-  const{error}=await supa.from('contas').delete().eq('id',conta.id);
-  if(!error){
-    supa.from('historico_excluidos').insert({
-      casa_id:usuario.casa_id,usuario_id:usuario.id,
-      modulo:'contas',registro_id:conta.id,dados:conta,
+  if(botao)botao.disabled=true;
+  try{
+    const{error}=await supa.from('contas').delete().eq('id',conta.id);
+    if(error){
+      aviso('avisoConta','Não foi possível excluir a conta.','erro');
+      return;
+    }
+    const{error:erroHistorico}=await supa.from('historico_excluidos').insert({
+        casa_id:usuario.casa_id,usuario_id:usuario.id,
+        modulo:'contas',registro_id:conta.id,dados:conta,
     });
-    await carregarContas();
+    if(erroHistorico)console.error('Conta excluída, mas não foi possível registrar no histórico.',erroHistorico);
+    await Promise.all([carregarContas(),carregarHoje()]);
+  }catch(e){
+    aviso('avisoConta','Não foi possível excluir a conta.','erro');
+  }finally{
+    if(botao)botao.disabled=false;
   }
 }
 
@@ -960,7 +980,7 @@ async function carregarContas(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
     const btnEditC=document.createElement('button');btnEditC.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
-    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta);};
+    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta,btnDelC);};
     dir.appendChild(btnEditC);dir.appendChild(btnDelC);
     l.appendChild(d);l.appendChild(dir);
     l.style.cursor='pointer';

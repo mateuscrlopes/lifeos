@@ -1438,7 +1438,7 @@ async function carregarPlantasHome() {
   });
   const corPerfil = { alto: '#3b7dbf', medio: '#2f6f4f', baixo: '#b8860b' };
   const area = document.getElementById('painelPlantas');
-  if (!urgentes.length) { area.innerHTML = '<div class="vazio">Todas as plantas em dia</div>'; document.getElementById('painelPlantasBox').style.display='none'; return; }
+  if (!urgentes.length) { area.innerHTML = '<div class="vazio">Todas as plantas em dia</div>'; document.getElementById('painelPlantasBox').style.display='none'; montarDestaques(0); return; }
   document.getElementById('painelPlantasBox').style.display='block';
   area.innerHTML = urgentes.slice(0,5).map(p => {
     const r = (p.planta_rotinas||[]).find(r=>r.ativa);
@@ -1589,19 +1589,39 @@ async function carregarPaginaSecundaria(pag) {
 
 // ---- ALTERNAR TAREFA ----
 async function alternarTarefa(id, idx, containerId) {
-  await supa.from('tarefas').update({ feita: true, feita_em: new Date().toISOString() }).eq('id', id);
-  await carregarTarefasHome();
+  const { error } = await supa.from('tarefas').update({
+    feita: true,
+    feita_em: new Date().toISOString(),
+    feita_por: usuario.id,
+  }).eq('id', id);
+  if (error) return;
+  await atualizarDadosTablet();
 }
 
 // ---- TEMPO REAL ----
+let atualizacaoTabletEmAndamento = null;
+
+async function atualizarDadosTablet() {
+  if (atualizacaoTabletEmAndamento) return atualizacaoTabletEmAndamento;
+  atualizacaoTabletEmAndamento = (async () => {
+    await carregarTudo();
+    if (_paginaAtual !== 'inicio') await carregarPaginaSecundaria(_paginaAtual);
+  })();
+  try {
+    await atualizacaoTabletEmAndamento;
+  } finally {
+    atualizacaoTabletEmAndamento = null;
+  }
+}
+
 function ligarTempoReal() {
   if (canal) return;
   canal = supa.channel('tablet-casa')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefas' }, carregarTudo)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_compras' }, carregarTudo)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'contas' }, carregarTudo)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'estoque' }, carregarTudo)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'planta_rotinas' }, carregarTudo)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefas' }, atualizarDadosTablet)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_compras' }, atualizarDadosTablet)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'contas' }, atualizarDadosTablet)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'estoque' }, atualizarDadosTablet)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'planta_rotinas' }, atualizarDadosTablet)
     .subscribe();
 }
 
