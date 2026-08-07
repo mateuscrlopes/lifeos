@@ -259,3 +259,13 @@
   script.defer = true;
   document.head.appendChild(script);
 })();
+
+// Receitas completas / Fase 3B.
+(() => {
+  if (document.getElementById('receitas-v2-script')) return;
+  const script = document.createElement('script');
+  script.id = 'receitas-v2-script';
+  script.src = '/receitas-v2.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();

@@ -8,6 +8,7 @@ import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInven
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
 import './alimentacao-contextual-mobile-fix.js?v=1';
+import './receitas-v2.js?v=1';
 
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
@@ -638,22 +639,22 @@ async function salvarEditarPlanta(){
 // --- CARDAPIO ---
 let _refeicoes=[],_planDias={},_slotAtual=null;
 async function carregarRefeicoes(){
-  const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
+  const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
   const area=el('listaRefeicoes');area.innerHTML='';
   if(error||!_refeicoes.length){area.innerHTML='<div class="vazio">Nenhuma refeição cadastrada.</div>';return;}
-  for(const r of _refeicoes){const linha=document.createElement('div');linha.className='card-refeicao';const d=document.createElement('div');d.className='desc';const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes`;d.appendChild(m);const btn=document.createElement('button');btn.textContent='×';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';btn.onclick=()=>removerRefeicao(r.id);linha.appendChild(d);linha.appendChild(btn);area.appendChild(linha);}
+  for(const r of _refeicoes){const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;const d=document.createElement('div');d.className='desc';const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);const btn=document.createElement('button');btn.textContent='×';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';btn.onclick=(ev)=>{ev.stopPropagation();removerRefeicao(r.id);};linha.appendChild(d);linha.appendChild(btn);area.appendChild(linha);}
   renderizarSlotsCardapio();
 }
 
 async function salvarRefeicao(){
   const nome=el('refNome').value.trim();if(!nome){aviso('avisoRefeicao','Digite o nome.','erro');return;}
   el('btnSalvarRefeicao').disabled=true;
-  const{data:ref,error}=await supa.from('refeicoes').insert({casa_id:usuario.casa_id,nome,tipo:el('refTipo').value,porcoes:Number(el('refPorcoes').value)||2,criada_por:usuario.id}).select().single();
+  const{data:ref,error}=await supa.from('refeicoes').insert({casa_id:usuario.casa_id,nome,tipo:el('refTipo').value,porcoes:Number(el('refPorcoes').value)||2,tempo_minutos:Number(el('refTempo')?.value)||null,fonte_url:el('refFonte')?.value.trim()||null,observacoes:el('refObservacoes')?.value.trim()||null,modo_preparo:el('refPreparo')?.value.trim()||null,criada_por:usuario.id,atualizado_em:new Date().toISOString()}).select().single();
   if(error){aviso('avisoRefeicao','Erro.','erro');el('btnSalvarRefeicao').disabled=false;return;}
   const linhas=el('refIngredientes').querySelectorAll('.linha-ingrediente');
   for(const l of linhas){const n=l.querySelector('.ing-nome').value.trim();const q=l.querySelector('.ing-qtd').value;const u=l.querySelector('.ing-un').value.trim();if(n)await supa.from('refeicao_ingredientes').insert({refeicao_id:ref.id,nome:n,quantidade:q?Number(q):null,unidade:u||null});}
-  el('refNome').value='';el('refPorcoes').value='2';el('refIngredientes').innerHTML='';
+  el('refNome').value='';el('refPorcoes').value='2';if(el('refTempo'))el('refTempo').value='';if(el('refFonte'))el('refFonte').value='';if(el('refObservacoes'))el('refObservacoes').value='';if(el('refPreparo'))el('refPreparo').value='';el('refIngredientes').innerHTML='';
   aviso('avisoRefeicao','Refeição salva.','ok');setTimeout(()=>aviso('avisoRefeicao',''),1500);el('btnSalvarRefeicao').disabled=false;await carregarRefeicoes();
 }
 

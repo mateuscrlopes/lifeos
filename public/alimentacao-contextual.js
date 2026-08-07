@@ -400,7 +400,7 @@
     }
 
     return `
-      <div class="ac-meal-summary">
+      <div class="ac-meal-summary" data-ac-receita-id="${escapar(item?.refeicoes?.id || '')}">
         <span class="ac-meal-summary-icon">${SVG.meal}</span>
         <div>
           <small>${escapar(rotuloTipo(item.tipo))}</small>
