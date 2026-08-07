@@ -1,9 +1,137 @@
-/* Reforço da alimentação contextual no celular */
+/* LifeOS — Correção visual definitiva da alimentação contextual mobile */
 
 #acMobileDestaque.ac-mobile-highlight {
+  box-sizing: border-box !important;
+  width: calc(100% - 40px) !important;
+  min-height: 78px !important;
   display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) 20px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  margin: 14px 20px 0 !important;
+  padding: 13px 14px !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 25%, var(--linha)) !important;
+  border-radius: var(--r-lg) !important;
+  background:
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--sage-soft) 82%, var(--paper)),
+      var(--paper)
+    ) !important;
+  color: var(--texto) !important;
+  text-align: left !important;
+  box-shadow: var(--shadow-soft) !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+#acMobileDestaque.ac-mobile-highlight:active {
+  transform: scale(.992);
+}
+
+#acMobileDestaque .ac-mobile-icon {
+  box-sizing: border-box !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border-radius: 14px !important;
+  background: var(--sage) !important;
+  color: #fff !important;
+}
+
+#acMobileDestaque .ac-mobile-icon svg {
+  display: block !important;
+  width: 21px !important;
+  height: 21px !important;
+  min-width: 21px !important;
+  min-height: 21px !important;
+  max-width: 21px !important;
+  max-height: 21px !important;
+  flex: none !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+#acMobileDestaque .ac-mobile-text {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+#acMobileDestaque .ac-mobile-text small {
+  display: block !important;
+  margin: 0 !important;
+  color: var(--sage) !important;
+  font-family: var(--sans) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  line-height: 1.25 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+#acMobileDestaque .ac-mobile-text strong {
+  display: block !important;
+  margin: 2px 0 0 !important;
+  overflow: hidden !important;
+  color: var(--texto) !important;
+  font-family: var(--serif) !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#acMobileDestaque .ac-mobile-text span {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  overflow: hidden !important;
+  color: var(--muted) !important;
+  font-family: var(--sans) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 1.3 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#acMobileDestaque .ac-mobile-chevron {
+  box-sizing: border-box !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  color: var(--sage) !important;
+}
+
+#acMobileDestaque .ac-mobile-chevron svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
+  flex: none !important;
+  color: inherit !important;
+  stroke: currentColor !important;
 }
 
 #acMobileDestaque + .card-hoje {
-  margin-top: 12px;
+  margin-top: 12px !important;
+}
+
+/* Proteção adicional caso regras globais tentem dimensionar SVGs do cartão. */
+#acMobileDestaque svg,
+#acMobileDestaque svg * {
+  vector-effect: non-scaling-stroke;
 }

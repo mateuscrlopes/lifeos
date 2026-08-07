@@ -195,7 +195,7 @@
     const link = document.createElement('link');
     link.id = 'alimentacao-contextual-mobile-fix-css';
     link.rel = 'stylesheet';
-    link.href = '/alimentacao-contextual-mobile-fix.css?v=1';
+    link.href = '/alimentacao-contextual-mobile-fix.css?v=2';
     document.head.appendChild(link);
   }
 
