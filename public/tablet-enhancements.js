@@ -239,3 +239,13 @@
   script.defer = true;
   document.head.appendChild(script);
 })();
+
+// Contas no Painel da Casa v1.
+(() => {
+  if (document.getElementById('tablet-contas-script')) return;
+  const script = document.createElement('script');
+  script.id = 'tablet-contas-script';
+  script.src = '/tablet-contas.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();
