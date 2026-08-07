@@ -1,0 +1,336 @@
+/* LifeOS — Painel da Casa v3
+   Legibilidade no tablet físico e cuidados de plantas acionáveis. */
+
+.tablet-mode .panel-titulo {
+  font-size: clamp(21px, 2vw, 25px) !important;
+}
+
+.tablet-mode .task-nome,
+.tablet-mode .conta-nome,
+.tablet-mode .estoque-nome,
+.tablet-mode .planta-nome,
+.tablet-mode .destaque-titulo {
+  font-size: clamp(17px, 1.62vw, 20px) !important;
+  line-height: 1.28 !important;
+}
+
+.tablet-mode .task-meta,
+.tablet-mode .conta-venc,
+.tablet-mode .estoque-local,
+.tablet-mode .planta-meta,
+.tablet-mode .destaque-sub {
+  font-size: clamp(13px, 1.22vw, 15px) !important;
+  line-height: 1.38 !important;
+}
+
+.tablet-mode .conta-valor {
+  font-size: clamp(15px, 1.35vw, 17px) !important;
+}
+
+.tablet-mode .planta-tag,
+.tablet-mode .estoque-badge,
+.tablet-mode .quem-tag {
+  font-size: 12px !important;
+  padding: 4px 9px !important;
+}
+
+.tablet-mode .task-row,
+.tablet-mode .conta-row,
+.tablet-mode .estoque-row,
+.tablet-mode .planta-row {
+  min-height: 58px !important;
+  padding-block: 10px !important;
+}
+
+.tablet-mode .destaque {
+  min-height: 58px;
+  align-items: center;
+  padding: 10px 9px !important;
+}
+
+.tablet-mode .metrica-label {
+  font-size: clamp(13px, 1.25vw, 15px) !important;
+}
+
+.tablet-mode .sidebar-btn,
+.tablet-mode .sidebar-espera {
+  font-size: 10px !important;
+}
+
+/* Linhas de planta passam a ser controles reais, sem parecer botões genéricos. */
+.tablet-mode button.pc-planta-action,
+.tablet-mode button.pc-cuidados-highlight {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.tablet-mode button.pc-planta-action {
+  background: transparent;
+  border-radius: 13px;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.tablet-mode button.pc-planta-action:active {
+  transform: scale(.988);
+  background: var(--pc-accent-soft);
+}
+
+.tablet-mode button.pc-planta-action:focus-visible,
+.tablet-mode button.pc-cuidados-highlight:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--pc-accent) 48%, transparent);
+  outline-offset: 2px;
+}
+
+.tablet-mode .pc-planta-chevron {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--pc-accent);
+}
+
+.tablet-mode .pc-planta-chevron svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tablet-mode button.pc-cuidados-highlight {
+  display: flex;
+  gap: 10px;
+  border-radius: 14px;
+  background: var(--pc-accent-soft);
+}
+
+/* Modal de cuidados */
+.pc-plant-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12050;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(5, 10, 7, .66);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pc-plant-dialog {
+  width: min(760px, calc(100vw - 56px));
+  max-height: min(680px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--pc-line, rgba(255,255,255,.12));
+  border-radius: 28px;
+  background: var(--pc-surface-strong, #fff);
+  color: var(--pc-text, #1e2d25);
+  box-shadow: 0 30px 90px rgba(0,0,0,.34);
+}
+
+.pc-plant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 26px 19px;
+  border-bottom: 1px solid var(--pc-line);
+}
+
+.pc-plant-kicker {
+  margin-bottom: 5px;
+  color: var(--pc-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.pc-plant-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(27px, 3vw, 36px);
+  line-height: 1.08;
+}
+
+.pc-plant-subtitle {
+  margin-top: 7px;
+  color: var(--pc-muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.pc-plant-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--pc-line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--pc-text);
+}
+
+.pc-plant-close svg {
+  width: 21px;
+  height: 21px;
+}
+
+.pc-plant-content {
+  max-height: calc(min(680px, 100vh - 48px) - 122px);
+  overflow-y: auto;
+  padding: 8px 26px 24px;
+}
+
+.pc-care-plant + .pc-care-plant {
+  margin-top: 8px;
+  border-top: 1px solid var(--pc-line);
+}
+
+.pc-care-plant-name {
+  padding: 18px 0 8px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pc-care-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  min-height: 72px;
+  padding: 11px 0;
+}
+
+.pc-care-row + .pc-care-row {
+  border-top: 1px solid var(--pc-line);
+}
+
+.pc-care-type {
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.pc-care-meta {
+  margin-top: 4px;
+  color: var(--pc-muted);
+  font-size: 13px;
+}
+
+.pc-care-button {
+  min-width: 170px;
+  min-height: 48px;
+  padding: 11px 17px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--pc-accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.pc-care-button:disabled {
+  opacity: .58;
+}
+
+.pc-care-feedback {
+  min-height: 23px;
+  padding: 13px 0 0;
+  color: var(--pc-accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pc-care-feedback.erro {
+  color: #d66f68;
+}
+
+.pc-care-empty {
+  padding: 38px 10px;
+  text-align: center;
+}
+
+.pc-care-empty svg {
+  width: 42px;
+  height: 42px;
+  color: var(--pc-accent);
+}
+
+.pc-care-empty strong {
+  display: block;
+  margin-top: 12px;
+  font-family: var(--serif);
+  font-size: 25px;
+}
+
+.pc-care-empty span {
+  display: block;
+  margin-top: 5px;
+  color: var(--pc-muted);
+  font-size: 14px;
+}
+
+@media (orientation: landscape) and (max-height: 700px) {
+  /* O v2 reduzia estes textos de novo no tablet físico. */
+  .tablet-mode .panel-titulo {
+    font-size: 21px !important;
+  }
+
+  .tablet-mode .task-nome,
+  .tablet-mode .conta-nome,
+  .tablet-mode .estoque-nome,
+  .tablet-mode .planta-nome,
+  .tablet-mode .destaque-titulo {
+    font-size: 17px !important;
+  }
+
+  .tablet-mode .task-meta,
+  .tablet-mode .conta-venc,
+  .tablet-mode .estoque-local,
+  .tablet-mode .planta-meta,
+  .tablet-mode .destaque-sub {
+    font-size: 13px !important;
+  }
+
+  .tablet-mode .conta-valor {
+    font-size: 15px !important;
+  }
+
+  .tablet-mode .task-row,
+  .tablet-mode .conta-row,
+  .tablet-mode .estoque-row,
+  .tablet-mode .planta-row {
+    min-height: 54px !important;
+    padding-block: 8px !important;
+  }
+
+  .pc-plant-modal {
+    padding: 16px;
+  }
+
+  .pc-plant-dialog {
+    width: min(780px, calc(100vw - 32px));
+    max-height: calc(100vh - 24px);
+  }
+
+  .pc-plant-header {
+    padding: 18px 21px 15px;
+  }
+
+  .pc-plant-content {
+    max-height: calc(100vh - 126px);
+    padding: 5px 21px 18px;
+  }
+
+  .pc-care-row {
+    min-height: 62px;
+  }
+}
