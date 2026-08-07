@@ -229,3 +229,13 @@
   script.defer = true;
   document.head.appendChild(script);
 })();
+
+// Tema automatico do Painel da Casa - 06h/18h.
+(() => {
+  if (document.getElementById('painel-tema-automatico-script')) return;
+  const script = document.createElement('script');
+  script.id = 'painel-tema-automatico-script';
+  script.src = '/painel-tema-automatico.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();
