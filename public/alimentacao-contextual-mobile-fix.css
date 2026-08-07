@@ -1,0 +1,9 @@
+/* Reforço da alimentação contextual no celular */
+
+#acMobileDestaque.ac-mobile-highlight {
+  display: grid !important;
+}
+
+#acMobileDestaque + .card-hoje {
+  margin-top: 12px;
+}
