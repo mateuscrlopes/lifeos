@@ -12,6 +12,9 @@
     dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></svg>',
   };
 
+  let tentativaBotao = 0;
+  let timerBotao = null;
+
   function temaPeloHorario(data = new Date()) {
     const hora = data.getHours();
     return hora >= 6 && hora < 18 ? 'light' : 'dark';
@@ -58,9 +61,13 @@
 
   function atualizarBotao(tema, override) {
     const botao = document.getElementById('tabletThemeToggle');
-    if (!botao) return;
+    if (!botao) return false;
 
-    botao.innerHTML = ICONS[tema];
+    if (botao.dataset.autoThemeRendered !== tema) {
+      botao.innerHTML = ICONS[tema];
+      botao.dataset.autoThemeRendered = tema;
+    }
+
     botao.dataset.themeMode = tema;
 
     const oposto = tema === 'light' ? 'escuro' : 'claro';
@@ -74,13 +81,32 @@
     }
 
     botao.setAttribute('aria-label', botao.title);
+    return true;
+  }
+
+  function atualizarBotaoQuandoExistir() {
+    window.clearTimeout(timerBotao);
+
+    const tema = document.documentElement.dataset.theme || temaPeloHorario();
+    if (atualizarBotao(tema, overrideValido())) {
+      tentativaBotao = 0;
+      return;
+    }
+
+    tentativaBotao += 1;
+    if (tentativaBotao <= 30) {
+      timerBotao = window.setTimeout(atualizarBotaoQuandoExistir, 150);
+    }
   }
 
   function aplicarTema() {
     const override = overrideValido();
     const tema = override?.tema || temaPeloHorario();
 
-    document.documentElement.dataset.theme = tema;
+    if (document.documentElement.dataset.theme !== tema) {
+      document.documentElement.dataset.theme = tema;
+    }
+
     localStorage.setItem(THEME_KEY, tema);
     atualizarBotao(tema, override);
 
@@ -107,33 +133,26 @@
     alternarManual();
   }
 
-  function observarBotao() {
-    const observer = new MutationObserver(() => atualizarBotao(
-      document.documentElement.dataset.theme || temaPeloHorario(),
-      overrideValido()
-    ));
-
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
-  }
-
   function iniciar() {
-    // Remove o antigo terceiro estado "seguir sistema".
     if (localStorage.getItem(THEME_KEY) === 'system') {
       localStorage.removeItem(THEME_KEY);
     }
 
     aplicarTema();
-    document.addEventListener('click', interceptarBotao, true);
-    observarBotao();
+    atualizarBotaoQuandoExistir();
 
-    // Mantém a troca correta mesmo se o painel ficar aberto por muitas horas.
-    window.setInterval(aplicarTema, 30 * 1000);
+    document.addEventListener('click', interceptarBotao, true);
+
+    window.setInterval(() => {
+      aplicarTema();
+      atualizarBotaoQuandoExistir();
+    }, 30 * 1000);
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) aplicarTema();
+      if (!document.hidden) {
+        aplicarTema();
+        atualizarBotaoQuandoExistir();
+      }
     });
   }
 
