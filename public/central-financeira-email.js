@@ -1,4 +1,4 @@
-// Central Financeira — Caixa de entrada do Gmail v4
+// Central Financeira — Caixa de entrada do Gmail v5
 
 let cfeClient = null;
 let cfeUsuario = null;
@@ -345,27 +345,36 @@ function cfeAbrirConferencia(item) {
         atualizado_em: new Date().toISOString(),
       };
 
-      const { data: conta, error: erroConta } = await cfeClient
-        .from('contas')
-        .insert(novaConta)
-        .select('id')
-        .single();
+      const { data: protecao, error: erroConta } = await cfeClient
+        .rpc('adicionar_conta_email_protegida', {
+          p_caixa_id: item.id,
+          p_casa_id: novaConta.casa_id,
+          p_usuario_id: novaConta.criada_por,
+          p_nome: novaConta.nome,
+          p_categoria: novaConta.categoria,
+          p_valor: novaConta.valor,
+          p_vencimento: novaConta.vencimento,
+          p_fornecedor: novaConta.fornecedor,
+          p_email_message_id: novaConta.email_message_id,
+          p_email_assunto: novaConta.email_assunto,
+          p_linha_digitavel: novaConta.linha_digitavel,
+          p_pix_copia_cola: novaConta.pix_copia_cola,
+        });
 
       if (erroConta) throw erroConta;
 
-      const { error: erroCaixa } = await cfeClient
-        .from('contas_email_caixa')
-        .update({
-          status: 'importado',
-          conta_id: conta.id,
-          atualizado_em: new Date().toISOString(),
-        })
-        .eq('id', item.id);
-
-      if (erroCaixa) throw erroCaixa;
+      const resultadoProtecao = Array.isArray(protecao)
+        ? protecao[0]
+        : protecao;
+      const contaJaExistia = resultadoProtecao?.criada === false;
 
       modal.remove();
       await cfeCarregar();
+
+      if (contaJaExistia) {
+        alert('Essa cobrança já estava cadastrada. O LifeOS vinculou o novo e-mail à conta existente, sem criar uma cópia.');
+      }
+
       window.dispatchEvent(new CustomEvent('lifeos:financeiro-atualizar'));
     } catch (erro) {
       console.error('[Caixa Financeira]', erro);

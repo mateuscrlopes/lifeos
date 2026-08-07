@@ -220,12 +220,12 @@
   document.head.appendChild(script);
 })();
 
-// Painel da Casa v3 - legibilidade e cuidados de plantas.
+// Painel da Casa v4 - cuidados de plantas sem atraso.
 (() => {
   if (document.getElementById('painel-casa-v3-script')) return;
   const script = document.createElement('script');
   script.id = 'painel-casa-v3-script';
-  script.src = '/painel-casa-v3.js?v=1';
+  script.src = '/painel-casa-v4.js?v=1';
   script.defer = true;
   document.head.appendChild(script);
 })();
