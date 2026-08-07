@@ -1,0 +1,82 @@
+/* LifeOS — Destaque compacto de alimentação no celular */
+
+.ac-mobile-highlight {
+  width: calc(100% - 40px);
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 20px;
+  gap: 12px;
+  align-items: center;
+  margin: 14px 20px 0;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--sage) 25%, var(--linha));
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--sage-soft) 82%, var(--paper)),
+      var(--paper)
+    );
+  color: var(--texto);
+  text-align: left;
+  box-shadow: var(--shadow-soft);
+}
+
+.ac-mobile-highlight:active {
+  transform: scale(.992);
+}
+
+.ac-mobile-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--sage);
+  color: #fff;
+}
+
+.ac-mobile-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.ac-mobile-text {
+  min-width: 0;
+}
+
+.ac-mobile-text small {
+  display: block;
+  color: var(--sage);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.ac-mobile-text strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ac-mobile-text span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ac-mobile-chevron {
+  color: var(--sage);
+}
+
+.ac-mobile-chevron svg {
+  width: 18px;
+  height: 18px;
+}

@@ -249,3 +249,13 @@
   script.defer = true;
   document.head.appendChild(script);
 })();
+
+// Alimentação contextual do Painel da Casa v1.
+(() => {
+  if (document.getElementById('alimentacao-contextual-script')) return;
+  const script = document.createElement('script');
+  script.id = 'alimentacao-contextual-script';
+  script.src = '/alimentacao-contextual.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();
