@@ -570,3 +570,39 @@ html[data-theme="dark"] .metrica {
     transition: none !important;
   }
 }
+
+
+/* Tipografia mobile unificada com a linguagem do Nordestrip */
+#telaApp .header-logo-txt,
+#telaApp .greeting-nome,
+#telaApp .hero-titulo,
+#telaApp .lifeos-page-head h1,
+#telaApp .modal-titulo,
+#telaApp .ui-sheet-title,
+#telaApp .cf-central-cabecalho h2,
+#telaApp .cf-modal-cabecalho h3,
+#telaApp .cfe-cabecalho h3,
+#telaApp .ac-hero h2,
+#telaApp .ac-sheet-head h3,
+#telaApp .card-cardapio-hoje strong {
+  font-family: var(--sans) !important;
+}
+
+#telaApp .modal-titulo,
+#telaApp .ui-sheet-title,
+#telaApp .cf-modal-cabecalho h3,
+#telaApp .cfe-cabecalho h3,
+#telaApp .ac-sheet-head h3 {
+  font-weight: 650 !important;
+  letter-spacing: -.025em !important;
+}
+
+@media (max-width: 360px) {
+  .lifeos-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lifeos-shortcut {
+    min-height: 78px;
+  }
+}
