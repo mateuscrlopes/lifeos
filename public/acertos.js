@@ -278,13 +278,18 @@
 
   function showNewExpense() {
     const totalDefault = '';
-    const userOptions = A.users.map((u) =>
-      '<option value="' + u.id + '"' + (u.id === A.profile.id ? ' selected' : '') + '>' + esc(u.nome) + '</option>'
-    ).join('');
+    const currentIsParticipant = A.users.some((u) => u.id === A.profile.id);
+    const userOptions =
+      (currentIsParticipant ? '' : '<option value="" selected disabled>Selecione quem pagou</option>') +
+      A.users.map((u) =>
+        '<option value="' + u.id + '"' + (u.id === A.profile.id ? ' selected' : '') + '>' + esc(u.nome) + '</option>'
+      ).join('');
 
     const fields = A.users.map((u) =>
       '<label class="ac-field"><span>Parte de ' + esc(u.nome) + '</span>' +
-      '<input type="number" min="0" step="0.01" data-ac-share="' + u.id + '" value=""></label>'
+        '<div class="ac-money-input"><span>R$</span>' +
+          '<input type="number" min="0" step="0.01" inputmode="decimal" data-ac-share="' + u.id + '" value="" readonly>' +
+        '</div></label>'
     ).join('');
 
     const root = modal(
@@ -292,11 +297,14 @@
       '<form class="ac-form" id="acExpenseForm">' +
         '<label class="ac-field"><span>Descrição</span><input name="title" required placeholder="Ex.: Hospedagem em Natal"></label>' +
         '<div class="ac-grid-2">' +
-          '<label class="ac-field"><span>Valor total</span><input name="total" type="number" min="0.01" step="0.01" required value="' + totalDefault + '"></label>' +
-          '<label class="ac-field"><span>Pago por</span><select name="payer">' + userOptions + '</select></label>' +
+          '<label class="ac-field"><span>Valor total</span><div class="ac-money-input"><span>R$</span>' +
+            '<input name="total" type="number" min="0.01" step="0.01" inputmode="decimal" required value="' + totalDefault + '" placeholder="0,00"></div></label>' +
+          '<label class="ac-field"><span>Pago por</span><select name="payer" required>' + userOptions + '</select></label>' +
         '</div>' +
-        '<div class="ac-split"><div class="ac-split-head"><strong>Divisão</strong><button type="button" id="acHalf">50% cada</button></div>' +
-          '<div class="ac-grid-2">' + fields + '</div></div>' +
+        '<div class="ac-split"><div class="ac-split-head"><strong>Divisão</strong>' +
+          '<label class="ac-split-toggle"><input type="checkbox" id="acHalf" checked><span>50% para cada</span></label></div>' +
+          '<div class="ac-grid-2">' + fields + '</div>' +
+          '<small id="acSplitHint">Divisão automática ativa. Desmarque para informar valores diferentes.</small></div>' +
         '<div class="ac-grid-2">' +
           '<label class="ac-field"><span>Parcelas</span><input name="installments" type="number" min="1" max="60" value="1" required></label>' +
           '<label class="ac-field"><span>Vencimento da 1ª</span><input name="due" type="date" required value="' + today() + '"></label>' +
@@ -310,21 +318,38 @@
     );
 
     const totalInput = root.querySelector('[name="total"]');
+    const halfToggle = root.querySelector('#acHalf');
+    const shareInputs = [...root.querySelectorAll('[data-ac-share]')];
+    const splitHint = root.querySelector('#acSplitHint');
+
     const fillHalf = () => {
       const total = Math.max(0, Number(totalInput.value || 0));
-      const values = [...root.querySelectorAll('[data-ac-share]')];
-      if (values.length !== 2) return;
+      if (shareInputs.length !== 2) return;
       const first = Math.round((total / 2) * 100) / 100;
       const second = Math.round((total - first) * 100) / 100;
-      values[0].value = first ? first.toFixed(2) : '';
-      values[1].value = second ? second.toFixed(2) : '';
+      shareInputs[0].value = first ? first.toFixed(2) : '';
+      shareInputs[1].value = second ? second.toFixed(2) : '';
     };
 
-    root.querySelector('#acHalf')?.addEventListener('click', fillHalf);
-    totalInput?.addEventListener('change', () => {
-      const empty = [...root.querySelectorAll('[data-ac-share]')].every((i) => !i.value);
-      if (empty) fillHalf();
+    const syncSplitMode = () => {
+      const automatic = Boolean(halfToggle?.checked);
+      shareInputs.forEach((input) => {
+        input.readOnly = automatic;
+      });
+      root.querySelector('.ac-split')?.classList.toggle('is-manual', !automatic);
+      if (splitHint) {
+        splitHint.textContent = automatic
+          ? 'Divisão automática ativa. Desmarque para informar valores diferentes.'
+          : 'Divisão manual ativa. Os valores precisam fechar o total.';
+      }
+      if (automatic) fillHalf();
+    };
+
+    halfToggle?.addEventListener('change', syncSplitMode);
+    totalInput?.addEventListener('input', () => {
+      if (halfToggle?.checked) fillHalf();
     });
+    syncSplitMode();
 
     root.querySelector('#acExpenseForm')?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -700,7 +725,9 @@
       if (configs.error) throw configs.error;
       if (notifications.error) throw notifications.error;
 
-      A.users = users.data || [];
+      A.users = (users.data || []).filter((u) =>
+        String(u.nome || '').trim().toLocaleLowerCase('pt-BR') !== 'casa'
+      );
       A.acertos = acertos.data || [];
       A.payments = payments.data || [];
       A.rules = rules.data || [];
