@@ -552,3 +552,156 @@ html[data-theme="dark"] #cfCentral #cfeInbox {
       color-mix(in srgb, var(--paper) 96%, #16231b)
     ) !important;
 }
+
+
+/* ================================================================
+   Product polish v5 — alinhamento real observado no iPhone
+================================================================ */
+
+/* Grids de formulário explícitos: evita dependência de :has() e
+   elimina largura intrínseca do date input no Safari/iOS. */
+#telaApp .lifeos-form-grid-2,
+.modal-overlay .lifeos-form-grid-2 {
+  display: grid !important;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px !important;
+  align-items: start;
+}
+
+#telaApp .lifeos-form-grid-2 > *,
+.modal-overlay .lifeos-form-grid-2 > * {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+#telaApp .lifeos-account-grid input[type="date"] {
+  inline-size: 100% !important;
+  min-inline-size: 0 !important;
+  max-inline-size: 100% !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Acertos: valor e ação pertencem à mesma coluna visual.
+   Evita a lixeira "cair" embaixo do texto principal. */
+#lifeosFinanceiroAcertos .ac-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 14px 18px !important;
+  align-items: start !important;
+}
+
+#lifeosFinanceiroAcertos .ac-row-main {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+#lifeosFinanceiroAcertos .ac-row-side {
+  min-width: 102px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+#lifeosFinanceiroAcertos .ac-row-value {
+  width: auto !important;
+  min-width: 0 !important;
+  text-align: right;
+}
+
+#lifeosFinanceiroAcertos .ac-actions {
+  width: auto;
+  justify-content: flex-end;
+  margin: 0 !important;
+}
+
+#lifeosFinanceiroAcertos .ac-actions .ac-icon-action {
+  margin: 0 !important;
+}
+
+#lifeosFinanceiroAcertos .ac-row-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.32;
+}
+
+#lifeosFinanceiroAcertos .ac-row-meta {
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
+/* Listas da Casa: eixo vertical e ações ficam centralizados na mesma linha. */
+#itensContas .lista-item,
+#itensContas .ui-account-row {
+  align-items: center !important;
+}
+
+#itensContas .lista-item-acoes,
+#itensContas .ui-row-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Header visual mais compacto, sem desalinhamento entre logo, marca e avatar. */
+#telaApp .app-header {
+  display: flex;
+  align-items: center;
+}
+
+#telaApp .header-logo {
+  display: flex;
+  align-items: center;
+}
+
+#telaApp .header-logo::after {
+  content: "by GhuMat";
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+@media (max-width: 520px) {
+  /* Em celular, prioriza legibilidade e nunca comprime data/valor. */
+  #telaApp .lifeos-form-grid-2,
+  #telaApp .lifeos-account-grid,
+  .modal-overlay .lifeos-form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  #telaApp .lifeos-account-grid {
+    gap: 0 !important;
+  }
+
+  #lifeosFinanceiroAcertos .ac-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  #lifeosFinanceiroAcertos .ac-row-side {
+    min-width: 92px;
+  }
+
+  #lifeosFinanceiroAcertos .ac-row-value strong {
+    font-size: 15px !important;
+  }
+}
+
+@media (max-width: 370px) {
+  #lifeosFinanceiroAcertos .ac-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  #lifeosFinanceiroAcertos .ac-row-side {
+    width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
