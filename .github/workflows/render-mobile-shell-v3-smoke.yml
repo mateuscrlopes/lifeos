@@ -1,0 +1,46 @@
+name: Render mobile shell v3 smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-mobile-shell-v3-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.31.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 32); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            shell="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/mobile-shell-v3.js || true)"
+            css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/mobile-shell-v3.css || true)"
+            index="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/ || true)"
+
+            if echo "$health" | grep -q '"versao":"0.31.0"'               && echo "$shell" | grep -q 'lifeosHomeShortcuts'               && echo "$css" | grep -q '.lifeos-shortcuts'               && echo "$index" | grep -q 'id="abaFinanceiro"'               && echo "$index" | grep -q 'data-tab="financeiro"'; then
+              echo "LifeOS 0.31.0 e shell mobile v3 publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu no Render a tempo."
+          exit 1
+
+      - name: Check finance navigation assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cf="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/central-financeira.js)"
+          ac="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js)"
+          status="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/status-estoque.js)"
+
+          echo "$cf" | grep -q 'lifeosFinanceiroContas'
+          echo "$ac" | grep -q 'lifeosFinanceiroAcertos'
+          echo "$ac" | grep -q 'originalAcertos'
+          echo "$status" | grep -q 'mobile-shell-v3.js?v=1'
+          echo "Financeiro separado e exclusão otimista publicados."
