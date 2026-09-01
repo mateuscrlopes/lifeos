@@ -1,0 +1,33 @@
+name: Render product polish v4 smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-product-polish-v4-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.32.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/product-polish-v4.css || true)"
+            tablet="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet-product-shell-v2.css || true)"
+            status="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/status-estoque.js || true)"
+            tablet_html="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet.html || true)"
+
+            if echo "$health" | grep -q '"versao":"0.32.0"'               && echo "$css" | grep -q '#cfCentral'               && echo "$css" | grep -q 'box-sizing: border-box'               && echo "$tablet" | grep -q '.conteudo-grid'               && echo "$status" | grep -q 'product-polish-v4.js?v=1'               && echo "$tablet_html" | grep -q 'tablet-product-shell-v2.js?v=2'; then
+              echo "LifeOS 0.32.0, polish v4 e tablet shell v2 publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu no Render a tempo."
+          exit 1
