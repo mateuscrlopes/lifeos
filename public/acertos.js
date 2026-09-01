@@ -440,10 +440,24 @@
 
     if (!confirm('Excluir “' + acerto.titulo + '”?' + installmentText + sourceText)) return;
 
+    const originalAcertos = A.acertos.map((item) => ({ ...item }));
+    const idsToHide = new Set(openGroup.map((item) => item.id));
+
+    // Atualização otimista: a ação responde no toque, como no Nordestrip.
+    A.acertos = A.acertos.map((item) =>
+      idsToHide.has(item.id)
+        ? { ...item, status: 'cancelado', cancelado_em: new Date().toISOString() }
+        : item
+    );
+    renderCentral();
+    window.lifeosToast?.('Acerto removido.', 'ok');
+
     const { data } = await A.client.auth.getSession();
     const token = data?.session?.access_token;
     if (!token) {
-      alert('Sua sessão expirou. Entre novamente.');
+      A.acertos = originalAcertos;
+      renderCentral();
+      window.lifeosToast?.('Sua sessão expirou. Entre novamente.', 'erro');
       return;
     }
 
@@ -456,9 +470,12 @@
       const body = await response.json();
       if (!response.ok) throw new Error(body.erro || 'Não foi possível excluir este acerto.');
 
-      await load();
+      // Revalida em segundo plano sem segurar a resposta visual.
+      load();
     } catch (e) {
-      alert(e.message);
+      A.acertos = originalAcertos;
+      renderCentral();
+      window.lifeosToast?.(e.message || 'Não foi possível excluir este acerto.', 'erro');
     }
   }
 
