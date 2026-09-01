@@ -36,3 +36,19 @@ jobs:
             exit 1
           fi
           echo "Backend privado de comprovantes está configurado e exige autenticação."
+
+
+      - name: Check new UI assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in /acertos.js /acertos.css /theme.js /ghumat-refinement.css; do
+            code="$(curl --silent --output /tmp/asset --write-out '%{http_code}' --max-time 25 "https://lifeos-6rib.onrender.com$path")"
+            if [ "$code" != "200" ] || [ ! -s /tmp/asset ]; then
+              echo "Falha ao carregar $path: HTTP $code"
+              exit 1
+            fi
+          done
+          home="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/)"
+          echo "$home" | grep -q 'ghumat-refinement.css'
+          echo "Assets financeiros e refinamento visual publicados."
