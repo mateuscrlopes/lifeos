@@ -24,3 +24,15 @@ jobs:
           done
           echo "Produção não confirmou a versão esperada a tempo."
           exit 1
+
+      - name: Check protected acertos backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --output /tmp/acertos-response.json --write-out '%{http_code}'             --request POST             --header 'Content-Type: application/pdf'             --header 'x-lifeos-valor: 1.00'             --data-binary '%PDF-1.4 smoke'             https://lifeos-6rib.onrender.com/api/acertos/00000000-0000-0000-0000-000000000000/comprovante)"
+          cat /tmp/acertos-response.json
+          if [ "$code" != "401" ]; then
+            echo "Esperava 401 sem sessão; recebido HTTP $code."
+            exit 1
+          fi
+          echo "Backend privado de comprovantes está configurado e exige autenticação."
