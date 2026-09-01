@@ -391,12 +391,21 @@ async function deleteSimple(module, row) {
   const record = records[0];
   const accepted = window.confirm(`Excluir “${name}”?\n\nO item ficará disponível no Histórico para restauração.`);
   if (!accepted) return;
-  await recordHistory(module, record.id, record);
-  const { error: deleteError } = await client.from(config.table).delete().eq('id', record.id);
-  if (deleteError) throw new Error(deleteError.message);
+
+  const parent = row.parentNode;
+  const nextSibling = row.nextSibling;
   row.remove();
-  toast(`${name} foi movido para o Histórico.`);
-  if (isConfigVisible()) await loadHistory();
+  toast(`${name} foi removido.`);
+
+  try {
+    await recordHistory(module, record.id, record);
+    const { error: deleteError } = await client.from(config.table).delete().eq('id', record.id);
+    if (deleteError) throw new Error(deleteError.message);
+    if (isConfigVisible()) loadHistory();
+  } catch (error) {
+    if (parent && !row.isConnected) parent.insertBefore(row, nextSibling);
+    throw error;
+  }
 }
 
 async function deletePlant() {
