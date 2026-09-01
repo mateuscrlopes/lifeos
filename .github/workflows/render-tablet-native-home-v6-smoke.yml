@@ -1,0 +1,33 @@
+name: Render tablet native home v6 smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-tablet-native-home-v6-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.34.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            tablet_html="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet.html || true)"
+            painel="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/painel-casa.js || true)"
+            shell="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet-app-shell-v3.css || true)"
+            loader="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet-app-shell-v3.js || true)"
+
+            if echo "$health" | grep -q '"versao":"0.34.0"'               && echo "$tablet_html" | grep -q 'tablet-app-shell-v3.js?v=2'               && echo "$painel" | grep -q 'limparLayoutLegado'               && ! echo "$painel" | grep -q 'painel-casa-v2.css'               && echo "$shell" | grep -q 'v6 — native tablet home'               && echo "$shell" | grep -q '#painelContextoCasa'               && echo "$loader" | grep -q 'MutationObserver'; then
+              echo "LifeOS 0.34.0 e tablet native home v6 publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu no Render a tempo."
+          exit 1
