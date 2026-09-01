@@ -215,7 +215,7 @@
   if (document.getElementById('painel-casa-script')) return;
   const script = document.createElement('script');
   script.id = 'painel-casa-script';
-  script.src = '/painel-casa.js?v=1';
+  script.src = '/painel-casa.js?v=2';
   script.defer = true;
   document.head.appendChild(script);
 })();

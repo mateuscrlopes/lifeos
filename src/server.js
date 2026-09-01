@@ -1,4 +1,4 @@
-// server.js — LifeOS v0.33.0 + Gumate Lab
+// server.js — LifeOS v0.34.0 + Gumate Lab
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
@@ -29,7 +29,7 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
-    versao: '0.33.0',
+    versao: '0.34.0',
   });
 });
 
@@ -60,6 +60,6 @@ registrarRotasIntegracaoNordestrip(app);
 registrarRotasGumate(app);
 
 app.listen(config.porta, '0.0.0.0', () => {
-  console.log(`\nLifeOS v0.33.0 — porta ${config.porta}`);
+  console.log(`\nLifeOS v0.34.0 — porta ${config.porta}`);
   console.log(`Gumate: ${config.gumateEnabled ? 'habilitado' : 'desabilitado'}\n`);
 });

@@ -66,7 +66,7 @@ test('tablet usa módulos integrados e tipografia sans', () => {
   assert.match(css, /font-family:\s*var\(--sans\)\s*!important/);
 });
 
-test('LifeOS foi versionado para 0.33.0', () => {
+test('LifeOS foi versionado para 0.34.0', () => {
   const server = read('src/server.js');
-  assert.match(server, /0\.33\.0/);
+  assert.match(server, /0\.34\.0/);
 });

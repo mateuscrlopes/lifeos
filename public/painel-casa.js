@@ -24,17 +24,10 @@
     'todas as plantas em dia'
   ];
 
-  function carregarCss() {
-    let link = document.getElementById('painel-casa-css');
-    if (!link) {
-      link = document.createElement('link');
-      link.id = 'painel-casa-css';
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-    }
-    if (!link.href.includes('painel-casa-v2.css')) {
-      link.href = '/painel-casa-v2.css?v=2';
-    }
+  function limparLayoutLegado() {
+    document.getElementById('painel-casa-css')?.remove();
+    document.getElementById('painelContextoCasa')?.remove();
+    document.querySelector('.hero-banner')?.removeAttribute('hidden');
   }
 
   function escapar(texto = '') {
@@ -289,7 +282,7 @@
   }
 
   function iniciar() {
-    carregarCss();
+    limparLayoutLegado();
     criarBotaoTema();
     renomearInicio();
     atualizar();
