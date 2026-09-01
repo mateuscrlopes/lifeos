@@ -41,8 +41,8 @@
   --r-xl:  28px;
 
   /* Tipografia */
-  --serif: 'Georgia', 'Times New Roman', serif;
-  --sans:  system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: system-ui, -apple-system, 'Segoe UI', Inter, sans-serif;
+  --sans:  system-ui, -apple-system, 'Segoe UI', Inter, sans-serif;
 
   /* Transições */
   --ease: cubic-bezier(.25,.46,.45,.94);
@@ -66,4 +66,51 @@ button {
 }
 input, select, textarea {
   font-family: var(--sans);
+}
+
+
+/* Tema escuro — mesma identidade, sem simples inversao de cores */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --sage:        #86B99A;
+  --sage-mid:    #6FA786;
+  --sage-soft:   #1D3329;
+  --sage-dark:   #A5CDB5;
+
+  --clay:        #D08A69;
+  --clay-soft:   #39281F;
+
+  --sky:         #79A9D4;
+  --sky-soft:    #1B2C3A;
+
+  --sun:         #D5AE55;
+  --sun-soft:    #342D1C;
+
+  --alert:       #E07A7A;
+  --alert-soft:  #3A2020;
+  --good:        #78B98D;
+
+  --bg:          #111A17;
+  --paper:       #18231F;
+  --paper-2:     #202C27;
+  --texto:       #EEF3F0;
+  --muted:       #A8B5AE;
+  --faint:       #76857D;
+  --linha:       #2D3A34;
+
+  --shadow:      0 12px 38px rgba(0,0,0,.25);
+  --shadow-soft: 0 7px 22px rgba(0,0,0,.16);
+  --shadow-up:   0 -8px 28px rgba(0,0,0,.20);
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #111A17;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  color-scheme: dark;
 }
