@@ -1,0 +1,691 @@
+/* LifeOS Tablet App Shell v3
+   A tablet-first version of the same visual language used on the iOS app.
+   This layer intentionally allows scrolling instead of shrinking the whole dashboard. */
+
+#painelCasa,
+#painelCasa *,
+#painelCasa *::before,
+#painelCasa *::after {
+  box-sizing: border-box;
+}
+
+#painelCasa {
+  --ta-gutter: clamp(20px, 2.4vw, 32px);
+  --ta-radius: 26px;
+  --ta-border: color-mix(in srgb, var(--sage) 10%, var(--linha));
+  --ta-divider: color-mix(in srgb, var(--sage) 8%, var(--linha));
+  --ta-shadow: 0 12px 34px color-mix(in srgb, var(--texto) 7%, transparent);
+  background:
+    radial-gradient(circle at 94% -8%, color-mix(in srgb, var(--sage-soft) 68%, transparent), transparent 35rem),
+    var(--bg) !important;
+}
+
+/* ----------------------------------------------------------------
+   Shell / header
+---------------------------------------------------------------- */
+
+.sidebar {
+  width: 78px !important;
+  padding: 16px 0 18px !important;
+  background: linear-gradient(180deg, #173124, #102219) !important;
+  box-shadow: 10px 0 34px rgba(11, 26, 18, .08);
+}
+
+.sidebar-logo {
+  width: 42px !important;
+  height: 42px !important;
+  margin-bottom: 22px !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb, var(--clay) 88%, #b47f3a) !important;
+}
+
+.sidebar-nav {
+  gap: 6px !important;
+}
+
+.sidebar-btn,
+.sidebar-espera {
+  width: 58px !important;
+  height: 56px !important;
+  gap: 5px !important;
+  border-radius: 17px !important;
+  color: rgba(255,255,255,.58) !important;
+  font-size: 9px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.sidebar-btn svg,
+.sidebar-espera svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.sidebar-btn.ativo {
+  color: #fff !important;
+  background: rgba(255,255,255,.14) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+}
+
+.painel-header {
+  height: 72px !important;
+  padding: 0 var(--ta-gutter) !important;
+  gap: 12px !important;
+  border-bottom: 1px solid var(--ta-divider) !important;
+  background: color-mix(in srgb, var(--paper) 94%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(115%);
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+}
+
+.header-logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+}
+
+.header-logo svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.header-logo-text {
+  font-family: var(--sans) !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.035em !important;
+}
+
+.header-brand-parent {
+  margin-left: 2px;
+  color: var(--muted);
+  font: 700 10px/1 var(--sans);
+  letter-spacing: .05em;
+}
+
+.header-sep {
+  height: 24px !important;
+}
+
+.header-titulo {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.header-right {
+  min-width: 0;
+  gap: 16px !important;
+}
+
+.header-clima,
+.header-data {
+  font-size: 12px !important;
+}
+
+.header-hora {
+  font-family: var(--sans) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.header-avatar {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 13px !important;
+}
+
+/* ----------------------------------------------------------------
+   Main content — stop squeezing the whole dashboard into one viewport
+---------------------------------------------------------------- */
+
+.painel-main {
+  min-width: 0;
+}
+
+.painel-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 22px var(--ta-gutter) 44px !important;
+  scroll-padding-bottom: 30px;
+}
+
+#pag-inicio {
+  width: 100%;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+/* Hero follows the iOS "single strong surface" language. */
+.hero-banner {
+  height: 164px !important;
+  margin-bottom: 18px !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 30px !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.13), transparent 45%),
+    linear-gradient(145deg, #214d37, #2f7653) !important;
+  box-shadow: 0 16px 44px rgba(24, 64, 43, .16) !important;
+}
+
+.hero-banner-bg {
+  display: none !important;
+}
+
+.hero-banner-overlay {
+  background: transparent !important;
+}
+
+.hero-banner-content {
+  padding: 28px 32px !important;
+}
+
+.hero-kicker {
+  margin-bottom: 7px !important;
+  color: rgba(255,255,255,.62) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+  text-transform: none !important;
+}
+
+.hero-titulo {
+  max-width: 850px;
+  margin: 0 0 7px !important;
+  color: #fff !important;
+  font-family: var(--sans) !important;
+  font-size: clamp(28px, 3vw, 38px) !important;
+  font-weight: 650 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -.045em !important;
+}
+
+.hero-subtitulo {
+  max-width: 700px !important;
+  color: rgba(255,255,255,.72) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* ----------------------------------------------------------------
+   Metrics — same card grammar as iOS
+---------------------------------------------------------------- */
+
+.metricas-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 18px !important;
+}
+
+.metrica-card {
+  min-width: 0 !important;
+  min-height: 122px !important;
+  display: grid !important;
+  grid-template-rows: auto 1fr auto auto;
+  align-content: stretch;
+  padding: 16px !important;
+  border: 1px solid var(--ta-border) !important;
+  border-radius: 24px !important;
+  outline: 0 !important;
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--paper) 96%, var(--sage-soft)), var(--paper)) !important;
+  color: var(--texto) !important;
+  box-shadow: var(--ta-shadow) !important;
+  text-align: left !important;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.metrica-card:active {
+  transform: scale(.985);
+}
+
+.metrica-topo {
+  min-height: 42px;
+}
+
+.metrica-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+}
+
+.metrica-icon svg {
+  width: 19px !important;
+  height: 19px !important;
+}
+
+.metrica-link {
+  display: none !important;
+}
+
+.metrica-num {
+  align-self: end;
+  margin-top: 8px !important;
+  font-family: var(--sans) !important;
+  font-size: 30px !important;
+  font-weight: 680 !important;
+  letter-spacing: -.035em;
+}
+
+.metrica-label {
+  margin-top: 4px !important;
+  color: var(--texto) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+
+.metrica-mini {
+  min-height: 15px;
+  margin-top: 4px !important;
+  color: var(--muted) !important;
+  font-size: 9.5px !important;
+  line-height: 1.25 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------
+   Content cards — two-column tablet composition, not three tiny columns
+---------------------------------------------------------------- */
+
+.conteudo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  align-items: start !important;
+}
+
+.col-esq,
+.col-mid {
+  min-width: 0;
+  display: flex !important;
+  flex-direction: column;
+  gap: 14px !important;
+}
+
+.col-dir {
+  min-width: 0;
+  grid-column: 1 / -1;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+
+.panel {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid var(--ta-border) !important;
+  border-radius: 26px !important;
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--paper) 97%, var(--sage-soft)), var(--paper)) !important;
+  box-shadow: var(--ta-shadow) !important;
+}
+
+.panel-head {
+  min-height: 62px;
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  border-bottom: 1px solid var(--ta-divider) !important;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--sage-soft) 72%, var(--paper)),
+      color-mix(in srgb, var(--paper) 95%, var(--sage-soft))
+    ) !important;
+}
+
+.panel-titulo {
+  color: var(--texto) !important;
+  font-family: var(--sans) !important;
+  font-size: 15px !important;
+  font-weight: 680 !important;
+  letter-spacing: -.015em;
+}
+
+.panel-link {
+  padding: 7px 11px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--sage-soft) 84%, var(--paper)) !important;
+  color: var(--sage) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+.panel > .task-list,
+.panel > .timeline,
+.panel > .destaque-list,
+.panel > #painelCompras,
+.panel > #painelPlantas,
+.panel > #painelContas,
+.panel > #painelEstoque,
+.panel > #pagTarefasLista,
+.panel > #pagComprasLista,
+.panel > #pagEstoqueLista,
+.panel > #pagContasLista,
+.panel > #pagRotinasList {
+  padding: 4px 18px 10px !important;
+}
+
+.task-row,
+.time-row,
+.conta-row,
+.estoque-row,
+.planta-row {
+  min-height: 48px;
+  gap: 10px !important;
+  padding: 11px 0 !important;
+  border-color: var(--ta-divider) !important;
+}
+
+.task-check {
+  width: 21px !important;
+  height: 21px !important;
+  border-radius: 7px !important;
+}
+
+.task-nome,
+.ev-titulo,
+.conta-nome,
+.estoque-nome,
+.planta-nome {
+  color: var(--texto) !important;
+  font-size: 12.5px !important;
+  font-weight: 650 !important;
+  line-height: 1.3 !important;
+}
+
+.task-meta,
+.ev-sub,
+.conta-venc,
+.estoque-local,
+.planta-meta {
+  margin-top: 3px;
+  color: var(--muted) !important;
+  font-size: 9.5px !important;
+  line-height: 1.35 !important;
+}
+
+.destaque-list {
+  gap: 0 !important;
+}
+
+.destaque {
+  min-height: 58px;
+  margin: 0 !important;
+  padding: 11px 0 !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--ta-divider);
+  background: transparent !important;
+}
+
+.destaque:last-child {
+  border-bottom: 0;
+}
+
+.destaque-icon {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 13px !important;
+}
+
+.destaque-titulo {
+  font-size: 12.5px !important;
+  font-weight: 650 !important;
+}
+
+.destaque-sub {
+  font-size: 9.5px !important;
+  line-height: 1.35 !important;
+}
+
+.conta-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+}
+
+.conta-valor {
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+
+/* Secondary pages retain the same visual system. */
+.pagina-titulo {
+  margin-bottom: 5px !important;
+  color: var(--texto) !important;
+  font-family: var(--sans) !important;
+  font-size: 28px !important;
+  font-weight: 650 !important;
+  letter-spacing: -.04em !important;
+}
+
+.pagina-sub {
+  margin-bottom: 18px !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+}
+
+/* ----------------------------------------------------------------
+   Responsive tablet widths
+---------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .sidebar {
+    width: 70px !important;
+  }
+
+  .sidebar-btn,
+  .sidebar-espera {
+    width: 52px !important;
+  }
+
+  .painel-header {
+    height: 66px !important;
+  }
+
+  .header-data {
+    display: none !important;
+  }
+
+  .metricas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .metrica-card {
+    min-height: 108px !important;
+  }
+
+  .conteudo-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .col-dir {
+    grid-column: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 850px) {
+  .header-sep,
+  .header-titulo,
+  .header-clima-desc,
+  .header-brand-parent {
+    display: none !important;
+  }
+
+  .col-dir {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Old density CSS aggressively shrank 1280x800. Override it explicitly:
+   a tablet can scroll; it does not need the entire dashboard visible at once. */
+@media (orientation: landscape) and (max-height: 900px) {
+  .sidebar {
+    width: 72px !important;
+    padding: 14px 0 16px !important;
+  }
+
+  .sidebar-logo {
+    width: 40px !important;
+    height: 40px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .sidebar-btn,
+  .sidebar-espera {
+    width: 54px !important;
+    height: 52px !important;
+    font-size: 8.5px !important;
+  }
+
+  .painel-header {
+    height: 64px !important;
+    padding-inline: var(--ta-gutter) !important;
+  }
+
+  .painel-body {
+    padding: 18px var(--ta-gutter) 38px !important;
+  }
+
+  .hero-banner {
+    height: 142px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .hero-banner-content {
+    padding: 23px 27px !important;
+  }
+
+  .hero-titulo {
+    font-size: 29px !important;
+  }
+
+  .hero-subtitulo {
+    display: block !important;
+    font-size: 11px !important;
+  }
+
+  .metricas-grid {
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .metrica-card {
+    min-height: 104px !important;
+    padding: 13px !important;
+    border-radius: 21px !important;
+  }
+
+  .metrica-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .metrica-num {
+    margin-top: 5px !important;
+    font-size: 25px !important;
+  }
+
+  .metrica-label {
+    font-size: 10.5px !important;
+  }
+
+  .metrica-mini {
+    display: block !important;
+    font-size: 8.5px !important;
+  }
+
+  .conteudo-grid,
+  .col-esq,
+  .col-mid,
+  .col-dir {
+    gap: 12px !important;
+  }
+
+  .panel {
+    border-radius: 22px !important;
+  }
+
+  .panel-head {
+    min-height: 52px !important;
+    padding: 13px 15px !important;
+  }
+
+  .panel-titulo {
+    font-size: 13px !important;
+  }
+
+  .panel > .task-list,
+  .panel > .timeline,
+  .panel > .destaque-list,
+  .panel > #painelCompras,
+  .panel > #painelPlantas,
+  .panel > #painelContas,
+  .panel > #painelEstoque {
+    padding-inline: 15px !important;
+  }
+
+  .task-row,
+  .time-row,
+  .conta-row,
+  .estoque-row,
+  .planta-row {
+    padding: 8px 0 !important;
+  }
+
+  .task-nome,
+  .ev-titulo,
+  .conta-nome,
+  .estoque-nome,
+  .planta-nome,
+  .destaque-titulo {
+    font-size: 11px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 650px) {
+  .hero-banner {
+    height: 116px !important;
+  }
+
+  .hero-titulo {
+    font-size: 24px !important;
+  }
+
+  .metricas-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .metrica-card {
+    min-height: 88px !important;
+  }
+
+  .metrica-mini {
+    display: none !important;
+  }
+}
+
+html[data-theme="dark"] #painelCasa {
+  background:
+    radial-gradient(circle at 94% -8%, rgba(54, 112, 78, .14), transparent 35rem),
+    var(--bg) !important;
+}
+
+html[data-theme="dark"] .metrica-card,
+html[data-theme="dark"] .panel {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--paper) 96%, #17231b), var(--paper)) !important;
+}
+
+html[data-theme="dark"] .panel-head {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--paper-2) 82%, #183222), var(--paper)) !important;
+}
