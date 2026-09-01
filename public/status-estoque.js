@@ -11,6 +11,7 @@ import './design-system.js?v=1';
 import './ui-refinements.js?v=4';
 import './central-financeira.js?v=5';
 import './central-financeira-email.js?v=5';
+import './acertos.js?v=1';
 import './purchase-destination-create.js?v=2';
 
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
