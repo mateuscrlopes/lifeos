@@ -11,9 +11,11 @@ function carregarDesignSystem() {
 }
 
 function aplicarTema() {
-  const tema = localStorage.getItem('lifeos:theme') || 'system';
-  if (tema === 'system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.dataset.theme = tema;
+  const tema = localStorage.getItem('lifeos-theme') || 'system';
+  const escuro = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme =
+    tema === 'system' ? (escuro ? 'dark' : 'light') : tema;
+  document.documentElement.dataset.themeMode = tema;
 }
 
 const ICONES = {
@@ -87,10 +89,11 @@ function iniciar() {
   window.lifeosTheme = {
     set(tema = 'system') {
       if (!['light', 'dark', 'system'].includes(tema)) return;
-      localStorage.setItem('lifeos:theme', tema);
+      if (tema === 'system') localStorage.removeItem('lifeos-theme');
+      else localStorage.setItem('lifeos-theme', tema);
       aplicarTema();
     },
-    get() { return localStorage.getItem('lifeos:theme') || 'system'; },
+    get() { return localStorage.getItem('lifeos-theme') || 'system'; },
   };
 }
 
