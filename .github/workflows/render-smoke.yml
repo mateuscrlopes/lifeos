@@ -65,3 +65,5 @@ jobs:
           echo "$js" | grep -q 'id="acHalf" checked'
           echo "$css" | grep -q '.ac-money-input'
           echo "Ajustes de divisão 50%, filtro Casa e campos monetários publicados."
+
+# rerun after Render rollout
