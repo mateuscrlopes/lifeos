@@ -1,0 +1,52 @@
+name: Render delete smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-delete-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.30.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 28); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            js="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js || true)"
+
+            if echo "$health" | grep -q '"versao":"0.30.0"'               && echo "$js" | grep -q 'data-ac-delete'               && echo "$js" | grep -q "method: 'DELETE'"; then
+              echo "LifeOS 0.30.0 e exclusão financeira publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu a tempo."
+          exit 1
+
+      - name: Check protected delete endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --output /tmp/delete.json --write-out '%{http_code}'             --request DELETE             https://lifeos-6rib.onrender.com/api/acertos/00000000-0000-0000-0000-000000000000)"
+          cat /tmp/delete.json
+          if [ "$code" != "401" ]; then
+            echo "Esperava 401 sem sessão; recebido HTTP $code."
+            exit 1
+          fi
+
+      - name: Check protected Nordestrip reverse bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --output /tmp/nord.json --write-out '%{http_code}'             --request POST             --header 'Content-Type: application/json'             --data '{"expenseId":"00000000-0000-0000-0000-000000000000"}'             https://nordestrip.vercel.app/api/integrations/lifeos/expenses/archive)"
+          cat /tmp/nord.json
+          if [ "$code" != "401" ]; then
+            echo "Esperava 401 sem credencial; recebido HTTP $code."
+            exit 1
+          fi
