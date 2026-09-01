@@ -1,0 +1,258 @@
+/* LifeOS — Refinamento visual GhuMat
+   Mantem a arquitetura da interface e melhora acabamento, tipografia e contraste. */
+
+body {
+  background:
+    radial-gradient(circle at 16% -8%, color-mix(in srgb, var(--sage-soft) 72%, transparent) 0, transparent 32rem),
+    var(--bg);
+}
+
+.app-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--linha) 82%, transparent);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.header-logo-txt,
+.greeting-nome,
+.secao-titulo b,
+.modal-titulo,
+.painel-proj-voltar > span,
+.login-titulo {
+  font-family: var(--sans) !important;
+  font-weight: 680 !important;
+  letter-spacing: -.035em;
+}
+
+.cartao,
+.metrica,
+.login-box,
+.modal-folha,
+.modal-caixa {
+  border-color: color-mix(in srgb, var(--sage) 7%, var(--linha));
+  box-shadow: 0 9px 28px color-mix(in srgb, var(--texto) 5%, transparent);
+}
+
+.cartao,
+.metrica {
+  border-radius: 21px;
+}
+
+.hero-hoje {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #fff 16%, transparent);
+  border-radius: 27px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.12), transparent 42%),
+    linear-gradient(145deg, var(--sage-dark), var(--sage-mid));
+  box-shadow: 0 16px 42px color-mix(in srgb, var(--sage-dark) 18%, transparent);
+}
+
+.hero-titulo {
+  font-family: var(--sans) !important;
+  font-weight: 680;
+  letter-spacing: -.03em;
+}
+
+.metricas-grid {
+  gap: 9px;
+}
+
+.metrica-num {
+  font-family: var(--sans);
+  font-weight: 680;
+  letter-spacing: -.035em;
+}
+
+.sub-aba,
+.filtro-btn {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--sage) 10%, var(--linha));
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  box-shadow: none;
+}
+
+.sub-aba.ativa,
+.filtro-btn.ativo {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--sage) 15%, transparent);
+}
+
+.btn-acao,
+.btn-primario {
+  border-radius: 14px;
+}
+
+.campo input,
+.campo select,
+.campo textarea,
+.sel {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--sage) 10%, var(--linha));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 82%, var(--paper));
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus,
+.sel:focus {
+  border-color: color-mix(in srgb, var(--sage) 54%, var(--linha));
+  box-shadow: 0 0 0 3px var(--sage-soft);
+}
+
+.tab-bar {
+  height: 78px;
+  border-top-color: color-mix(in srgb, var(--linha) 86%, transparent);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  box-shadow: 0 -8px 28px color-mix(in srgb, var(--texto) 4%, transparent);
+}
+
+.tab-btn {
+  letter-spacing: 0;
+  font-weight: 650;
+}
+
+.tab-btn svg {
+  stroke-width: 1.7;
+}
+
+.modal-overlay {
+  background: color-mix(in srgb, var(--texto) 34%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-folha,
+.modal-caixa {
+  border: 1px solid var(--linha);
+}
+
+.cf-central,
+.cfe-central {
+  border-color: color-mix(in srgb, var(--sage) 8%, var(--linha)) !important;
+  box-shadow: 0 11px 34px color-mix(in srgb, var(--texto) 5%, transparent) !important;
+}
+
+.cf-central-cabecalho {
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.10), transparent 44%),
+    linear-gradient(145deg, var(--sage-dark), var(--sage-mid)) !important;
+}
+
+.cf-central-cabecalho h2,
+.cf-modal-cabecalho h3 {
+  font-family: var(--sans) !important;
+  font-weight: 680 !important;
+  letter-spacing: -.035em !important;
+}
+
+.cf-resumo-item,
+.cf-modal-resumo > div,
+.cf-pagamento-bloco,
+.cf-sem-pagamento {
+  background: color-mix(in srgb, var(--bg) 84%, var(--paper)) !important;
+}
+
+.cf-filtros button {
+  border-width: 1px !important;
+}
+
+html[data-theme="dark"] .tab-bar {
+  background: rgba(24,35,31,.94);
+}
+
+html[data-theme="dark"] .app-header {
+  background: rgba(24,35,31,.94);
+}
+
+html[data-theme="dark"] .cf-pagamento-visual,
+html[data-theme="dark"] .cf-codigo-moldura,
+html[data-theme="dark"] .cf-codigo-pix canvas,
+html[data-theme="dark"] .cf-codigo-pix img,
+html[data-theme="dark"] .cf-codigo-boleto canvas {
+  background: var(--paper) !important;
+}
+
+html[data-theme="dark"] .cf-visual-abas button.ativo {
+  background: var(--paper) !important;
+}
+
+html[data-theme="dark"] .cf-editor-campo input,
+html[data-theme="dark"] .cf-editor-campo textarea {
+  background: var(--bg) !important;
+}
+
+html[data-theme="dark"] .login-logo,
+html[data-theme="dark"] .header-logo img {
+  filter: brightness(.92) contrast(1.03);
+}
+
+.ghumat-theme-card {
+  border: 1px solid color-mix(in srgb, var(--sage) 8%, var(--linha));
+  border-radius: 20px;
+  padding: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow-soft);
+}
+
+.ghumat-theme-card h3 {
+  margin: 0;
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.ghumat-theme-card p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.ghumat-theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border-radius: 15px;
+  background: var(--bg);
+}
+
+.ghumat-theme-options button {
+  min-height: 36px;
+  border-radius: 11px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ghumat-theme-options button.ativo {
+  color: #fff;
+  background: var(--sage);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--sage) 16%, transparent);
+}
+
+@media (max-width: 430px) {
+  .app-header {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .greeting-area,
+  .secao {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .hero-hoje,
+  .card-hoje {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .metricas-grid {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
