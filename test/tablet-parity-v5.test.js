@@ -40,10 +40,10 @@ test('cards de métricas do tablet seguem gramática visual do iOS', () => {
   const html = read('public/tablet.html');
   const css = read('public/tablet-app-shell-v3.css');
 
-  assert.match(html, /<button type="button" class="metrica-card mi-sage"/);
-  assert.match(html, /<button type="button" class="metrica-card mi-sky"/);
-  assert.match(html, /<button type="button" class="metrica-card mi-clay"/);
-  assert.match(html, /<button type="button" class="metrica-card mi-sun"/);
+  assert.match(html, /<div class="metrica-card mi-sage"/);
+  assert.match(html, /<div class="metrica-card mi-sky"/);
+  assert.match(html, /<div class="metrica-card mi-clay"/);
+  assert.match(html, /<div class="metrica-card mi-sun"/);
   assert.match(css, /\.metrica-card[\s\S]*border-radius:\s*24px/);
   assert.match(css, /\.metrica-icon[\s\S]*width:\s*42px/);
   assert.match(css, /\.metrica-link[\s\S]*display:\s*none/);
