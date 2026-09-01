@@ -1,0 +1,33 @@
+name: Render tablet parity v5 smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-tablet-parity-v5-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.33.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            mobile="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/product-polish-v4.css || true)"
+            tablet="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet-app-shell-v3.css || true)"
+            tablet_html="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet.html || true)"
+            acertos="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js || true)"
+
+            if echo "$health" | grep -q '"versao":"0.33.0"'               && echo "$mobile" | grep -q 'lifeos-account-grid'               && echo "$mobile" | grep -q 'ac-row-side'               && echo "$tablet" | grep -q 'grid-template-columns: repeat(2'               && echo "$tablet" | grep -q 'hero-banner-bg'               && echo "$tablet_html" | grep -q 'tablet-app-shell-v3.js?v=1'               && echo "$tablet_html" | grep -q 'header-brand-parent'               && echo "$acertos" | grep -q 'ac-row-side'; then
+              echo "LifeOS 0.33.0 e tablet parity v5 publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu no Render a tempo."
+          exit 1
