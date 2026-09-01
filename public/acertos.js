@@ -140,7 +140,9 @@
     return '<article class="ac-row">' +
       '<div class="ac-row-main">' +
         '<div class="ac-row-name">' + esc(acerto.titulo) +
-          '<span class="ac-chip ' + status.cls + '">' + status.text + '</span></div>' +
+          '<span class="ac-chip ' + status.cls + '">' + status.text + '</span>' +
+          (acerto.origem === 'nordestrip' ? '<span class="ac-chip source">Nordestrip</span>' : '') +
+        '</div>' +
         '<div class="ac-row-meta">' +
           (mineToPay ? 'Você → ' + esc(other) : esc(other) + ' → você') +
           parcel + ' · vence ' + date(acerto.vencimento) + paid +
