@@ -1,0 +1,26 @@
+name: Render production smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            body="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            echo "Tentativa $attempt: $body"
+            if echo "$body" | grep -q '"status":"ok"' && echo "$body" | grep -q '"versao":"0.28.0"'; then
+              echo "LifeOS 0.28.0 está saudável em produção."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Produção não confirmou a versão esperada a tempo."
+          exit 1
