@@ -98,7 +98,7 @@ async function sair(){
 }
 
 // Mapeamento das abas principais
-const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaPlantas','abaMais'];
+const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
 const SECOES_MAIS=['secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
 
 // ---- DATA, HORA e CLIMA ----
@@ -136,6 +136,7 @@ function trocarAba(qual,btn){
   const body=el('appBody');if(body)body.scrollTop=0;
   // Ações por aba
   if(qual==='hoje'&&usuario)carregarHoje();
+  if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
   if(qual==='plantas'&&usuario)renderizarPlantas();
 }
 
