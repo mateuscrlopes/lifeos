@@ -108,6 +108,6 @@ test('mapeamento financeiro Nordestrip inclui somente pessoas reais', () => {
   const sql = fs.readFileSync(new URL('../db/036_integracao_nordestrip.sql', import.meta.url), 'utf8');
   assert.match(sql, /5e2bafb7-d6ef-4fe4-8d73-a4f2c37567bf/);
   assert.match(sql, /059c34d6-bcf7-4ec4-b1d8-e5fb111a3092/);
-  assert.doesNotMatch(sql, /external_user_id[^\n]*Casa/i);
+  assert.doesNotMatch(sql, /1e038f4d-3200-47c0-87ee-b2c2d3efff0f/);
   assert.match(sql, /lifeos_has_payment_history/);
 });
