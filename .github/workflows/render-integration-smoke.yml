@@ -1,0 +1,46 @@
+name: Render integration smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-integration-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.29.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 32); do
+            body="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            echo "Tentativa $attempt: $body"
+            if echo "$body" | grep -q '"status":"ok"' && echo "$body" | grep -q '"versao":"0.29.0"'; then
+              echo "LifeOS 0.29.0 publicado."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "LifeOS 0.29.0 não apareceu no tempo esperado."
+          exit 1
+
+      - name: Check protected Nordestrip bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --output /tmp/bridge.json --write-out '%{http_code}'             --request POST             --header 'Content-Type: application/json'             --data '{"expense_id":"smoke"}'             https://lifeos-6rib.onrender.com/api/integracoes/nordestrip/despesas)"
+          cat /tmp/bridge.json
+          if [ "$code" != "401" ]; then
+            echo "Esperava 401 sem credencial; recebido HTTP $code."
+            exit 1
+          fi
+
+          code_wrong="$(curl --silent --output /tmp/bridge-wrong.json --write-out '%{http_code}'             --request POST             --header 'Content-Type: application/json'             --header 'Authorization: Bearer credencial-incorreta'             --data '{"expense_id":"smoke"}'             https://lifeos-6rib.onrender.com/api/integracoes/nordestrip/despesas)"
+          cat /tmp/bridge-wrong.json
+          if [ "$code_wrong" != "401" ]; then
+            echo "Esperava 401 com credencial inválida; recebido HTTP $code_wrong."
+            exit 1
+          fi
+
+          echo "Ponte Nordestrip protegida em produção."
