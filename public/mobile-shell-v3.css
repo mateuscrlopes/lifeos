@@ -1,0 +1,572 @@
+/* LifeOS Mobile Shell v3
+   Acabamento final inspirado na clareza do Nordestrip, mantendo identidade LifeOS/GhuMat. */
+
+:root {
+  --shell-max: 680px;
+  --shell-gutter: clamp(16px, 4.6vw, 22px);
+  --shell-radius: 24px;
+  --shell-icon: 42px;
+}
+
+html, body {
+  min-height: 100dvh;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+#telaApp {
+  background:
+    radial-gradient(circle at 100% -10%, color-mix(in srgb, var(--sage-soft) 65%, transparent), transparent 24rem),
+    var(--bg);
+}
+
+.app-header {
+  width: 100%;
+  min-height: calc(60px + env(safe-area-inset-top, 0px));
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) var(--shell-gutter) 10px !important;
+  border-bottom: 0 !important;
+  background: color-mix(in srgb, var(--bg) 88%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.header-logo {
+  min-width: 0;
+}
+
+.header-logo img {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+}
+
+.header-logo-txt {
+  font-size: 17px !important;
+  font-weight: 680 !important;
+}
+
+.header-avatar,
+.ac-bell {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px;
+  border-radius: 13px !important;
+}
+
+.app-body {
+  width: min(100%, var(--shell-max));
+  margin-inline: auto;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.greeting-area {
+  padding: 18px var(--shell-gutter) 0 !important;
+}
+
+.greeting-periodo {
+  margin: 0 0 4px;
+  color: var(--muted) !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  letter-spacing: .04em !important;
+  text-transform: none !important;
+}
+
+.greeting-nome {
+  margin: 0;
+  font-size: clamp(26px, 7vw, 32px) !important;
+  font-weight: 650 !important;
+  letter-spacing: -.045em !important;
+}
+
+.greeting-meta {
+  margin-top: 7px;
+  gap: 7px !important;
+  font-size: 11px !important;
+}
+
+.hero-hoje {
+  min-height: 150px;
+  margin: 16px var(--shell-gutter) 0 !important;
+  padding: 22px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 0 !important;
+  border-radius: 30px !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.13), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--sage-dark) 88%, #13251c), var(--sage-mid)) !important;
+  box-shadow: 0 16px 42px color-mix(in srgb, var(--sage-dark) 16%, transparent) !important;
+}
+
+.hero-kicker {
+  margin-bottom: 8px !important;
+  color: rgba(255,255,255,.62) !important;
+  font-size: 9px !important;
+  font-weight: 650 !important;
+  letter-spacing: .08em !important;
+}
+
+.hero-titulo {
+  max-width: 24ch;
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 22px !important;
+  line-height: 1.12 !important;
+}
+
+.hero-sub {
+  margin-top: 7px !important;
+  color: rgba(255,255,255,.72) !important;
+}
+
+.lifeos-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px var(--shell-gutter) 0;
+}
+
+.lifeos-shortcut {
+  min-width: 0;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 5px;
+  border: 1px solid color-mix(in srgb, var(--sage) 7%, var(--linha));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  color: var(--texto);
+  box-shadow: 0 7px 22px color-mix(in srgb, var(--texto) 4%, transparent);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.lifeos-shortcut:active {
+  transform: scale(.97);
+}
+
+.lifeos-shortcut-icon,
+.lifeos-module-icon {
+  width: var(--shell-icon);
+  height: var(--shell-icon);
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--sage);
+  background: color-mix(in srgb, var(--sage-soft) 72%, var(--paper));
+}
+
+.metricas-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  padding: 16px var(--shell-gutter) 0 !important;
+}
+
+.metrica {
+  min-height: 100px !important;
+  padding: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 6%, var(--linha)) !important;
+  border-radius: 21px !important;
+  background: color-mix(in srgb, var(--paper) 95%, transparent) !important;
+  box-shadow: 0 7px 22px color-mix(in srgb, var(--texto) 4%, transparent) !important;
+}
+
+.metrica-icon {
+  width: 36px !important;
+  height: 36px !important;
+  margin-bottom: 11px !important;
+  border-radius: 12px !important;
+}
+
+.metrica-num {
+  font-size: 23px !important;
+  font-weight: 650 !important;
+}
+
+.card-hoje {
+  margin: 14px var(--shell-gutter) 0 !important;
+}
+
+.card-hoje > .cartao,
+#cfToday {
+  overflow: hidden;
+  border-radius: 23px !important;
+}
+
+.card-hoje-head {
+  align-items: center !important;
+  min-height: 34px;
+  padding-bottom: 10px !important;
+}
+
+.card-hoje-titulo-txt {
+  color: var(--texto) !important;
+  font-size: 13px !important;
+  font-weight: 680 !important;
+  letter-spacing: -.01em !important;
+  text-transform: none !important;
+}
+
+.card-hoje-abrir,
+.secao-link {
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+.lifeos-page-head {
+  padding: 22px var(--shell-gutter) 8px;
+}
+
+.lifeos-page-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+
+.lifeos-page-head h1 {
+  margin: 0;
+  color: var(--texto);
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.lifeos-page-head p {
+  max-width: 38rem;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#abaCasa > .sub-abas {
+  padding: 10px var(--shell-gutter) 2px !important;
+}
+
+#abaPlantas > div:first-of-type:not(.lifeos-page-head) {
+  padding-left: var(--shell-gutter) !important;
+  padding-right: var(--shell-gutter) !important;
+}
+
+#abaPlantas .filtros-plantas {
+  padding-left: var(--shell-gutter) !important;
+  padding-right: var(--shell-gutter) !important;
+}
+
+.secao {
+  padding-left: var(--shell-gutter) !important;
+  padding-right: var(--shell-gutter) !important;
+}
+
+.cartao {
+  border-radius: 22px !important;
+  box-shadow: 0 7px 22px color-mix(in srgb, var(--texto) 4%, transparent) !important;
+}
+
+#abaMais .config-section-titulo {
+  padding: 20px var(--shell-gutter) 8px !important;
+  color: var(--muted) !important;
+  font-size: 10px !important;
+  letter-spacing: .05em !important;
+  text-transform: none !important;
+}
+
+#abaMais .secao {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.lifeos-module-card > div {
+  min-height: 56px;
+  justify-content: flex-start !important;
+  gap: 12px;
+}
+
+.lifeos-module-card .ui-menu-icon {
+  display: none !important;
+}
+
+.lifeos-module-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+
+.lifeos-finance-mount {
+  margin: 12px var(--shell-gutter) 0;
+}
+
+.lifeos-finance-mount:empty {
+  display: none;
+}
+
+#lifeosFinanceiroContas .cf-central,
+#lifeosFinanceiroAcertos .ac-central {
+  margin: 0 !important;
+}
+
+#lifeosFinanceiroAcertos {
+  padding-bottom: 10px;
+}
+
+.tab-bar {
+  left: max(14px, env(safe-area-inset-left, 0px)) !important;
+  right: max(14px, env(safe-area-inset-right, 0px)) !important;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  width: auto !important;
+  max-width: 650px;
+  min-height: 62px !important;
+  height: auto !important;
+  margin-inline: auto;
+  padding: 6px !important;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--sage) 7%, var(--linha)) !important;
+  border-radius: 24px !important;
+  background: color-mix(in srgb, var(--paper) 94%, transparent) !important;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--texto) 10%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+}
+
+.tab-btn {
+  min-width: 0;
+  min-height: 50px !important;
+  gap: 4px !important;
+  padding: 4px 1px !important;
+  border-radius: 15px !important;
+  color: var(--muted) !important;
+  font-size: clamp(8px, 2.3vw, 9.5px) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+.tab-btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  stroke-width: 1.8 !important;
+  transform: none !important;
+}
+
+.tab-btn.ativa {
+  color: #fff !important;
+  background: var(--sage) !important;
+}
+
+.sub-aba,
+.filtro-btn {
+  min-height: 36px !important;
+  padding: 7px 12px !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+}
+
+.lifeos-action-row,
+.lista-item-acoes,
+.est-controles,
+.ui-row-actions,
+.ac-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.lifeos-icon-action,
+.ac-icon-action {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: inline-grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  line-height: 1 !important;
+  background: var(--paper-2) !important;
+  color: var(--muted) !important;
+}
+
+.lifeos-icon-action.is-danger,
+.ac-icon-action.danger {
+  color: var(--alert) !important;
+  background: var(--alert-soft) !important;
+}
+
+.lifeos-icon-action svg,
+.ac-icon-action svg {
+  width: 17px;
+  height: 17px;
+}
+
+.lifeos-aligned-row {
+  align-items: center !important;
+}
+
+.cf-conta-item > *,
+.cf-hoje-item > *,
+.ac-row > * {
+  align-self: center;
+}
+
+.cf-conta-acoes,
+.cf-hoje-acoes,
+.ac-actions {
+  align-items: center !important;
+}
+
+.modal-overlay,
+.ac-overlay,
+.cf-modal,
+.ui-sheet-overlay {
+  padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.modal-folha,
+.ac-sheet,
+.cf-modal-conteudo,
+.ui-sheet {
+  width: min(100%, 560px) !important;
+  max-width: 560px !important;
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px))) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border-radius: 26px 26px 0 0 !important;
+}
+
+.modal-caixa {
+  width: min(calc(100vw - 16px), 520px) !important;
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.ac-sheet-head,
+.cf-modal-cabecalho,
+.ui-sheet-head,
+.modal-header {
+  align-items: center !important;
+}
+
+.ac-sheet-head > div,
+.cf-modal-cabecalho > div,
+.ui-sheet-head > div,
+.modal-header > :first-child {
+  min-width: 0;
+}
+
+.ac-row {
+  gap: 10px !important;
+}
+
+.ac-row-main {
+  min-width: 0;
+}
+
+.ac-row-value {
+  flex: 0 0 auto;
+  min-width: 72px;
+}
+
+.lifeos-toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index: 9999;
+  width: min(calc(100vw - 32px), 420px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.lifeos-toast {
+  margin-top: 7px;
+  padding: 11px 14px;
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 96%, transparent);
+  color: var(--texto);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--texto) 14%, transparent);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.lifeos-toast.is-error {
+  color: var(--alert);
+  border-color: color-mix(in srgb, var(--alert) 20%, var(--linha));
+}
+
+html[data-theme="dark"] .tab-bar {
+  background: color-mix(in srgb, var(--paper) 92%, transparent) !important;
+}
+
+html[data-theme="dark"] .lifeos-shortcut,
+html[data-theme="dark"] .metrica {
+  background: color-mix(in srgb, var(--paper) 96%, transparent) !important;
+}
+
+@media (max-width: 390px) {
+  :root { --shell-gutter: 14px; }
+
+  .lifeos-shortcuts {
+    gap: 6px;
+  }
+
+  .lifeos-shortcut {
+    min-height: 74px;
+    border-radius: 18px;
+    font-size: 9px;
+  }
+
+  .lifeos-shortcut-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .tab-bar {
+    left: 8px !important;
+    right: 8px !important;
+  }
+
+  .tab-btn {
+    font-size: 8px !important;
+  }
+
+  .ac-row {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  .ac-row-value {
+    width: 100%;
+    display: flex !important;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-left: 0 !important;
+  }
+}
+
+@media (min-width: 700px) {
+  .app-header {
+    width: min(100%, var(--shell-max));
+    margin-inline: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lifeos-toast,
+  .tab-btn,
+  .lifeos-shortcut {
+    transition: none !important;
+  }
+}
