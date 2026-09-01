@@ -47,6 +47,11 @@ test('tablet recebe acabamento próprio sem copiar layout mobile', () => {
   const css = read('public/tablet-product-shell-v2.css');
 
   assert.match(html, /tablet-product-shell-v2\.css\?v=1/);
+  assert.match(html, /tablet-product-shell-v2\.js\?v=2/);
+  assert.ok(
+    html.lastIndexOf('tablet-product-shell-v2.js') > html.lastIndexOf('tablet-enhancements.js'),
+    'shell final do tablet precisa carregar depois dos enhancements'
+  );
   assert.match(css, /\.conteudo-grid[\s\S]*grid-template-columns:\s*minmax\(0, 1\.25fr\)/);
   assert.match(css, /@media \(max-width: 1024px\)/);
   assert.match(css, /@media \(max-width: 820px\)/);
