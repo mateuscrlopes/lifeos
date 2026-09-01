@@ -444,18 +444,18 @@
                 </select>
               </div>
               <div id="estCamposNum">
-                <div style="display:flex;gap:10px;">
-                  <div class="campo" style="flex:1"><label>Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div>
-                  <div class="campo" style="flex:1"><label>Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div>
+                <div class="lifeos-form-grid-2">
+                  <div class="campo"><label>Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div>
+                  <div class="campo"><label>Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div>
                 </div>
                 <div class="campo"><label>Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div>
               </div>
               <div id="estCamposNivel" class="oculto" style="display:none;">
-                <div style="display:flex;gap:10px;">
-                  <div class="campo" style="flex:1"><label>Nível atual</label>
+                <div class="lifeos-form-grid-2">
+                  <div class="campo"><label>Nível atual</label>
                     <select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select>
                   </div>
-                  <div class="campo" style="flex:1"><label>Alertar abaixo de</label>
+                  <div class="campo"><label>Alertar abaixo de</label>
                     <select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select>
                   </div>
                 </div>
@@ -485,11 +485,11 @@
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Nova tarefa</label><input id="tfTitulo" type="text" placeholder="Ex.: Lavar roupa"/></div>
-              <div style="display:flex;gap:10px;">
-                <div class="campo" style="flex:1"><label>Responsável</label>
+              <div class="lifeos-form-grid-2">
+                <div class="campo"><label>Responsável</label>
                   <select id="tfResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select>
                 </div>
-                <div class="campo" style="flex:1"><label>Data</label><input id="tfData" type="date"/></div>
+                <div class="campo"><label>Data</label><input id="tfData" type="date"/></div>
               </div>
               <div class="campo"><label class="toggle-label"><input id="tfRecorrente" type="checkbox"/>Repete (rotina)</label></div>
               <div id="tfRecorrenciaBox" class="campo oculto" style="display:none;"><input id="tfRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div>
@@ -505,9 +505,9 @@
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Nome da conta</label><input id="ctNome" type="text" placeholder="Ex.: Energia"/></div>
-              <div style="display:flex;gap:10px;">
-                <div class="campo" style="flex:1"><label>Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div>
-                <div class="campo" style="flex:1"><label>Vencimento</label><input id="ctVenc" type="date"/></div>
+              <div class="lifeos-form-grid-2 lifeos-account-grid">
+                <div class="campo"><label>Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div>
+                <div class="campo"><label>Vencimento</label><input id="ctVenc" type="date"/></div>
               </div>
               <div class="campo"><label class="toggle-label"><input id="ctRecorrente" type="checkbox"/>Repete todo mês</label></div>
               <button class="btn-acao" id="btnAddConta" style="width:100%">Adicionar conta</button>
@@ -522,11 +522,11 @@
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Nova refeição</label><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div>
-              <div style="display:flex;gap:10px;">
-                <div class="campo" style="flex:1"><label>Serve para</label>
+              <div class="lifeos-form-grid-2">
+                <div class="campo"><label>Serve para</label>
                   <select id="refTipo" class="sel"><option value="almoco">Almoço</option><option value="janta">Janta</option><option value="ambos">Ambos</option></select>
                 </div>
-                <div class="campo" style="flex:1"><label>Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div>
+                <div class="campo"><label>Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div>
               </div>
               <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Ingredientes</div>
               <div id="refIngredientes"></div>
@@ -660,7 +660,7 @@
             <div id="inputTarefaProjeto" class="oculto" style="display:none;margin-top:10px;">
               <div class="campo"><input id="novaTarefaProjeto" type="text" placeholder="Título da tarefa"/></div>
               <div style="display:flex;gap:10px;margin-bottom:10px;">
-                <div class="campo" style="flex:1"><label>Data</label><input id="tfpData" type="date"/></div>
+                <div class="campo"><label>Data</label><input id="tfpData" type="date"/></div>
                 <div class="campo" style="flex:1"><label>Visibilidade</label><select id="tfpPriv" class="sel"><option value="false">Pública</option><option value="true">Privada</option></select></div>
               </div>
               <button class="btn-acao" id="btnSalvarTarefaProjeto" style="width:100%;font-size:13px">Salvar tarefa</button>
@@ -794,7 +794,7 @@
     <div class="campo"><label>Título</label><input id="etTitulo" type="text"/></div>
     <div style="display:flex;gap:10px;">
       <div class="campo" style="flex:1"><label>Responsável</label><select id="etResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div>
-      <div class="campo" style="flex:1"><label>Data</label><input id="etData" type="date"/></div>
+      <div class="campo"><label>Data</label><input id="etData" type="date"/></div>
     </div>
     <div class="campo"><label class="toggle-label"><input id="etRecorrente" type="checkbox"/>Repete</label></div>
     <div id="etRecorrenciaBox" class="campo oculto" style="display:none;"><input id="etRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div>
@@ -810,7 +810,7 @@
     <div class="campo"><label>Nome</label><input id="ecNome" type="text"/></div>
     <div style="display:flex;gap:10px;">
       <div class="campo" style="flex:1"><label>Valor (R$)</label><input id="ecValor" type="number" min="0" step="0.01"/></div>
-      <div class="campo" style="flex:1"><label>Vencimento</label><input id="ecVenc" type="date"/></div>
+      <div class="campo"><label>Vencimento</label><input id="ecVenc" type="date"/></div>
     </div>
     <div class="campo"><label class="toggle-label"><input id="ecRecorrente" type="checkbox"/>Repete todo mês</label></div>
     <button class="btn-primario" id="btnSalvarEditarConta">Salvar alterações</button>
@@ -826,7 +826,7 @@
     <div class="campo"><label>Local</label><select id="eeLocal" class="sel"><option value="">— Sem local —</option></select></div>
     <div id="eeQtdBox">
       <div style="display:flex;gap:10px;">
-        <div class="campo" style="flex:1"><label>Mínimo</label><input id="eeMin" type="number" min="0" step="any"/></div>
+        <div class="campo"><label>Mínimo</label><input id="eeMin" type="number" min="0" step="any"/></div>
         <div class="campo" style="flex:1"><label>Unidade</label><input id="eeUnidade" type="text"/></div>
       </div>
     </div>
