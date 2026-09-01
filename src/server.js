@@ -1,4 +1,4 @@
-// server.js — LifeOS v0.28.0 + Gumate Lab
+// server.js — LifeOS v0.29.0 + Gumate Lab
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
@@ -6,6 +6,7 @@ import { registrarRotasAtalhos } from './atalhos.js';
 import { registrarRotasFinanceiroEmail } from './financeiro-email.js';
 import { registrarRotasGumate } from './gumate/index.js';
 import { registrarRotasAcertos } from './acertos.js';
+import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
 import { buscarClima } from './clima.js';
 
 const app = express();
@@ -28,7 +29,7 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
-    versao: '0.28.0',
+    versao: '0.29.0',
   });
 });
 
@@ -52,10 +53,13 @@ registrarRotasFinanceiroEmail(app);
 // Acertos financeiros entre moradores.
 registrarRotasAcertos(app);
 
+// Ponte financeira com o Nordestrip.
+registrarRotasIntegracaoNordestrip(app);
+
 // Rotas do assistente de voz da Casa.
 registrarRotasGumate(app);
 
 app.listen(config.porta, '0.0.0.0', () => {
-  console.log(`\nLifeOS v0.28.0 — porta ${config.porta}`);
+  console.log(`\nLifeOS v0.29.0 — porta ${config.porta}`);
   console.log(`Gumate: ${config.gumateEnabled ? 'habilitado' : 'desabilitado'}\n`);
 });
