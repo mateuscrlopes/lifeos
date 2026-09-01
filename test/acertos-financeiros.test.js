@@ -81,3 +81,17 @@ test('hardening remove execucao anonima dos RPCs financeiros', () => {
     assert.match(sql, new RegExp('revoke execute on function public\\.' + nome, 'i'));
   }
 });
+
+
+test('acertos não oferece o perfil Casa como participante financeiro', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /toLocaleLowerCase\('pt-BR'\) !== 'casa'/);
+});
+
+test('divisão 50% é um modo explícito e automático', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /id="acHalf" checked/);
+  assert.match(source, /if \(halfToggle\?\.checked\) fillHalf\(\)/);
+  assert.match(source, /input\.readOnly = automatic/);
+  assert.match(source, /R\$/);
+});
