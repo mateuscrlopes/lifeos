@@ -52,3 +52,16 @@ jobs:
           home="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/)"
           echo "$home" | grep -q 'ghumat-refinement.css'
           echo "Assets financeiros e refinamento visual publicados."
+
+
+      - name: Check split feedback deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          js="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js)"
+          css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.css)"
+          echo "$js" | grep -q "50% para cada"
+          echo "$js" | grep -q "toLocaleLowerCase('pt-BR') !== 'casa'"
+          echo "$js" | grep -q 'id="acHalf" checked'
+          echo "$css" | grep -q '.ac-money-input'
+          echo "Ajustes de divisão 50%, filtro Casa e campos monetários publicados."
