@@ -153,6 +153,48 @@ function gerarPdfSimples(linhas) {
   return Buffer.concat(partes);
 }
 
+async function segredoServidor(admin, nome) {
+  const { data, error } = await admin.rpc('lifeos_obter_segredo_servidor', {
+    p_nome: nome,
+  });
+
+  if (error || !data) {
+    throw new Error('Segredo da integracao nao disponivel.');
+  }
+
+  return String(data);
+}
+
+async function arquivarDespesaNoNordestrip(admin, expenseId) {
+  const token = await segredoServidor(admin, 'nordestrip_reverse_bridge_token');
+  const response = await fetch(
+    'https://nordestrip.vercel.app/api/integrations/lifeos/expenses/archive',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ expenseId }),
+      signal: AbortSignal.timeout(12000),
+    }
+  );
+
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {}
+
+  if (!response.ok) {
+    const erro = body?.error || 'O Nordestrip nao confirmou o arquivamento.';
+    const e = new Error(erro);
+    e.status = response.status;
+    throw e;
+  }
+
+  return body?.result || null;
+}
+
 async function carregarPagamento(admin, pagamentoId) {
   const { data: pagamento, error } = await admin
     .from('acerto_pagamentos')
@@ -176,6 +218,168 @@ export function registrarRotasAcertos(app) {
   const receberArquivo = express.raw({
     type: ['application/pdf', 'image/png', 'image/jpeg', 'application/octet-stream'],
     limit: LIMITE,
+  });
+
+  app.delete('/api/acertos/:id', async (req, res) => {
+    const contexto = await contextoAutenticado(req);
+    if (!contexto.ok) return res.status(contexto.status).json({ ok: false, erro: contexto.erro });
+
+    const { admin, perfil } = contexto;
+
+    const { data: acerto, error: erroAcerto } = await admin
+      .from('acertos')
+      .select('id,casa_id,despesa_id,titulo,devedor_id,credor_id,valor_pago,status,origem,origem_externa_id,criado_por')
+      .eq('id', req.params.id)
+      .single();
+
+    if (erroAcerto || !acerto || acerto.casa_id !== perfil.casa_id) {
+      return res.status(404).json({ ok: false, erro: 'Acerto nao encontrado.' });
+    }
+
+    const podeExcluir = acerto.credor_id === perfil.id || acerto.criado_por === perfil.id;
+    if (!podeExcluir) {
+      return res.status(403).json({
+        ok: false,
+        erro: 'Somente quem criou ou vai receber este acerto pode exclui-lo.',
+      });
+    }
+
+    if (['pago', 'cancelado'].includes(acerto.status)) {
+      return res.status(409).json({
+        ok: false,
+        erro: acerto.status === 'pago'
+          ? 'Um acerto pago nao pode ser excluido.'
+          : 'Este acerto ja foi excluido.',
+      });
+    }
+
+    let alvoIds = [acerto.id];
+    let despesa = null;
+
+    if (acerto.despesa_id) {
+      const [acertosGrupo, despesaResult] = await Promise.all([
+        admin
+          .from('acertos')
+          .select('id,valor_pago,status')
+          .eq('despesa_id', acerto.despesa_id),
+        admin
+          .from('despesas_compartilhadas')
+          .select('id,casa_id,origem,origem_externa_id,titulo')
+          .eq('id', acerto.despesa_id)
+          .maybeSingle(),
+      ]);
+
+      if (acertosGrupo.error) {
+        return res.status(500).json({ ok: false, erro: 'Nao foi possivel carregar as parcelas deste acerto.' });
+      }
+
+      alvoIds = (acertosGrupo.data || []).map(item => item.id);
+      despesa = despesaResult.data || null;
+    }
+
+    const { data: pagamentos, error: erroPagamentos } = await admin
+      .from('acerto_pagamentos')
+      .select('id,acerto_id,status')
+      .in('acerto_id', alvoIds);
+
+    if (erroPagamentos) {
+      return res.status(500).json({ ok: false, erro: 'Nao foi possivel validar o historico de pagamentos.' });
+    }
+
+    const { data: valores } = await admin
+      .from('acertos')
+      .select('id,valor_pago')
+      .in('id', alvoIds);
+
+    const temHistorico = (pagamentos || []).length > 0
+      || (valores || []).some(item => Number(item.valor_pago || 0) > 0);
+
+    if (temHistorico) {
+      return res.status(409).json({
+        ok: false,
+        erro: 'Este acerto ja possui historico de pagamento. Para preservar comprovantes e recibos, ele nao pode ser excluido.',
+      });
+    }
+
+    let nordestrip = null;
+    const veioDoNordestrip = acerto.origem === 'nordestrip'
+      || despesa?.origem === 'nordestrip';
+
+    if (veioDoNordestrip) {
+      const externalExpenseId = despesa?.origem_externa_id;
+      if (!externalExpenseId) {
+        return res.status(409).json({
+          ok: false,
+          erro: 'Este acerto veio do Nordestrip, mas o vinculo de origem nao foi encontrado.',
+        });
+      }
+
+      try {
+        nordestrip = await arquivarDespesaNoNordestrip(admin, externalExpenseId);
+      } catch (e) {
+        console.error('[Acertos exclusao Nordestrip]', e.message);
+        return res.status(502).json({
+          ok: false,
+          erro: 'Nao consegui remover a compra no Nordestrip. Nada foi excluido no LifeOS para evitar desencontro entre os dois aplicativos.',
+        });
+      }
+    }
+
+    const agora = new Date().toISOString();
+    const motivo = veioDoNordestrip
+      ? 'Excluido no LifeOS e arquivado no Nordestrip.'
+      : 'Excluido manualmente no LifeOS.';
+
+    const atualizacao = await admin
+      .from('acertos')
+      .update({
+        status: 'cancelado',
+        cancelado_em: agora,
+        cancelado_por: perfil.id,
+        cancelamento_motivo: motivo,
+        atualizado_em: agora,
+      })
+      .in('id', alvoIds)
+      .neq('status', 'pago');
+
+    if (atualizacao.error) {
+      return res.status(500).json({
+        ok: false,
+        erro: 'Nao foi possivel excluir o acerto no LifeOS.',
+      });
+    }
+
+    if (acerto.despesa_id) {
+      await admin
+        .from('despesas_compartilhadas')
+        .update({
+          cancelada_em: agora,
+          cancelada_por: perfil.id,
+          cancelamento_motivo: motivo,
+          atualizado_em: agora,
+        })
+        .eq('id', acerto.despesa_id);
+    }
+
+    await admin.from('eventos').insert({
+      tipo: 'acerto_excluido',
+      entidade: 'acertos',
+      entidade_id: acerto.id,
+      usuario_id: perfil.id,
+      valor_novo: {
+        acertos_cancelados: alvoIds,
+        despesa_id: acerto.despesa_id,
+        origem: veioDoNordestrip ? 'nordestrip' : acerto.origem,
+        nordestrip,
+      },
+      detalhe: motivo,
+    });
+
+    return res.json({
+      ok: true,
+      removidos: alvoIds.length,
+      sincronizado_nordestrip: veioDoNordestrip,
+    });
   });
 
   app.post('/api/acertos/:id/comprovante', receberArquivo, async (req, res) => {

@@ -42,6 +42,17 @@
   const paymentsFor = (id) => A.payments.filter((p) => p.acerto_id === id);
   const remaining = (a) => Math.max(0, Number(a.valor_devido) - Number(a.valor_pago || 0));
 
+  function hasPaymentHistory(acerto) {
+    const ids = acerto.despesa_id
+      ? A.acertos.filter((item) => item.despesa_id === acerto.despesa_id).map((item) => item.id)
+      : [acerto.id];
+
+    return ids.some((id) =>
+      A.payments.some((payment) => payment.acerto_id === id)
+      || Number(A.acertos.find((item) => item.id === id)?.valor_pago || 0) > 0
+    );
+  }
+
   function context() {
     const ctx = window.lifeosContext;
     if (!ctx?.supa || !ctx?.usuario) return false;
@@ -127,6 +138,14 @@
     if (approved[0]) {
       actions.push('<button data-ac-receipt="' + approved[0].id + '">Recibo</button>');
       actions.push('<button data-ac-proof="' + approved[0].id + '">Comprovante</button>');
+    }
+
+    const canDelete = !['pago', 'cancelado'].includes(acerto.status)
+      && !hasPaymentHistory(acerto)
+      && (acerto.credor_id === A.profile.id || acerto.criado_por === A.profile.id);
+
+    if (canDelete) {
+      actions.push('<button class="danger" data-ac-delete="' + acerto.id + '">Excluir</button>');
     }
 
     const parcel = Number(acerto.parcelas_total) > 1
@@ -222,6 +241,8 @@
       btn.addEventListener('click', () => downloadReceipt(btn.dataset.acReceipt)));
     root.querySelectorAll('[data-ac-proof]').forEach((btn) =>
       btn.addEventListener('click', () => openProof(btn.dataset.acProof)));
+    root.querySelectorAll('[data-ac-delete]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteAcerto(btn.dataset.acDelete)));
   }
 
   function maskKey(value) {
@@ -397,6 +418,48 @@
       closeModal();
       await load();
     });
+  }
+
+  async function deleteAcerto(acertoId) {
+    const acerto = A.acertos.find((item) => item.id === acertoId);
+    if (!acerto) return;
+
+    const group = acerto.despesa_id
+      ? A.acertos.filter((item) => item.despesa_id === acerto.despesa_id)
+      : [acerto];
+
+    const openGroup = group.filter((item) => item.status !== 'cancelado');
+    const fromNordestrip = acerto.origem === 'nordestrip';
+    const installmentText = openGroup.length > 1
+      ? '\n\nEsta compra possui ' + openGroup.length + ' parcelas/acertos. Todos serão removidos juntos.'
+      : '';
+
+    const sourceText = fromNordestrip
+      ? '\n\nComo este acerto veio do Nordestrip, a compra também será arquivada lá.'
+      : '\n\nO histórico técnico será preservado, mas o acerto sairá da sua lista.';
+
+    if (!confirm('Excluir “' + acerto.titulo + '”?' + installmentText + sourceText)) return;
+
+    const { data } = await A.client.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) {
+      alert('Sua sessão expirou. Entre novamente.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/acertos/' + acerto.id, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+      });
+
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.erro || 'Não foi possível excluir este acerto.');
+
+      await load();
+    } catch (e) {
+      alert(e.message);
+    }
   }
 
   function showPayment(acertoId) {
