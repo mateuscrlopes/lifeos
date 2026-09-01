@@ -519,3 +519,108 @@ export function consolidarExtracoes(anexos = []) {
       : null,
   };
 }
+
+
+// -------------------------------------------------------------------
+// Comprovantes de pagamento entre moradores
+// Leitura deterministica/local: valor e data, sem IA generativa.
+// -------------------------------------------------------------------
+
+function extrairValorComprovante(texto) {
+  const base = semAcentos(texto).toLowerCase();
+  const rotulos = [
+    'valor da transferencia',
+    'valor da transacao',
+    'valor transferido',
+    'valor enviado',
+    'valor pago',
+    'valor',
+  ];
+
+  for (const rotulo of rotulos) {
+    for (const indice of ocorrencias(base, rotulo)) {
+      const valor = encontrarMoeda(texto.slice(indice, indice + 220));
+      if (valor) return valor;
+    }
+  }
+
+  const moedas = texto.match(/R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})|R\$\s*\d+(?:,\d{2})/gi) || [];
+  for (const moeda of moedas) {
+    const valor = parseValorBr(moeda);
+    if (valor) return valor;
+  }
+
+  return null;
+}
+
+function extrairDataComprovante(texto) {
+  const base = semAcentos(texto).toLowerCase();
+  const rotulos = [
+    'data e hora',
+    'data da transacao',
+    'data da transferencia',
+    'realizado em',
+    'feito em',
+    'pagamento realizado',
+    'data',
+  ];
+
+  for (const rotulo of rotulos) {
+    for (const indice of ocorrencias(base, rotulo)) {
+      const trecho = texto.slice(indice, indice + 220);
+      const dataMatch = trecho.match(/(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/);
+      const data = parseDataBr(dataMatch?.[1]);
+      if (!data) continue;
+
+      const horaMatch = trecho.match(/(?:\s|às|as)(\d{1,2}):(\d{2})(?::(\d{2}))?/i);
+      const hora = horaMatch
+        ? `${String(horaMatch[1]).padStart(2, '0')}:${horaMatch[2]}:${horaMatch[3] || '00'}`
+        : '12:00:00';
+
+      return `${data}T${hora}-03:00`;
+    }
+  }
+
+  return null;
+}
+
+export async function extrairComprovantePdf(buffer) {
+  let parser;
+
+  try {
+    parser = new PDFParse({
+      data: buffer,
+      CanvasFactory,
+    });
+
+    const resultado = await parser.getText({ first: 6 });
+    const texto = normalizarTexto(resultado?.text);
+    const valor = extrairValorComprovante(texto);
+    const pagoEm = extrairDataComprovante(texto);
+
+    return {
+      versao: EXTRACAO_VERSAO,
+      status: valor || pagoEm ? 'parcial' : 'falha',
+      valor,
+      pago_em: pagoEm,
+      caracteres_lidos: texto.length,
+      codigo: valor || pagoEm ? null : 'dados_nao_encontrados',
+      erro: valor || pagoEm ? null : 'Nao foi possivel identificar valor ou data no comprovante.',
+    };
+  } catch (erro) {
+    return {
+      versao: EXTRACAO_VERSAO,
+      status: 'falha',
+      valor: null,
+      pago_em: null,
+      codigo: 'erro_leitura_comprovante',
+      erro: String(erro?.message || erro || 'Falha desconhecida.').slice(0, 300),
+    };
+  } finally {
+    try {
+      await parser?.destroy();
+    } catch {
+      // O descarte do leitor nao deve interromper o fluxo.
+    }
+  }
+}
