@@ -1,0 +1,554 @@
+/* LifeOS Product Polish v4
+   Final visual layer for mobile. Mirrors the compositional logic of Nordestrip:
+   one module, integrated sections, restrained borders, clear hierarchy. */
+
+#telaApp,
+#telaApp *,
+#telaApp *::before,
+#telaApp *::after,
+.modal-overlay,
+.modal-overlay *,
+.cf-modal,
+.cf-modal *,
+.ac-overlay,
+.ac-overlay * {
+  box-sizing: border-box;
+}
+
+#telaApp {
+  --module-bg:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--paper) 92%, var(--sage-soft)),
+      color-mix(in srgb, var(--paper) 97%, var(--bg))
+    );
+  --module-section: color-mix(in srgb, var(--paper) 88%, var(--sage-soft));
+  --module-border: color-mix(in srgb, var(--sage) 10%, var(--linha));
+  --module-divider: color-mix(in srgb, var(--sage) 9%, var(--linha));
+  --module-shadow: 0 14px 40px color-mix(in srgb, var(--texto) 7%, transparent);
+}
+
+/* ---------- layout safety ---------- */
+
+#telaApp input:not([type="checkbox"]):not([type="radio"]),
+#telaApp select,
+#telaApp textarea,
+.modal-overlay input:not([type="checkbox"]):not([type="radio"]),
+.modal-overlay select,
+.modal-overlay textarea,
+.cf-modal input:not([type="checkbox"]):not([type="radio"]),
+.cf-modal select,
+.cf-modal textarea,
+.ac-overlay input:not([type="checkbox"]):not([type="radio"]),
+.ac-overlay select,
+.ac-overlay textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+#telaApp input[type="date"],
+#telaApp input[type="month"],
+#telaApp input[type="time"],
+#telaApp input[type="number"] {
+  display: block;
+  min-inline-size: 0 !important;
+  max-inline-size: 100% !important;
+}
+
+#telaApp .campo,
+#telaApp .campo > *,
+#telaApp .cartao > *,
+#telaApp .mini-item > *,
+#telaApp .lista-item > *,
+#telaApp .cf-conta-item > *,
+#telaApp .cf-hoje-item > *,
+#telaApp .ac-row > *,
+#telaApp .cfe-item > * {
+  min-width: 0;
+}
+
+#telaApp [style*="display:flex"] > *,
+#telaApp [style*="display: flex"] > * {
+  min-width: 0;
+}
+
+#telaApp div:has(> .campo > #ctValor):has(> .campo > #ctVenc),
+#telaApp div:has(> .campo > #tfResp):has(> .campo > #tfData),
+#telaApp div:has(> .campo > #refTipo):has(> .campo > #refPorcoes) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px !important;
+}
+
+#telaApp .linha-add {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 8px !important;
+}
+
+#telaApp .linha-add > input {
+  min-width: 0;
+}
+
+/* ---------- surfaces: fewer boxes, more integrated modules ---------- */
+
+#telaApp .card-hoje {
+  margin-inline: var(--shell-gutter) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#telaApp .card-hoje > .cartao {
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 26px !important;
+  background: var(--module-bg) !important;
+  box-shadow: var(--module-shadow) !important;
+}
+
+#telaApp .card-hoje > .cartao > .card-hoje-head {
+  min-height: 66px;
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--sage-soft) 74%, var(--paper)),
+      color-mix(in srgb, var(--paper) 94%, var(--sage-soft))
+    );
+}
+
+#telaApp .card-hoje > .cartao > .card-hoje-head + div {
+  padding: 2px 18px 8px;
+}
+
+#telaApp .card-hoje .mini-item {
+  min-height: 52px;
+  margin: 0 !important;
+  padding: 13px 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+#telaApp .card-hoje .mini-item:last-child {
+  border-bottom: 0 !important;
+}
+
+#telaApp .card-hoje .mini-item > span:first-child {
+  font-weight: 650;
+}
+
+#telaApp .card-hoje .mini-meta {
+  max-width: 52%;
+  color: var(--muted);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+#telaApp .tudo-em-dia {
+  padding: 20px 18px !important;
+}
+
+/* Casa forms become a single composed surface instead of stacked framed boxes */
+#abaCasa .sub-conteudo > .secao {
+  display: grid;
+  gap: 14px;
+  padding-top: 12px !important;
+}
+
+#abaCasa .sub-conteudo > .secao > .cartao {
+  margin: 0 !important;
+  padding: 18px !important;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 26px !important;
+  background: var(--module-bg) !important;
+  box-shadow: var(--module-shadow) !important;
+}
+
+#abaCasa .sub-conteudo > .secao > .cartao + .cartao {
+  margin-top: 0 !important;
+}
+
+#abaCasa .campo {
+  min-width: 0;
+}
+
+#abaCasa .campo label:not(.toggle-label) {
+  margin-bottom: 7px !important;
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#abaCasa input:not([type="checkbox"]):not([type="radio"]),
+#abaCasa select,
+#abaCasa textarea {
+  min-height: 48px !important;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 15px !important;
+  background: color-mix(in srgb, var(--paper-2) 76%, var(--paper)) !important;
+}
+
+#abaCasa .btn-acao {
+  border-radius: 15px !important;
+}
+
+/* ---------- Financeiro: one module with header/content/footer rhythm ---------- */
+
+#lifeosFinanceiroContas {
+  margin-top: 16px !important;
+}
+
+#cfCentral {
+  overflow: hidden !important;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 30px !important;
+  background: var(--module-bg) !important;
+  box-shadow: var(--module-shadow) !important;
+}
+
+#cfCentral .cf-central-cabecalho {
+  min-height: 160px;
+  margin: 0 !important;
+  padding: 26px 24px !important;
+  border: 0 !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.18), transparent 44%),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--sage) 84%, #8ec6a7),
+      color-mix(in srgb, var(--sage) 72%, var(--paper))
+    ) !important;
+}
+
+#cfCentral .cf-central-kicker,
+#cfCentral .cf-central-cabecalho p {
+  color: rgba(255,255,255,.78) !important;
+}
+
+#cfCentral .cf-central-cabecalho h2 {
+  color: #fff !important;
+  font-size: 26px !important;
+  letter-spacing: -.035em !important;
+}
+
+#cfCentral .cf-central-icone {
+  border: 1px solid rgba(255,255,255,.22) !important;
+  background: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#cfCentral #cfeInbox {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--module-divider) !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper-2) 88%, var(--sage-soft)),
+      color-mix(in srgb, var(--paper) 94%, var(--sage-soft))
+    ) !important;
+  box-shadow: none !important;
+}
+
+#cfCentral #cfeInbox .cfe-cabecalho {
+  min-height: 104px;
+  margin: 0 !important;
+  padding: 18px 20px !important;
+  align-items: center !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#cfCentral #cfeInbox .cfe-cabecalho > div {
+  min-width: 0;
+}
+
+#cfCentral #cfeInbox .cfe-cabecalho h3 {
+  margin-top: 3px;
+  font-size: 18px !important;
+  line-height: 1.16 !important;
+}
+
+#cfCentral #cfeInbox .cfe-cabecalho p {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+#cfCentral #cfeInbox [data-cfe-atualizar] {
+  flex: 0 0 auto;
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--paper) 92%, transparent) !important;
+  color: var(--sage) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#cfCentral #cfeInbox .cfe-lista {
+  padding: 0 20px 14px !important;
+}
+
+#cfCentral .cf-resumo {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  padding: 18px 20px 0 !important;
+  background: transparent !important;
+}
+
+#cfCentral .cf-resumo-item {
+  min-height: 82px;
+  margin: 0 !important;
+  padding: 14px 14px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+#cfCentral .cf-resumo-item:nth-child(odd):not(.cf-resumo-valor) {
+  border-right: 1px solid var(--module-divider) !important;
+}
+
+#cfCentral .cf-resumo-valor {
+  grid-column: 1 / -1;
+  min-height: 76px;
+}
+
+#cfCentral .cf-resumo-item strong {
+  font-size: 22px !important;
+}
+
+#cfCentral .cf-resumo-valor strong {
+  font-size: 19px !important;
+}
+
+#cfCentral .cf-filtros {
+  margin: 0 !important;
+  padding: 18px 20px 10px !important;
+  background: transparent !important;
+}
+
+#cfCentral .cf-contas-lista {
+  padding: 0 20px 18px !important;
+  background: transparent !important;
+}
+
+#cfCentral .cf-conta-item {
+  min-height: 68px;
+  gap: 12px !important;
+  padding: 14px 2px !important;
+  border-color: var(--module-divider) !important;
+}
+
+#cfCentral .cf-conta-main {
+  min-width: 0;
+}
+
+#cfCentral .cf-conta-nome,
+#cfCentral .cf-conta-meta {
+  overflow-wrap: anywhere;
+}
+
+#cfCentral .cf-conta-valor {
+  white-space: nowrap;
+}
+
+/* Acertos adopts the same module composition */
+#lifeosFinanceiroAcertos .ac-central {
+  overflow: hidden;
+  border: 1px solid var(--module-border) !important;
+  border-radius: 30px !important;
+  background: var(--module-bg) !important;
+  box-shadow: var(--module-shadow) !important;
+}
+
+#lifeosFinanceiroAcertos .ac-hero {
+  margin: 0 !important;
+  padding: 22px 20px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+  border-radius: 0 !important;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--sage-soft) 76%, var(--paper)),
+      color-mix(in srgb, var(--paper) 94%, var(--sage-soft))
+    ) !important;
+}
+
+#lifeosFinanceiroAcertos .ac-list {
+  padding: 0 18px 16px !important;
+}
+
+#lifeosFinanceiroAcertos .ac-row {
+  padding: 15px 0 !important;
+  border-bottom: 1px solid var(--module-divider) !important;
+}
+
+#lifeosFinanceiroAcertos .ac-row:last-child {
+  border-bottom: 0 !important;
+}
+
+/* ---------- actions, alignment and text containment ---------- */
+
+#telaApp button svg,
+.cf-modal button svg,
+.ac-overlay button svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+#telaApp button,
+#telaApp .lifeos-sync-badge,
+#telaApp .badge,
+#telaApp .ac-chip {
+  line-height: 1 !important;
+}
+
+#telaApp .cf-conta-acoes,
+#telaApp .cf-hoje-acoes,
+#telaApp .ac-actions,
+#telaApp .lista-item-acoes,
+#telaApp .est-controles {
+  align-items: center !important;
+}
+
+#telaApp .lista-item-nome,
+#telaApp .lista-item-meta,
+#telaApp .cf-conta-nome,
+#telaApp .cf-conta-meta,
+#telaApp .ac-row-name,
+#telaApp .ac-row-meta,
+#telaApp .mini-item,
+#telaApp .config-item {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- modals: safe viewport, no horizontal leak ---------- */
+
+.modal-overlay,
+.cf-modal,
+.ac-overlay,
+.ui-sheet-overlay {
+  overflow-x: hidden !important;
+}
+
+.modal-folha,
+.modal-caixa,
+.cf-modal-conteudo,
+.ac-sheet,
+.ui-sheet {
+  max-width: min(100%, 560px) !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+}
+
+.modal-folha > *,
+.modal-caixa > *,
+.cf-modal-conteudo > *,
+.ac-sheet > *,
+.ui-sheet > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.cfe-form-linha,
+.ac-grid-2,
+.cf-modal-resumo,
+.cf-editor-acoes {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+/* ---------- mobile adaptations ---------- */
+
+@media (max-width: 520px) {
+  #cfCentral .cf-central-cabecalho {
+    min-height: 148px;
+    padding: 22px 20px !important;
+  }
+
+  #cfCentral .cf-central-cabecalho h2 {
+    font-size: 24px !important;
+  }
+
+  #cfCentral #cfeInbox .cfe-cabecalho {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 10px !important;
+  }
+
+  #cfCentral #cfeInbox [data-cfe-atualizar] {
+    padding-inline: 12px !important;
+  }
+
+  #telaApp div:has(> .campo > #ctValor):has(> .campo > #ctVenc),
+  #telaApp div:has(> .campo > #tfResp):has(> .campo > #tfData),
+  #telaApp div:has(> .campo > #refTipo):has(> .campo > #refPorcoes) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .cfe-form-linha,
+  .ac-grid-2,
+  .cf-modal-resumo,
+  .cf-editor-acoes {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 390px) {
+  #telaApp div:has(> .campo > #ctValor):has(> .campo > #ctVenc),
+  #telaApp div:has(> .campo > #tfResp):has(> .campo > #tfData),
+  #telaApp div:has(> .campo > #refTipo):has(> .campo > #refPorcoes) {
+    grid-template-columns: 1fr;
+  }
+
+  #cfCentral #cfeInbox .cfe-cabecalho {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  #cfCentral #cfeInbox [data-cfe-atualizar] {
+    justify-self: start;
+  }
+}
+
+html[data-theme="dark"] #telaApp {
+  --module-bg:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--paper) 95%, #132119),
+      color-mix(in srgb, var(--paper) 98%, var(--bg))
+    );
+  --module-section: color-mix(in srgb, var(--paper-2) 86%, #132119);
+}
+
+html[data-theme="dark"] #cfCentral .cf-central-cabecalho {
+  background:
+    radial-gradient(circle at 100% 0, rgba(255,255,255,.08), transparent 45%),
+    linear-gradient(145deg, #2e6448, #214633) !important;
+}
+
+html[data-theme="dark"] #cfCentral #cfeInbox {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper-2) 94%, #16231b),
+      color-mix(in srgb, var(--paper) 96%, #16231b)
+    ) !important;
+}
