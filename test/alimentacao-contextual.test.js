@@ -34,9 +34,11 @@ test('celular remove o cardápio antigo antes do destaque compacto', () => {
   assert.match(codigo, /acMobileDestaque/);
 });
 
-test('instalação carrega o módulo nos dois dispositivos', () => {
+test('instalação usa módulo completo no tablet e correção compacta no celular', () => {
   const tablet = ler('public/tablet-enhancements.js');
-  const mobile = ler('public/status-estoque.js');
+  const mobile = ler('public/app.js');
+  const status = ler('public/status-estoque.js');
   assert.match(tablet, /alimentacao-contextual\.js\?v=1/);
-  assert.match(mobile, /alimentacao-contextual\.js\?v=1/);
+  assert.match(mobile, /alimentacao-contextual-mobile-fix\.js\?v=1/);
+  assert.doesNotMatch(status, /alimentacao-contextual\.js\?v=1/);
 });
