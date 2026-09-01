@@ -67,3 +67,34 @@ test('polish mobile usa cache bust novo e versão é 0.34.0', () => {
   assert.match(loader, /product-polish-v4\.css\?v=2/);
   assert.match(server, /0\.34\.0/);
 });
+
+
+test('tablet v6 abandona contexto legado e preserva hero nativo', () => {
+  const painel = read('public/painel-casa.js');
+  const css = read('public/tablet-app-shell-v3.css');
+  const enhancements = read('public/tablet-enhancements.js');
+
+  assert.doesNotMatch(painel, /painel-casa-v2\.css/);
+  assert.match(painel, /limparLayoutLegado/);
+  assert.match(painel, /painelContextoCasa/);
+  assert.match(css, /#painelContextoCasa[\s\S]*display:\s*none\s*!important/);
+  assert.match(css, /\.hero-banner[\s\S]*display:\s*block\s*!important/);
+  assert.match(enhancements, /painel-casa\.js\?v=2/);
+});
+
+test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
+  const loader = read('public/tablet-app-shell-v3.js');
+  const html = read('public/tablet.html');
+
+  assert.match(loader, /MutationObserver/);
+  assert.match(loader, /HTMLLinkElement/);
+  assert.match(loader, /tablet-app-shell-v3\.css\?v=2/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=2/);
+});
+
+test('alimentação contextual deixa de parecer faixa tracejada', () => {
+  const css = read('public/tablet-app-shell-v3.css');
+
+  assert.match(css, /\.ac-tablet-strip\.ac-is-empty[\s\S]*border-style:\s*solid\s*!important/);
+  assert.match(css, /\.ac-tablet-main strong[\s\S]*font-family:\s*var\(--sans\)\s*!important/);
+});
