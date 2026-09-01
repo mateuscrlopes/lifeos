@@ -1,0 +1,27 @@
+name: Render split smoke 2
+
+on:
+  push:
+    branches:
+      - "ops/render-split-smoke-2"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check LifeOS financial split rollout
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            js="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js || true)"
+            css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.css || true)"
+            if echo "$js" | grep -q "50% para cada"               && echo "$js" | grep -q "toLocaleLowerCase('pt-BR') !== 'casa'"               && echo "$js" | grep -q 'id="acHalf" checked'               && echo "$css" | grep -q '.ac-money-input'; then
+              echo "Feedback financeiro publicado no Render."
+              exit 0
+            fi
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+          echo "A versão esperada não apareceu em produção."
+          exit 1
