@@ -11,7 +11,16 @@
 <link rel="shortcut icon" href="/favicon.ico?v=4">
 <link rel="icon" type="image/png" href="/favicon.png?v=4">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4">
+  <script>
+    try {
+      const lifeosTheme = localStorage.getItem('lifeos-theme');
+      const dark = lifeosTheme === 'dark' || (!lifeosTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.documentElement.dataset.themeMode = lifeosTheme || 'system';
+    } catch {}
+  </script>
   <link rel="stylesheet" href="tokens.css"/>
+  <link rel="stylesheet" href="/ghumat-refinement.css?v=1"/>
   <style>
     /* ================================================
        LAYOUT MOBILE
