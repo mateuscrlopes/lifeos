@@ -145,7 +145,13 @@
       && (acerto.credor_id === A.profile.id || acerto.criado_por === A.profile.id);
 
     if (canDelete) {
-      actions.push('<button class="danger" data-ac-delete="' + acerto.id + '">Excluir</button>');
+      actions.push(
+        '<button class="ac-icon-action danger" type="button" data-ac-delete="' + acerto.id + '" ' +
+        'aria-label="Excluir acerto" title="Excluir">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' +
+        '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/></svg>' +
+        '</button>'
+      );
     }
 
     const parcel = Number(acerto.parcelas_total) > 1
@@ -174,7 +180,8 @@
   }
 
   function renderCentral() {
-    const section = document.querySelector('#subContas .secao');
+    const section = document.getElementById('lifeosFinanceiroAcertos')
+      || document.querySelector('#subContas .secao');
     if (!section) return;
 
     let root = document.getElementById('acertosCentral');
@@ -834,6 +841,7 @@
     if (context()) load();
 
     window.addEventListener('lifeos:ready', load);
+    window.addEventListener('lifeos:financeiro-abrir', load);
     window.addEventListener('lifeos:contas-atualizadas', () => window.setTimeout(load, 80));
 
     window.setInterval(() => {
