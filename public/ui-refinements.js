@@ -1019,14 +1019,14 @@ function enhanceMoreMenu() {
 function destinationFromText(value = '') {
   const text = normalizeName(value);
   if (text.includes('tarefa')) return 'tarefas';
-  if (text.includes('conta')) return 'contas';
+  if (text.includes('conta')) return 'financeiro';
   if (text.includes('compra') || text.includes('lista')) return 'compras';
   if (text.includes('estoque') || text.includes('item')) return 'estoque';
   return '';
 }
 
 function makeMetricsInteractive() {
-  const fallback = ['tarefas', 'contas', 'compras', 'estoque'];
+  const fallback = ['tarefas', 'financeiro', 'compras', 'estoque'];
   document.querySelectorAll('#metricasHoje .metrica').forEach((metric, index) => {
     const label = metric.querySelector('.metrica-label')?.textContent || metric.textContent || '';
     const destination = destinationFromText(label) || fallback[index] || '';
@@ -1531,7 +1531,13 @@ function installStableNavigation() {
     if (destinationTarget) {
       event.preventDefault();
       event.stopPropagation();
-      openCasaSubtab(destinationTarget.dataset.uiDestination);
+      const destination = destinationTarget.dataset.uiDestination;
+      if (destination === 'financeiro') {
+        if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
+        else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+      } else {
+        openCasaSubtab(destination);
+      }
       return;
     }
 
@@ -1552,7 +1558,10 @@ function installStableNavigation() {
     if (!target) return;
     event.preventDefault();
     if (target.classList.contains('header-logo')) goToToday();
-    else openCasaSubtab(target.dataset.uiDestination);
+    else if (target.dataset.uiDestination === 'financeiro') {
+      if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
+      else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+    } else openCasaSubtab(target.dataset.uiDestination);
   });
 
   const appBody = document.getElementById('appBody');
