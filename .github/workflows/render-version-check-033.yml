@@ -1,0 +1,29 @@
+name: Render version check 033
+
+on:
+  push:
+    branches:
+      - "ops/render-version-check-033"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch production
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://lifeos-6rib.onrender.com/saude > /tmp/health
+          curl --fail --silent --show-error --max-time 30 https://lifeos-6rib.onrender.com/tablet.html > /tmp/tablet
+          curl --fail --silent --show-error --max-time 30 https://lifeos-6rib.onrender.com/product-polish-v4.css > /tmp/mobile
+      - name: Production is 0.33.0
+        continue-on-error: true
+        run: grep -q '"versao":"0.33.0"' /tmp/health
+      - name: Production is still 0.32.0
+        continue-on-error: true
+        run: grep -q '"versao":"0.32.0"' /tmp/health
+      - name: Tablet v3 present
+        continue-on-error: true
+        run: grep -q 'tablet-app-shell-v3.js?v=1' /tmp/tablet
+      - name: Mobile v5 present
+        continue-on-error: true
+        run: grep -q 'lifeos-account-grid' /tmp/mobile
