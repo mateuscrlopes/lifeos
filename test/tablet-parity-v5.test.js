@@ -53,17 +53,17 @@ test('tablet exibe marca GhuMat e shell v3 carrega por último', () => {
   const html = read('public/tablet.html');
 
   assert.match(html, /header-brand-parent">by GhuMat/);
-  assert.match(html, /tablet-app-shell-v3\.js\?v=1/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=2/);
   assert.ok(
     html.lastIndexOf('tablet-app-shell-v3.js') > html.lastIndexOf('tablet-product-shell-v2.js'),
     'shell v3 precisa carregar depois do shell v2'
   );
 });
 
-test('polish mobile usa cache bust novo e versão é 0.33.0', () => {
+test('polish mobile usa cache bust novo e versão é 0.34.0', () => {
   const loader = read('public/product-polish-v4.js');
   const server = read('src/server.js');
 
   assert.match(loader, /product-polish-v4\.css\?v=2/);
-  assert.match(server, /0\.33\.0/);
+  assert.match(server, /0\.34\.0/);
 });
