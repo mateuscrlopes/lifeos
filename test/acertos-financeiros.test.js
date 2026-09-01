@@ -111,3 +111,27 @@ test('mapeamento financeiro Nordestrip inclui somente pessoas reais', () => {
   assert.doesNotMatch(sql, /1e038f4d-3200-47c0-87ee-b2c2d3efff0f/);
   assert.match(sql, /lifeos_has_payment_history/);
 });
+
+
+test('exclusão de acerto preserva histórico e usa ponte reversa quando necessário', () => {
+  const source = fs.readFileSync(new URL('../src/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /app\.delete\('\/api\/acertos\/:id'/);
+  assert.match(source, /lifeos_obter_segredo_servidor/);
+  assert.match(source, /nordestrip\.vercel\.app\/api\/integrations\/lifeos\/expenses\/archive/);
+  assert.match(source, /ja possui historico de pagamento/);
+  assert.match(source, /status: 'cancelado'/);
+});
+
+test('interface permite excluir acerto sem pagamento', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /data-ac-delete/);
+  assert.match(source, /method: 'DELETE'/);
+  assert.match(source, /também será arquivada lá/);
+});
+
+test('segredo da ponte reversa fica restrito ao service role', () => {
+  const sql = fs.readFileSync(new URL('../db/038_exclusao_acertos_e_ponte_reversa.sql', import.meta.url), 'utf8');
+  assert.match(sql, /lifeos_obter_segredo_servidor/);
+  assert.match(sql, /revoke all on function public\.lifeos_obter_segredo_servidor\(text\)/i);
+  assert.match(sql, /grant execute on function public\.lifeos_obter_segredo_servidor\(text\)[\s\S]*service_role/i);
+});
