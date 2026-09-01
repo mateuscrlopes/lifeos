@@ -109,29 +109,19 @@ async function cfCarregar() {
 }
 
 function cfAbrirCentral() {
-  const botaoCasa = document.querySelector('.tab-btn[data-tab="casa"]');
+  const botaoFinanceiro = document.querySelector('.tab-btn[data-tab="financeiro"]');
 
-  if (botaoCasa) {
-    botaoCasa.click();
+  if (botaoFinanceiro) {
+    botaoFinanceiro.click();
   } else if (typeof window.trocarAba === 'function') {
-    window.trocarAba('casa');
+    window.trocarAba('financeiro');
   }
 
   window.setTimeout(() => {
-    const botaoContas = document.querySelector('.sub-aba[data-sub="contas"]');
-
-    if (botaoContas) {
-      botaoContas.click();
-    } else if (typeof window.trocarSub === 'function') {
-      window.trocarSub('contas');
-    }
-
-    window.setTimeout(() => {
-      document.getElementById('cfCentral')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 80);
+    document.getElementById('cfCentral')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
   }, 80);
 }
 
@@ -797,7 +787,7 @@ function cfVincularCentral(central) {
       evento.preventDefault();
       evento.stopPropagation();
 
-      cfAbaOrigem = 'casa';
+      cfAbaOrigem = 'financeiro';
       const conta = cfContas.find(item => String(item.id) === String(botao.dataset.cfAbrir));
       if (conta) cfAbrirConta(conta);
     });
@@ -815,7 +805,8 @@ function cfVincularCentral(central) {
 }
 
 function cfRenderizarCentral() {
-  const secao = document.querySelector('#subContas .secao');
+  const secao = document.getElementById('lifeosFinanceiroContas')
+    || document.querySelector('#subContas .secao');
   if (!secao) return;
 
   let central = document.getElementById('cfCentral');
@@ -977,3 +968,8 @@ if (document.readyState === 'loading') {
 } else {
   cfIniciar();
 }
+
+
+window.addEventListener('lifeos:financeiro-abrir', () => {
+  cfAtualizar().catch(erro => console.error('[Central Financeira]', erro));
+});

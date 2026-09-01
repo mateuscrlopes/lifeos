@@ -1019,14 +1019,14 @@ function enhanceMoreMenu() {
 function destinationFromText(value = '') {
   const text = normalizeName(value);
   if (text.includes('tarefa')) return 'tarefas';
-  if (text.includes('conta')) return 'contas';
+  if (text.includes('conta')) return 'financeiro';
   if (text.includes('compra') || text.includes('lista')) return 'compras';
   if (text.includes('estoque') || text.includes('item')) return 'estoque';
   return '';
 }
 
 function makeMetricsInteractive() {
-  const fallback = ['tarefas', 'contas', 'compras', 'estoque'];
+  const fallback = ['tarefas', 'financeiro', 'compras', 'estoque'];
   document.querySelectorAll('#metricasHoje .metrica').forEach((metric, index) => {
     const label = metric.querySelector('.metrica-label')?.textContent || metric.textContent || '';
     const destination = destinationFromText(label) || fallback[index] || '';
@@ -1094,7 +1094,9 @@ function replaceBottomNavigationIcons() {
   const icons = {
     hoje: `<svg class="ui-nav-svg ui-nav-sparkle" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.7 5.2 4.8 9.3 10 10-5.2.7-9.3 4.8-10 10-.7-5.2-4.8-9.3-10-10 5.2-.7 9.3-4.8 10-10Z"/></svg>`,
     casa: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>`,
+    financeiro: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>`,
     plantas: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>`,
+    mais: `<svg class="ui-nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
   };
   Object.entries(icons).forEach(([tab, markup]) => {
     const button = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
@@ -1529,7 +1531,13 @@ function installStableNavigation() {
     if (destinationTarget) {
       event.preventDefault();
       event.stopPropagation();
-      openCasaSubtab(destinationTarget.dataset.uiDestination);
+      const destination = destinationTarget.dataset.uiDestination;
+      if (destination === 'financeiro') {
+        if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
+        else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+      } else {
+        openCasaSubtab(destination);
+      }
       return;
     }
 
@@ -1550,7 +1558,10 @@ function installStableNavigation() {
     if (!target) return;
     event.preventDefault();
     if (target.classList.contains('header-logo')) goToToday();
-    else openCasaSubtab(target.dataset.uiDestination);
+    else if (target.dataset.uiDestination === 'financeiro') {
+      if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
+      else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+    } else openCasaSubtab(target.dataset.uiDestination);
   });
 
   const appBody = document.getElementById('appBody');
