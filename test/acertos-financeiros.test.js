@@ -95,3 +95,19 @@ test('divisão 50% é um modo explícito e automático', () => {
   assert.match(source, /input\.readOnly = automatic/);
   assert.match(source, /R\$/);
 });
+
+
+test('ponte Nordestrip exige credencial e usa RPC dedicada', () => {
+  const source = fs.readFileSync(new URL('../src/integracao-nordestrip.js', import.meta.url), 'utf8');
+  assert.match(source, /verificar_token_integracao/);
+  assert.match(source, /sincronizar_despesa_nordestrip/);
+  assert.match(source, /Credencial da integracao ausente/);
+});
+
+test('mapeamento financeiro Nordestrip inclui somente pessoas reais', () => {
+  const sql = fs.readFileSync(new URL('../db/036_integracao_nordestrip.sql', import.meta.url), 'utf8');
+  assert.match(sql, /5e2bafb7-d6ef-4fe4-8d73-a4f2c37567bf/);
+  assert.match(sql, /059c34d6-bcf7-4ec4-b1d8-e5fb111a3092/);
+  assert.doesNotMatch(sql, /external_user_id[^\n]*Casa/i);
+  assert.match(sql, /lifeos_has_payment_history/);
+});
