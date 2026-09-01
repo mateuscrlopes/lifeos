@@ -1,0 +1,26 @@
+name: Render chip smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-chip-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check LifeOS integration UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            js="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/acertos.js || true)"
+            if echo "$health" | grep -q '"versao":"0.29.0"'               && echo "$js" | grep -q 'ac-chip source'               && echo "$js" | grep -q 'Nordestrip'; then
+              echo "LifeOS integrado e chip Nordestrip publicados."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "A versão esperada ainda não apareceu no Render."
+          exit 1
