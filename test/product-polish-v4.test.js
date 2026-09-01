@@ -35,7 +35,7 @@ test('acabamento v4 carrega depois do shell funcional', () => {
   const status = read('public/status-estoque.js');
 
   assert.match(status, /mobile-shell-v3\.js\?v=1/);
-  assert.match(status, /product-polish-v4\.js\?v=1/);
+  assert.match(status, /product-polish-v4\.js\?v=2/);
   assert.ok(
     status.lastIndexOf('product-polish-v4.js') > status.lastIndexOf('mobile-shell-v3.js'),
     'product polish precisa carregar depois do shell'
@@ -66,7 +66,7 @@ test('tablet usa módulos integrados e tipografia sans', () => {
   assert.match(css, /font-family:\s*var\(--sans\)\s*!important/);
 });
 
-test('LifeOS foi versionado para 0.32.0', () => {
+test('LifeOS foi versionado para 0.33.0', () => {
   const server = read('src/server.js');
-  assert.match(server, /0\.32\.0/);
+  assert.match(server, /0\.33\.0/);
 });

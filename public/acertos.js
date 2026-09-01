@@ -172,10 +172,12 @@
           (mineToPay ? 'Você → ' + esc(other) : esc(other) + ' → você') +
           parcel + ' · vence ' + date(acerto.vencimento) + paid +
         '</div>' +
+      '</div>' +
+      '<div class="ac-row-side">' +
+        '<div class="ac-row-value"><strong>' + money(remaining(acerto)) + '</strong>' +
+          '<small>' + (mineToPay ? 'a pagar' : 'a receber') + '</small></div>' +
         (actions.length ? '<div class="ac-actions">' + actions.join('') + '</div>' : '') +
       '</div>' +
-      '<div class="ac-row-value"><strong>' + money(remaining(acerto)) + '</strong>' +
-        '<small>' + (mineToPay ? 'a pagar' : 'a receber') + '</small></div>' +
     '</article>';
   }
 

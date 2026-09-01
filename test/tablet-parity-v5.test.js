@@ -1,0 +1,69 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+
+test('formulários mobile usam grids explícitos e seguros', () => {
+  const html = read('public/index.html');
+  const css = read('public/product-polish-v4.css');
+
+  assert.match(html, /lifeos-form-grid-2 lifeos-account-grid/);
+  assert.match(html, /id="ctValor"/);
+  assert.match(html, /id="ctVenc"/);
+  assert.match(css, /\.lifeos-form-grid-2/);
+  assert.match(css, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*\.lifeos-account-grid[\s\S]*grid-template-columns:\s*1fr/i);
+  assert.match(css, /-webkit-appearance:\s*none/);
+});
+
+test('acertos deixam valor e ações na mesma coluna lateral', () => {
+  const js = read('public/acertos.js');
+  const css = read('public/product-polish-v4.css');
+
+  assert.match(js, /ac-row-side/);
+  assert.doesNotMatch(js, /ac-row-meta[\s\S]*ac-actions[\s\S]*<\/div>' \+\s*'<\/div>' \+\s*'<div class="ac-row-value"/);
+  assert.match(css, /#lifeosFinanceiroAcertos \.ac-row-side/);
+  assert.match(css, /align-items:\s*flex-end/);
+});
+
+test('tablet v3 troca densidade de dashboard por leitura e scroll', () => {
+  const css = read('public/tablet-app-shell-v3.css');
+
+  assert.match(css, /\.painel-body[\s\S]*overflow-y:\s*auto\s*!important/);
+  assert.match(css, /\.conteudo-grid[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /\.col-dir[\s\S]*grid-column:\s*1\s*\/\s*-1/);
+  assert.match(css, /\.hero-banner-bg[\s\S]*display:\s*none\s*!important/);
+});
+
+test('cards de métricas do tablet seguem gramática visual do iOS', () => {
+  const html = read('public/tablet.html');
+  const css = read('public/tablet-app-shell-v3.css');
+
+  assert.match(html, /<div class="metrica-card mi-sage"/);
+  assert.match(html, /<div class="metrica-card mi-sky"/);
+  assert.match(html, /<div class="metrica-card mi-clay"/);
+  assert.match(html, /<div class="metrica-card mi-sun"/);
+  assert.match(css, /\.metrica-card[\s\S]*border-radius:\s*24px/);
+  assert.match(css, /\.metrica-icon[\s\S]*width:\s*42px/);
+  assert.match(css, /\.metrica-link[\s\S]*display:\s*none/);
+});
+
+test('tablet exibe marca GhuMat e shell v3 carrega por último', () => {
+  const html = read('public/tablet.html');
+
+  assert.match(html, /header-brand-parent">by GhuMat/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=1/);
+  assert.ok(
+    html.lastIndexOf('tablet-app-shell-v3.js') > html.lastIndexOf('tablet-product-shell-v2.js'),
+    'shell v3 precisa carregar depois do shell v2'
+  );
+});
+
+test('polish mobile usa cache bust novo e versão é 0.33.0', () => {
+  const loader = read('public/product-polish-v4.js');
+  const server = read('src/server.js');
+
+  assert.match(loader, /product-polish-v4\.css\?v=2/);
+  assert.match(server, /0\.33\.0/);
+});
