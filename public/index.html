@@ -557,6 +557,18 @@
         </div>
       </div>
 
+
+      <!-- aba: FINANCEIRO -->
+      <div id="abaFinanceiro" class="oculto lifeos-module-page" style="display:none;">
+        <header class="lifeos-page-head">
+          <span class="lifeos-page-kicker">Casa</span>
+          <h1>Financeiro</h1>
+          <p>Contas da casa e acertos entre vocês, em um só lugar.</p>
+        </header>
+        <section class="lifeos-finance-mount" id="lifeosFinanceiroContas"></section>
+        <section class="lifeos-finance-mount" id="lifeosFinanceiroAcertos"></section>
+      </div>
+
       <!-- aba: PLANTAS -->
       <div id="abaPlantas" class="oculto" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0;">
@@ -746,17 +758,21 @@
     </div><!-- fim app-body -->
 
     <!-- BARRA INFERIOR -->
-    <nav class="tab-bar">
+    <nav class="tab-bar" aria-label="Navegação principal">
       <button class="tab-btn ativa" data-tab="hoje" onclick="trocarAba('hoje',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Hoje
+        Início
       </button>
       <button class="tab-btn" data-tab="casa" onclick="trocarAba('casa',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h6l-3 5"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>
         Casa
       </button>
+      <button class="tab-btn" data-tab="financeiro" onclick="trocarAba('financeiro',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
+        Financeiro
+      </button>
       <button class="tab-btn" data-tab="plantas" onclick="trocarAba('plantas',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M12 12C12 12 8 10 6 7c-1-1.5-1-4 2-4s4 3 4 3M12 12c0 0 4-2 6-5 1-1.5 1-4-2-4s-4 3-4 3"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>
         Plantas
       </button>
       <button class="tab-btn" data-tab="mais" onclick="trocarAba('mais',this)">
