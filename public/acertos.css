@@ -233,6 +233,11 @@
   background: var(--sage);
 }
 
+.ac-actions button.danger {
+  color: var(--alert);
+  background: var(--alert-soft);
+}
+
 .ac-rule {
   margin-top: 16px;
   border-radius: 18px;
