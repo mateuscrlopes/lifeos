@@ -160,10 +160,18 @@
 
       let icon = card.querySelector('.lifeos-module-icon');
       if (!icon) {
-        icon = document.createElement('span');
-        icon.className = 'lifeos-module-icon';
-        icon.innerHTML = svg(entry[1]);
-        row.insertBefore(icon, row.firstElementChild);
+        const legacyIcon = card.querySelector('.ui-menu-icon');
+        if (legacyIcon) {
+          legacyIcon.classList.remove('ui-menu-icon');
+          legacyIcon.classList.add('lifeos-module-icon');
+          legacyIcon.removeAttribute('style');
+          icon = legacyIcon;
+        } else {
+          icon = document.createElement('span');
+          icon.className = 'lifeos-module-icon';
+          icon.innerHTML = svg(entry[1]);
+          row.insertBefore(icon, row.firstElementChild);
+        }
       }
     });
   }
