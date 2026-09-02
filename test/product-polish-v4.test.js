@@ -34,7 +34,7 @@ test('Central Financeira usa um módulo visual integrado em três ritmos', () =>
 test('acabamento v4 carrega depois do shell funcional', () => {
   const status = read('public/status-estoque.js');
 
-  assert.match(status, /mobile-shell-v3\.js\?v=1/);
+  assert.match(status, /mobile-shell-v3\.js\?v=2/);
   assert.match(status, /product-polish-v4\.js\?v=3/);
   assert.ok(
     status.lastIndexOf('product-polish-v4.js') > status.lastIndexOf('mobile-shell-v3.js'),

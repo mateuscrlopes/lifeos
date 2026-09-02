@@ -12,7 +12,7 @@ test('LifeOS possui cinco módulos principais com Financeiro separado', () => {
   assert.match(html, /id="lifeosFinanceiroContas"/);
   assert.match(html, /id="lifeosFinanceiroAcertos"/);
   assert.match(html, /data-tab="financeiro"/);
-  assert.match(html, />\s*Início\s*<\/button>/);
+  assert.match(html, />\s*Hoje\s*<\/button>/);
   assert.match(app, /'abaFinanceiro'/);
   assert.match(app, /lifeos:financeiro-abrir/);
 });
@@ -26,18 +26,18 @@ test('Central Financeira e Acertos usam o módulo Financeiro', () => {
   assert.match(acertos, /lifeosFinanceiroAcertos/);
 });
 
-test('shell mobile v3 é carregado por último e cria atalhos de app', () => {
+test('shell mobile v3 é carregado por último sem duplicar a navegação da home', () => {
   const status = ler('public/status-estoque.js');
   const shell = ler('public/mobile-shell-v3.js');
   const css = ler('public/mobile-shell-v3.css');
 
-  assert.match(status, /mobile-shell-v3\.js\?v=1/);
+  assert.match(status, /mobile-shell-v3\.js\?v=2/);
   assert.ok(
     status.lastIndexOf('mobile-shell-v3.js') > status.lastIndexOf('acertos.js'),
     'shell v3 precisa carregar depois dos módulos funcionais'
   );
-  assert.match(shell, /lifeosHomeShortcuts/);
-  assert.match(shell, /Financeiro/);
+  assert.match(shell, /removeLegacyHomeShortcuts/);
+  assert.match(shell, /document\.getElementById\('lifeosHomeShortcuts'\)\?\.remove/);
   assert.match(css, /\.tab-bar[\s\S]*border-radius: 24px/);
   assert.match(css, /prefers-reduced-motion/);
 });

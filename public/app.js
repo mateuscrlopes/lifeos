@@ -99,7 +99,7 @@ async function sair(){
 
 // Mapeamento das abas principais
 const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
-const SECOES_MAIS=['secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
+const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
 
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
@@ -147,7 +147,36 @@ function trocarSub(qual,btn){
   document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
 }
 
-function abrirSecao(qual){
+const _origensSecao = new Map();
+
+function localizacaoAtual(){
+  for(const id of SECOES_MAIS){
+    const node=el(id);
+    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
+      if(id==='abaPainelProjeto') return {tipo:'painel-projeto'};
+      return {tipo:'secao',secao:id.replace(/^secao/,'').toLowerCase()};
+    }
+  }
+  for(const id of ABAS_PRINCIPAIS){
+    const node=el(id);
+    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
+      const tab=id.replace(/^aba/,'').toLowerCase();
+      if(tab==='casa'){
+        const sub=[...document.querySelectorAll('.sub-aba[data-sub]')].find(b=>b.classList.contains('ativa'))?.dataset.sub || 'compras';
+        return {tipo:'casa',sub};
+      }
+      return {tipo:'tab',tab};
+    }
+  }
+  return {tipo:'tab',tab:'hoje'};
+}
+
+function abrirSecao(qual,{preservarOrigem=false}={}){
+  if(!preservarOrigem){
+    const atual=localizacaoAtual();
+    const mesmaSecao=atual.tipo==='secao' && atual.secao===qual;
+    if(!mesmaSecao) _origensSecao.set(qual,atual);
+  }
   [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
     const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
   });
@@ -156,9 +185,31 @@ function abrirSecao(qual){
   if(secao){secao.style.display='block';secao.classList.remove('oculto');}
   const body=el('appBody');if(body)body.scrollTop=0;
   // Carregar dados da seção
+  if(qual==='ritmo')window.dispatchEvent(new CustomEvent('lifeos:ritmo-abrir'));
   if(qual==='projetos')carregarProjetos();
   if(qual==='rituais')carregarRituais();
   if(qual==='config'){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
+}
+
+function voltarContexto(){
+  const atual=localizacaoAtual();
+  const qual=atual.tipo==='secao' ? atual.secao : null;
+  const origem=qual ? _origensSecao.get(qual) : null;
+
+  if(origem?.tipo==='casa'){
+    trocarAba('casa');
+    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
+    return;
+  }
+  if(origem?.tipo==='tab'){
+    trocarAba(origem.tab);
+    return;
+  }
+  if(origem?.tipo==='secao'){
+    abrirSecao(origem.secao,{preservarOrigem:true});
+    return;
+  }
+  trocarAba('mais');
 }
 
 function voltarMais(){
@@ -172,11 +223,25 @@ function voltarMais(){
 
 // --- LISTA ---
 async function carregarLista(){
-  const{data:itens,error}=await supa.from('lista_compras').select('id,nome,quantidade,unidade,categoria,criado_em,origem,estoque_id').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
+  const{data:itens,error}=await supa.from('lista_compras').select('id,nome,quantidade,unidade,categoria,criado_em,origem,estoque_id,ciclo_compra').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
   const area=el('itens');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
   if(!itens||!itens.length){area.innerHTML='<div class="vazio">Nada pendente.</div>';return;}
-  for(const item of itens){
+  let cicloAnterior=null;
+  const ordenados=[...itens].sort((a,b)=>{
+    const ordem={semanal:0,mensal:1};
+    return (ordem[a.ciclo_compra||'semanal']??0)-(ordem[b.ciclo_compra||'semanal']??0)
+      || new Date(b.criado_em)-new Date(a.criado_em);
+  });
+  for(const item of ordenados){
+    const ciclo=item.ciclo_compra||'semanal';
+    if(ciclo!==cicloAnterior){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:var(--muted);padding:10px 2px 6px;text-transform:uppercase;letter-spacing:.04em';
+      h.textContent=ciclo==='mensal'?'Compra do mês':'Compra semanal';
+      area.appendChild(h);
+      cicloAnterior=ciclo;
+    }
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome;
@@ -198,6 +263,7 @@ function abrirEditarLista(item){
   el('elNome').value=item.nome||'';
   el('elQtd').value=item.quantidade??'';
   el('elUnidade').value=item.unidade||'';
+  if(el('elCicloCompra'))el('elCicloCompra').value=item.ciclo_compra||'semanal';
   aviso('avisoEditarLista','');
   abrirModal('modalEditarLista');
 }
@@ -210,6 +276,7 @@ async function salvarEditarLista(){
   const qtd=el('elQtd').value?Number(el('elQtd').value):null;
   const{error}=await supa.from('lista_compras').update({
     nome,quantidade:qtd,unidade:el('elUnidade').value.trim()||null,
+    ciclo_compra:el('elCicloCompra')?.value||'semanal',
   }).eq('id',_listaEditando.id);
   el('btnSalvarEditarLista').disabled=false;
   if(error){aviso('avisoEditarLista','Erro ao salvar.','erro');return;}
@@ -234,7 +301,7 @@ async function adicionar(){
   const nome=el('novoItem').value.trim();if(!nome){aviso('avisoAdd','Digite o nome.','erro');return;}
   const destinoCompraId=el('novoItemDestino')?.value||null;
   el('btnAdd').disabled=true;
-  const payload={casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id};
+  const payload={casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id,ciclo_compra:el('novoItemCiclo')?.value||'semanal'};
   if(destinoCompraId)payload.destino_compra_id=destinoCompraId;
   const{data,error}=await supa.from('lista_compras').insert(payload).select().single();
   if(data)supa.from('eventos').insert({tipo:'item_adicionado',entidade:'lista_compras',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome});
@@ -638,7 +705,7 @@ async function salvarEditarPlanta(){
 }
 
 // --- CARDAPIO ---
-let _refeicoes=[],_planDias={},_slotAtual=null;
+let _refeicoes=[],_planDias={},_slotAtual=null,_sugestaoCardapioOffset=0;
 async function carregarRefeicoes(){
   const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
@@ -672,6 +739,80 @@ function adicionarLinhaIngrediente(){
 
 function renderizarSlotsCardapio(){
   ['almoco','janta'].forEach(tipo=>{const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);if(!grid)return;grid.innerHTML='';for(let d=1;d<=5;d++){const chave=`${d}-${tipo}`;const slot=_planDias[chave];const btn=document.createElement('div');btn.className='dia-slot'+(slot?' preenchido':'');btn.textContent=slot?slot.nome:'+ add';btn.onclick=()=>abrirModalRefeicao(d,tipo);grid.appendChild(btn);}});
+}
+
+function normalizarCardapioTexto(valor=''){
+  return String(valor||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+function familiaProteinaReceita(receita){
+  const texto=normalizarCardapioTexto([receita.nome,...(receita.refeicao_ingredientes||[]).map(i=>i.nome)].join(' '));
+  if(/frango|sassami|sobrecoxa/.test(texto))return 'frango';
+  if(/tilapia|peixe|atum|sardinha/.test(texto))return 'peixe';
+  if(/suino|lombo|porco/.test(texto))return 'porco';
+  if(/carne|acem|bife|almondega/.test(texto))return 'carne';
+  if(/ovo|omelete/.test(texto))return 'ovos';
+  return 'outro';
+}
+
+function ingredienteDisponivelNoEstoque(ingrediente,nomesEstoque){
+  const nome=normalizarCardapioTexto(ingrediente);
+  if(!nome)return false;
+  return nomesEstoque.some(est=>est.includes(nome)||nome.includes(est));
+}
+
+async function sugerirPlanejamentoSemana(){
+  const botao=el('btnSugerirPlan');
+  if(botao){botao.disabled=true;botao.textContent='Montando...';}
+  try{
+    if(!_refeicoes.length)await carregarRefeicoes();
+    const candidatas=_refeicoes.filter(r=>['almoco','janta','ambos'].includes(r.tipo));
+    if(!candidatas.length){aviso('avisoPlan','Cadastre ao menos uma refeição de almoço/janta.','erro');return;}
+
+    const{data:estoque}=await supa.from('estoque')
+      .select('nome,quantidade,nivel')
+      .eq('casa_id',usuario.casa_id);
+    const nomesEstoque=(estoque||[])
+      .filter(i=>i.nivel!=='acabou'&&(i.quantidade==null||Number(i.quantidade)>0))
+      .map(i=>normalizarCardapioTexto(i.nome))
+      .filter(Boolean);
+
+    const usados=new Set();
+    let ultimaFamilia=null;
+    const semana=formatarDataISO(inicioSemana());
+    const baseHash=[...semana].reduce((a,c)=>a+c.charCodeAt(0),0)+_sugestaoCardapioOffset++;
+
+    for(let d=1;d<=5;d++){
+      for(const tipo of ['almoco','janta']){
+        const compativeis=candidatas.filter(r=>r.tipo===tipo||r.tipo==='ambos');
+        const ranking=compativeis.map((r,idx)=>{
+          const disponiveis=(r.refeicao_ingredientes||[])
+            .filter(i=>ingredienteDisponivelNoEstoque(i.nome,nomesEstoque)).length;
+          const familia=familiaProteinaReceita(r);
+          let score=disponiveis*3;
+          if(usados.has(r.id))score-=20;
+          if(familia===ultimaFamilia&&familia!=='outro')score-=4;
+          score+=((baseHash+idx+d+(tipo==='janta'?7:0))%7)/100;
+          return{r,score,familia};
+        }).sort((a,b)=>b.score-a.score||a.r.nome.localeCompare(b.r.nome,'pt-BR'));
+
+        const escolha=ranking[0]||null;
+        if(!escolha)continue;
+        _planDias[`${d}-${tipo}`]={nome:escolha.r.nome,refeicaoId:escolha.r.id};
+        usados.add(escolha.r.id);
+        ultimaFamilia=escolha.familia;
+      }
+    }
+    renderizarSlotsCardapio();
+    aviso('avisoPlan',nomesEstoque.length
+      ?'Sugestão pronta priorizando o que já existe no estoque. Revise e salve quando quiser.'
+      :'Sugestão pronta com variedade. Revise e salve quando quiser.','ok');
+  }catch(erro){
+    console.error('[Cardápio] Falha ao sugerir semana:',erro);
+    aviso('avisoPlan','Não foi possível montar a sugestão agora.','erro');
+  }finally{
+    if(botao){botao.disabled=false;botao.textContent='Sugerir semana';}
+  }
 }
 
 function abrirModalRefeicao(dia,tipo){
@@ -1753,6 +1894,7 @@ el('btnAddIngrediente').onclick=adicionarLinhaIngrediente;
 el('btnConfirmarRef').onclick=confirmarSlot;
 el('btnLimparSlot').onclick=limparSlot;
 el('btnFecharModalRef').onclick=fecharModalRefeicao;
+el('btnSugerirPlan').onclick=sugerirPlanejamentoSemana;
 el('btnSalvarPlan').onclick=salvarPlanejamento;
 el('btnGerarLista').onclick=gerarListaCardapio;
 el('btnSalvarRitual').onclick=salvarRitual;
@@ -1793,7 +1935,7 @@ el('btnNovoProjeto').onclick=()=>{
 };
 el('btnFecharModalProjeto').onclick=()=>{fecharModal('modalProjeto');};
 el('btnSalvarProjeto').onclick=salvarProjeto;
-el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;abrirSecao('projetos');};
+el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;abrirSecao('projetos',{preservarOrigem:true});};
 el('btnEditarProjeto').onclick=()=>{
   if(!_projetoAtual)return;
   el('modalProjetoTitulo').textContent='Editar projeto';
@@ -1878,6 +2020,7 @@ window.trocarAba = trocarAba;
 window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
+window.voltarContexto = voltarContexto;
 if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
 
 

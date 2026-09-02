@@ -21,6 +21,7 @@
   </script>
   <link rel="stylesheet" href="tokens.css"/>
   <link rel="stylesheet" href="/ghumat-refinement.css?v=1"/>
+  <link rel="stylesheet" href="/ritmo.css?v=1"/>
   <style>
     /* ================================================
        LAYOUT MOBILE
@@ -419,8 +420,12 @@
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Adicionar à lista</label>
-                <div class="linha-add">
-                  <input id="novoItem" type="text" placeholder="Ex.: leite"/>
+                <div class="linha-add" style="flex-wrap:wrap">
+                  <input id="novoItem" type="text" placeholder="Ex.: leite" style="min-width:160px"/>
+                  <select id="novoItemCiclo" class="sel" style="width:auto;min-width:112px">
+                    <option value="semanal">Semanal</option>
+                    <option value="mensal">Do mês</option>
+                  </select>
                   <button class="btn-acao" id="btnAdd">Add</button>
                 </div>
               </div>
@@ -548,7 +553,8 @@
               <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px" id="slotsAlmoco"></div>
               <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Janta</div>
               <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px" id="slotsJanta"></div>
-              <div style="margin-top:14px;display:flex;gap:8px">
+              <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-acao secundario" id="btnSugerirPlan">Sugerir semana</button>
                 <button class="btn-acao" id="btnSalvarPlan">Salvar</button>
                 <button class="btn-acao secundario" id="btnGerarLista">Gerar lista</button>
               </div>
@@ -589,8 +595,23 @@
 
       <!-- aba: MAIS -->
       <div id="abaMais" class="oculto" style="display:none;">
+
         <div class="config-section-titulo">Pessoal</div>
         <div class="secao">
+          <div class="cartao clicavel lifeos-module-card" onclick="abrirSecao('ritmo')" role="button" tabindex="0" aria-label="Abrir Ritmo">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div class="lifeos-module-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 13h3l2-6 4 12 2-6h5"/>
+                </svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:700">Ritmo</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px">Alimentação, movimento e evolução</div>
+              </div>
+              <svg class="ui-menu-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </div>
           <!-- Projetos -->
           <div class="cartao clicavel" onclick="abrirSecao('projetos')">
             <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -622,10 +643,27 @@
         </div>
       </div>
 
+      <!-- SEÇÃO: RITMO (submódulo pessoal dentro do LifeOS) -->
+      <div id="secaoRitmo" class="oculto" style="display:none;">
+        <header class="lifeos-page-head" style="display:flex;align-items:flex-start;gap:10px;">
+          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar para Mais" title="Voltar" style="margin-top:1px">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div style="min-width:0;flex:1">
+            <span class="lifeos-page-kicker">Pessoal · LifeOS</span>
+            <h1>Ritmo</h1>
+            <p>Seu espaço privado de alimentação, movimento e evolução.</p>
+          </div>
+        </header>
+        <div id="ritmoMount">
+          <div class="secao"><div class="cartao"><div class="vazio">Carregando seu Ritmo...</div></div></div>
+        </div>
+      </div>
+
       <!-- SEÇÃO: PROJETOS (dentro de Mais) -->
       <div id="secaoProjetos" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Projetos</span>
         </div>
         <div class="secao">
@@ -689,7 +727,7 @@
       <!-- SEÇÃO: RITUAIS -->
       <div id="secaoRituais" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Rituais</span>
         </div>
         <div class="secao">
@@ -708,7 +746,7 @@
       <!-- SEÇÃO: CONFIGURAÇÕES -->
       <div id="secaoConfig" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Configurações</span>
         </div>
         <div class="secao">
@@ -762,7 +800,7 @@
     <nav class="tab-bar" aria-label="Navegação principal">
       <button class="tab-btn ativa" data-tab="hoje" onclick="trocarAba('hoje',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Início
+        Hoje
       </button>
       <button class="tab-btn" data-tab="casa" onclick="trocarAba('casa',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>
@@ -852,6 +890,12 @@
     <div style="display:flex;gap:10px;">
       <div class="campo" style="flex:1"><label>Quantidade</label><input id="elQtd" type="number" min="0" step="any"/></div>
       <div class="campo"><label>Unidade</label><input id="elUnidade" type="text" placeholder="Ex.: kg, un"/></div>
+    </div>
+    <div class="campo"><label>Lista</label>
+      <select id="elCicloCompra" class="sel">
+        <option value="semanal">Compra semanal</option>
+        <option value="mensal">Compra do mês</option>
+      </select>
     </div>
     <button class="btn-primario" id="btnSalvarEditarLista">Salvar alterações</button>
     <div id="avisoEditarLista" class="aviso"></div>
@@ -1050,6 +1094,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/ritmo.js?v=1" defer></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

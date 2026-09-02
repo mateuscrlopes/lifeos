@@ -80,37 +80,8 @@
     }
   }
 
-  function installHomeShortcuts() {
-    const hero = document.getElementById('heroHoje');
-    const metrics = document.getElementById('metricasHoje');
-    if (!hero || !metrics || document.getElementById('lifeosHomeShortcuts')) return;
-
-    const nav = document.createElement('nav');
-    nav.id = 'lifeosHomeShortcuts';
-    nav.className = 'lifeos-shortcuts';
-    nav.setAttribute('aria-label', 'Atalhos do LifeOS');
-
-    const shortcuts = [
-      ['tab', 'financeiro', 'finance', 'Financeiro'],
-      ['tab', 'casa', 'house', 'Casa'],
-      ['tab', 'plantas', 'plant', 'Plantas'],
-      ['section', 'projetos', 'folder', 'Projetos'],
-    ];
-
-    nav.innerHTML = shortcuts.map(([type, value, iconName, label]) =>
-      '<button type="button" class="lifeos-shortcut" data-lifeos-nav="' + type + ':' + value + '">' +
-        '<span class="lifeos-shortcut-icon">' + svg(iconName) + '</span>' +
-        '<span>' + label + '</span>' +
-      '</button>'
-    ).join('');
-
-    metrics.parentNode.insertBefore(nav, metrics);
-    nav.querySelectorAll('[data-lifeos-nav]').forEach(button => {
-      button.addEventListener('click', () => {
-        const [type, value] = button.dataset.lifeosNav.split(':');
-        navigate(type, value);
-      });
-    });
+  function removeLegacyHomeShortcuts() {
+    document.getElementById('lifeosHomeShortcuts')?.remove();
   }
 
   function iconizeDeleteButton(button) {
@@ -184,7 +155,7 @@
 
   function enhanceAll(root = document) {
     installPageHeaders();
-    installHomeShortcuts();
+    removeLegacyHomeShortcuts();
     normalizeActions(root);
     normalizeMoreMenu();
     alignFinanceStatus();

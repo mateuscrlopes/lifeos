@@ -1492,7 +1492,7 @@ function goToToday() {
 }
 
 function syncBottomNavigationState() {
-  const moreSections = ['secaoProjetos', 'secaoRituais', 'secaoConfig', 'abaPainelProjeto'];
+  const moreSections = ['secaoRitmo', 'secaoProjetos', 'secaoRituais', 'secaoConfig', 'abaPainelProjeto'];
   const moreVisible = moreSections.some(id => isVisible(document.getElementById(id)));
   if (!moreVisible) return;
   document.querySelectorAll('.tab-btn').forEach(button => button.classList.toggle('ativa', button.dataset.tab === 'mais'));
