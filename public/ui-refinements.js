@@ -52,6 +52,10 @@ let marketLocationsCache = [];
 let stockConferenceLoading = false;
 let marketDestinationsCache = [];
 let purchaseRowsDecorating = false;
+let uiSheetReturnFocus = null;
+let uiSheetKeydownHandler = null;
+let uiSheetViewportCleanup = null;
+const legacyModalReturnFocus = new WeakMap();
 const LAST_SUBTAB_KEY = 'lifeos:last-casa-subtab';
 
 function loadStyles() {
@@ -109,12 +113,24 @@ function toast(message, type = 'ok', duration = 2800) {
 }
 
 function closeSheet() {
-  document.querySelector('.ui-sheet-overlay')?.remove();
+  const overlay = document.querySelector('.ui-sheet-overlay');
+  if (!overlay) return;
+  overlay.remove();
+  uiSheetViewportCleanup?.();
+  uiSheetViewportCleanup = null;
+  if (uiSheetKeydownHandler) document.removeEventListener('keydown', uiSheetKeydownHandler);
+  uiSheetKeydownHandler = null;
   updateBodyModalState();
+
+  const returnFocus = uiSheetReturnFocus;
+  uiSheetReturnFocus = null;
+  window.requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
 }
 
 function openSheet({ title, subtitle = '', content = '', onMount }) {
   closeSheet();
+  uiSheetReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
   const overlay = document.createElement('div');
   const overMarket = Boolean(marketOverlay);
   overlay.className = `ui-sheet-overlay${overMarket ? ' ui-sheet-over-market ui-sheet-center' : ''}`;
@@ -126,17 +142,63 @@ function openSheet({ title, subtitle = '', content = '', onMount }) {
           <div class="ui-sheet-title">${escapeHtml(title)}</div>
           ${subtitle ? `<div class="ui-sheet-sub">${escapeHtml(subtitle)}</div>` : ''}
         </div>
-        <button type="button" class="ui-icon-button ui-sheet-close" aria-label="Fechar">${icon('close')}</button>
+        <button type="button" class="ui-icon-button ui-sheet-close" data-ui-action="close" aria-label="Fechar">${icon('close')}</button>
       </div>
       <div class="ui-sheet-body">${content}</div>
     </section>`;
+
+  const syncViewport = () => {
+    const height = window.visualViewport?.height || window.innerHeight;
+    overlay.style.setProperty('--ui-viewport-height', Math.round(height) + 'px');
+  };
+  syncViewport();
+  window.visualViewport?.addEventListener('resize', syncViewport);
+  window.visualViewport?.addEventListener('scroll', syncViewport);
+  uiSheetViewportCleanup = () => {
+    window.visualViewport?.removeEventListener('resize', syncViewport);
+    window.visualViewport?.removeEventListener('scroll', syncViewport);
+  };
+
   overlay.addEventListener('click', event => {
     if (event.target === overlay) closeSheet();
+  });
+  overlay.addEventListener('focusin', event => {
+    if (!event.target?.matches?.('input, select, textarea')) return;
+    window.setTimeout(() => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 120);
   });
   overlay.querySelector('.ui-sheet-close').addEventListener('click', closeSheet);
   document.body.appendChild(overlay);
   document.body.classList.add('ui-modal-open');
-  onMount?.(overlay.querySelector('.ui-sheet'));
+
+  uiSheetKeydownHandler = event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSheet();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )].filter(el => !el.hidden && el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener('keydown', uiSheetKeydownHandler);
+
+  const sheet = overlay.querySelector('.ui-sheet');
+  onMount?.(sheet);
+  window.requestAnimationFrame(() => {
+    sheet?.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])')
+      ?.focus({ preventScroll: true });
+  });
   return overlay;
 }
 
@@ -213,9 +275,11 @@ function enhanceButton(button) {
   const label = buttonLabel(button);
   const title = (button.title || '').toLowerCase();
   const aria = (button.getAttribute('aria-label') || '').toLowerCase();
-  const closeControl = button.classList.contains('modal-fechar')
+  const explicitAction = String(button.dataset.uiAction || '').toLowerCase();
+  const closeControl = explicitAction === 'close'
+    || button.classList.contains('modal-fechar')
     || button.classList.contains('ritmo-close')
-    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close],[data-ac-close],[data-cf-fechar],[data-cf-editor-fechar],[data-cfe-fechar]')
     || aria.includes('fechar')
     || title.includes('fechar');
 
@@ -270,19 +334,32 @@ function enhanceButton(button) {
     return;
   }
 
-  if ((label === '×' || label === '✕') && !button.closest('.linha-ingrediente')) {
+  if (explicitAction === 'delete') {
     button.classList.add('ui-icon-button', 'ui-delete');
-    button.setAttribute('aria-label', 'Excluir');
-    button.title = 'Excluir';
+    button.setAttribute('aria-label', button.getAttribute('aria-label') || 'Excluir');
+    button.title = button.title || 'Excluir';
     setButtonContent(button, 'trash');
+    return;
+  }
+
+  if ((label === '×' || label === '✕') && !button.closest('.linha-ingrediente')) {
+    // Um X sem semântica explícita é tratado como fechar, nunca como exclusão.
+    // Ações destrutivas precisam declarar data-ui-action="delete".
+    button.classList.remove('ui-delete', 'ui-danger', 'is-danger');
+    button.classList.add('ui-icon-button');
+    button.dataset.uiAction = 'close';
+    button.setAttribute('aria-label', 'Fechar');
+    button.title = 'Fechar';
+    setButtonContent(button, 'close');
     return;
   }
 
   if (label === '×' && button.closest('.linha-ingrediente')) {
     button.classList.add('ui-icon-button', 'ui-delete');
+    button.dataset.uiAction = 'delete';
     button.setAttribute('aria-label', 'Remover ingrediente');
     button.title = 'Remover ingrediente';
-    setButtonContent(button, 'close');
+    setButtonContent(button, 'trash');
     return;
   }
 
@@ -496,16 +573,24 @@ function moduleFromDeleteTarget(button) {
 }
 
 function isDeleteControl(button) {
-  const label = buttonLabel(button);
   const aria = (button.getAttribute('aria-label') || '').toLowerCase();
   const title = (button.title || '').toLowerCase();
-  const closeControl = button.classList.contains('modal-fechar')
+  const explicitAction = String(button.dataset.uiAction || '').toLowerCase();
+  const closeControl = explicitAction === 'close'
+    || button.classList.contains('modal-fechar')
     || button.classList.contains('ritmo-close')
-    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close],[data-ac-close],[data-cf-fechar],[data-cf-editor-fechar],[data-cfe-fechar]')
     || aria.includes('fechar')
     || title.includes('fechar');
   if (closeControl) return false;
-  return button.classList.contains('ui-delete') || label === '×' || aria.includes('excluir') || aria.includes('remover');
+
+  // Exclusão exige intenção semântica; o caractere ×, sozinho, nunca é destrutivo.
+  return explicitAction === 'delete'
+    || button.classList.contains('ui-delete')
+    || aria.includes('excluir')
+    || aria.includes('remover')
+    || title.includes('excluir')
+    || title.includes('remover');
 }
 
 function installDeletionGuard() {
@@ -542,6 +627,7 @@ const HISTORY_MODULES = [
   ['estoque', 'Estoque'],
   ['tarefas', 'Tarefas'],
   ['contas', 'Contas'],
+  ['acerto_regras', 'Recorrências'],
   ['refeicoes', 'Cardápio'],
   ['projetos', 'Projetos'],
   ['rituais', 'Rituais'],
@@ -550,6 +636,7 @@ const HISTORY_MODULES = [
 
 function historyName(item) {
   const data = item.dados || {};
+  if (data._ui_archive === 'acerto_regra') return data.titulo || 'Recorrência';
   if (data._ui_bundle === 'planta') {
     const p = data.planta || {};
     return p.nome_personalizado || p.especies?.nome_popular || p.codigo || 'Planta';
@@ -599,14 +686,40 @@ async function loadHistory() {
   list.innerHTML = '<div class="vazio">Carregando histórico...</div>';
   try {
     const { client, profile } = await getContext();
-    const { data, error } = await client
-      .from('historico_excluidos')
-      .select('id,modulo,registro_id,dados,excluido_em,restaurado_em,restaurado_por')
-      .eq('casa_id', profile.casa_id)
-      .order('excluido_em', { ascending: false })
-      .limit(300);
-    if (error) throw error;
-    historyCache = data || [];
+    const [deletedResult, archivedRulesResult] = await Promise.all([
+      client
+        .from('historico_excluidos')
+        .select('id,modulo,registro_id,dados,excluido_em,restaurado_em,restaurado_por')
+        .eq('casa_id', profile.casa_id)
+        .order('excluido_em', { ascending: false })
+        .limit(300),
+      client
+        .from('acerto_regras')
+        .select('id,titulo,arquivado_em,ativo_antes_arquivar')
+        .eq('casa_id', profile.casa_id)
+        .not('arquivado_em', 'is', null)
+        .order('arquivado_em', { ascending: false }),
+    ]);
+    if (deletedResult.error) throw deletedResult.error;
+
+    const archivedRules = archivedRulesResult.error
+      ? []
+      : (archivedRulesResult.data || []).map(rule => ({
+          id: `acerto-regra:${rule.id}`,
+          modulo: 'acerto_regras',
+          registro_id: rule.id,
+          dados: {
+            titulo: rule.titulo,
+            _ui_archive: 'acerto_regra',
+            ativo_antes_arquivar: rule.ativo_antes_arquivar,
+          },
+          excluido_em: rule.arquivado_em,
+          restaurado_em: null,
+          restaurado_por: null,
+        }));
+
+    historyCache = [...(deletedResult.data || []), ...archivedRules]
+      .sort((a, b) => String(b.excluido_em || '').localeCompare(String(a.excluido_em || '')));
     renderHistory();
   } catch (error) {
     list.innerHTML = `<div class="ui-history-error"><strong>O Histórico não pôde ser carregado.</strong><br>${escapeHtml(error.message || 'Verifique se a migração 017 foi aplicada no Supabase.')}</div>`;
@@ -629,13 +742,14 @@ function renderHistory() {
     wrapper.className = 'ui-history-item';
     const date = item.excluido_em ? new Date(item.excluido_em) : null;
     const restoredDate = item.restaurado_em ? new Date(item.restaurado_em) : null;
+    const archived = item.dados?._ui_archive === 'acerto_regra';
     wrapper.innerHTML = `
       <div class="ui-history-top">
         <div>
           <div class="ui-history-name">${escapeHtml(historyName(item))}</div>
           <div class="ui-history-meta">
             ${escapeHtml(moduleLabel(item.modulo))}
-            ${date ? ` · excluído em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+            ${date ? ` · ${archived ? 'arquivada' : 'excluído'} em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
           </div>
         </div>
         ${item.restaurado_em
@@ -680,6 +794,12 @@ async function restoreHistoryItem(item) {
   const { client, profile } = await getContext();
   const data = item.dados || {};
   let result = { error: null };
+
+  if (data._ui_archive === 'acerto_regra') {
+    result = await client.rpc('restaurar_regra_acerto', { p_regra_id: item.registro_id });
+    if (result?.error) throw new Error(result.error.message);
+    return;
+  }
 
   if (data._ui_bundle === 'planta') {
     const plant = data.planta || {};
@@ -1602,9 +1722,28 @@ function installModalAccessibility() {
   const observer = new MutationObserver(records => {
     records.forEach(record => {
       const modal = record.target;
-      if (modal instanceof HTMLElement && modal.classList.contains('aberto')) {
+      if (!(modal instanceof HTMLElement)) return;
+
+      if (modal.classList.contains('aberto')) {
+        if (!legacyModalReturnFocus.has(modal)) {
+          const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          legacyModalReturnFocus.set(modal, active);
+        }
         modal.dataset.uiDirty = '0';
+        modal.setAttribute('role', modal.getAttribute('role') || 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.querySelectorAll('.modal-fechar').forEach(button => {
+          button.dataset.uiAction = 'close';
+          button.setAttribute('aria-label', button.getAttribute('aria-label') || 'Fechar');
+        });
         focusModal(modal);
+        return;
+      }
+
+      const returnFocus = legacyModalReturnFocus.get(modal);
+      if (legacyModalReturnFocus.has(modal)) {
+        legacyModalReturnFocus.delete(modal);
+        window.requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
       }
     });
   });
@@ -1618,6 +1757,11 @@ function installModalAccessibility() {
     const modal = event.target.closest?.('.modal-overlay.aberto');
     if (modal && event.target.matches('input,select,textarea')) modal.dataset.uiDirty = '1';
   }, true);
+  document.addEventListener('focusin', event => {
+    const modal = event.target.closest?.('.modal-overlay.aberto');
+    if (!modal || !event.target.matches('input,select,textarea')) return;
+    window.setTimeout(() => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 120);
+  }, true);
 
   document.addEventListener('click', event => {
     const close = event.target.closest?.('.modal-overlay.aberto .modal-fechar');
@@ -1630,14 +1774,36 @@ function installModalAccessibility() {
   }, true);
 
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    if (document.querySelector('.ui-sheet-overlay')) { closeSheet(); return; }
-    if (marketOverlay) { closeMarketMode(); return; }
+    if (document.querySelector('.ui-sheet-overlay')) return;
+    if (marketOverlay && event.key === 'Escape') { closeMarketMode(); return; }
+
     const open = [...document.querySelectorAll('.modal-overlay.aberto')].pop();
     if (!open) return;
-    if (open.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) return;
-    open.dataset.uiDirty = '0';
-    open.classList.remove('aberto');
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (open.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) return;
+      open.dataset.uiDirty = '0';
+      const close = open.querySelector('.modal-fechar');
+      if (close) close.click();
+      else open.classList.remove('aberto');
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+    const focusable = [...open.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )].filter(element => !element.hidden && element.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 }
 

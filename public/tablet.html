@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -17,7 +17,7 @@
     ================================================ */
     html, body { height: 100%; overflow: hidden; }
 
-    #appRoot { height: 100vh; position: relative; }
+    #appRoot { height: 100dvh; min-height: 100vh; position: relative; }
 
     /* ---- TELA DE ESPERA ---- */
     #telaEspera {
@@ -1045,6 +1045,28 @@ let usuario = null;
 let canal = null;
 let _foto = null;
 
+const tabletEscapeHtml = (valor = '') => String(valor)
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#039;');
+
+function tabletDataCivil(valor = new Date()) {
+  const d = valor instanceof Date ? valor : new Date(valor);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function tabletSomarDiasCivil(dias) {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + dias);
+  return tabletDataCivil(d);
+}
+
 // URL da foto — substitua quando hospedar no Supabase Storage
 const FOTO_URL = 'https://awuapqiueykslecwxyaz.supabase.co/storage/v1/object/public/fotos/Design%20sem%20nome.png';
 const FOTO_FALLBACK = 'linear-gradient(145deg, #1E4A34, #2F6F4F)';
@@ -1380,15 +1402,15 @@ async function carregarComprasHome() {
   if (!itens.length) { area.innerHTML = '<div class="vazio">Nenhum item pendente</div>'; return; }
   area.innerHTML = itens.slice(0,6).map(i => `
     <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--linha);font-size:13px">
-      <span style="font-weight:600">${i.nome}</span>
-      <span style="color:var(--faint);font-size:11px">${i.quantidade?i.quantidade+' '+(i.unidade||''):'—'}</span>
+      <span style="font-weight:600">${tabletEscapeHtml(i.nome)}</span>
+      <span style="color:var(--faint);font-size:11px">${i.quantidade?tabletEscapeHtml(i.quantidade+' '+(i.unidade||'')):'—'}</span>
     </div>
   `).join('') + (itens.length > 6 ? `<div style="text-align:center;font-size:11px;color:var(--faint);padding-top:8px">+ ${itens.length-6} mais</div>` : '');
 }
 
 async function carregarContasHome() {
-  const hoje = new Date().toISOString().slice(0,10);
-  const em15 = new Date(Date.now() + 15*86400000).toISOString().slice(0,10);
+  const hoje = tabletDataCivil();
+  const em15 = tabletSomarDiasCivil(15);
   const { data } = await supa.from('contas')
     .select('id,nome,valor,vencimento,paga')
     .eq('casa_id', usuario.casa_id)
@@ -1409,7 +1431,7 @@ async function carregarContasHome() {
     const quando = dias < 0 ? 'Vencida' : dias === 0 ? 'Vence hoje' : `em ${dias}d`;
     return `<div class="conta-row">
       <div class="conta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-      <div class="conta-info"><div class="conta-nome">${c.nome}</div><div class="conta-venc">${quando}</div></div>
+      <div class="conta-info"><div class="conta-nome">${tabletEscapeHtml(c.nome)}</div><div class="conta-venc">${tabletEscapeHtml(quando)}</div></div>
       <div class="conta-valor">${c.valor ? 'R$ '+Number(c.valor).toFixed(2) : '—'}</div>
       <div class="status-dot ${cor}"></div>
     </div>`;
@@ -1438,14 +1460,14 @@ async function carregarEstoqueHome() {
   area.innerHTML = problema.slice(0,5).map(i => {
     const acabou = i.quantidade === 0 || i.nivel === 'acabou';
     return `<div class="estoque-row">
-      <div class="estoque-nome">${i.nome}<div class="estoque-local">${i.local||''}</div></div>
+      <div class="estoque-nome">${tabletEscapeHtml(i.nome)}<div class="estoque-local">${tabletEscapeHtml(i.local||'')}</div></div>
       <span class="estoque-badge ${acabou?'acabou':'baixo'}">${acabou?'Acabou':'Baixo'}</span>
     </div>`;
   }).join('');
 }
 
 async function carregarPlantasHome() {
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = tabletDataCivil();
   const { data } = await supa.from('plantas')
     .select('id,codigo,perfil_hidrico,especies(nome_popular),planta_rotinas(tipo,proxima_realizacao,ativa)')
     .eq('casa_id', usuario.casa_id)
@@ -1470,7 +1492,7 @@ async function carregarPlantasHome() {
     const urgente = dias != null && dias <= 0;
     return `<div class="planta-row">
       <div class="planta-dot" style="background:${corPerfil[p.perfil_hidrico]||'#6b7280'}"></div>
-      <div style="flex:1;min-width:0"><div class="planta-nome">${p.especies?.nome_popular||p.codigo}</div><div class="planta-meta">${r?.tipo||'Cuidados em dia'} · ${quando}</div></div>
+      <div style="flex:1;min-width:0"><div class="planta-nome">${tabletEscapeHtml(p.especies?.nome_popular||p.codigo)}</div><div class="planta-meta">${tabletEscapeHtml(r?.tipo||'Cuidados em dia')} · ${tabletEscapeHtml(quando)}</div></div>
       <span class="planta-tag" style="background:${urgente?'var(--alert-soft)':'var(--paper-2)'};color:${urgente?'var(--alert)':'var(--muted)'}">${urgente?'Atenção':'Em dia'}</span>
     </div>`;
   }).join('');
@@ -1533,7 +1555,7 @@ async function carregarDestaquesHome() {
   area.innerHTML=destaques.slice(0,2).map(d=>`
     <div class="destaque">
       <div class="destaque-icon" style="background:${d.tom==='sun'?'var(--sun-soft)':'var(--sage-soft)'};color:${d.tom==='sun'?'var(--sun)':'var(--sage)'}">${d.icon}</div>
-      <div style="flex:1;min-width:0"><div class="destaque-titulo">${d.titulo}</div><div class="destaque-sub">${d.sub}</div>${d.progresso!=null?`<div style="height:5px;margin-top:8px;border-radius:999px;background:var(--paper-2);overflow:hidden"><span style="display:block;width:${d.progresso}%;height:100%;background:var(--sage)"></span></div>`:''}</div>
+      <div style="flex:1;min-width:0"><div class="destaque-titulo">${tabletEscapeHtml(d.titulo)}</div><div class="destaque-sub">${tabletEscapeHtml(d.sub)}</div>${d.progresso!=null?`<div style="height:5px;margin-top:8px;border-radius:999px;background:var(--paper-2);overflow:hidden"><span style="display:block;width:${d.progresso}%;height:100%;background:var(--sage)"></span></div>`:''}</div>
     </div>`).join('');
 }
 
@@ -1594,8 +1616,8 @@ function renderizarTarefas(containerId, tarefas) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div>
-        <div class="task-nome">${t.titulo}</div>
-        <div class="task-meta">${t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1)}${t.data?` · ${t.data.slice(0,10).split('-').reverse().join('/')}`:''}</div>
+        <div class="task-nome">${tabletEscapeHtml(t.titulo)}</div>
+        <div class="task-meta">${tabletEscapeHtml(t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1))}${t.data?` · ${t.data.slice(0,10).split('-').reverse().join('/')}`:''}</div>
       </div>
     </div>
   `).join('');
@@ -1609,25 +1631,25 @@ async function carregarPaginaSecundaria(pag) {
     const { data } = await supa.from('lista_compras').select('id,nome,quantidade,unidade,origem,status').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
     const area = document.getElementById('pagComprasLista');
     const itens = data||[];
-    area.innerHTML = itens.length ? itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--linha);font-size:14px"><span style="font-weight:600">${i.nome}</span><span style="color:var(--faint)">${i.quantidade?i.quantidade+' '+(i.unidade||''):'—'}</span></div>`).join('') : '<div class="vazio">Lista vazia</div>';
+    area.innerHTML = itens.length ? itens.map(i=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--linha);font-size:14px"><span style="font-weight:600">${tabletEscapeHtml(i.nome)}</span><span style="color:var(--faint)">${i.quantidade?tabletEscapeHtml(i.quantidade+' '+(i.unidade||'')):'—'}</span></div>`).join('') : '<div class="vazio">Lista vazia</div>';
   } else if (pag === 'estoque') {
     const { data } = await supa.from('estoque').select('id,nome,tipo,quantidade,minimo,unidade,nivel,minimo_nivel,local').eq('casa_id',usuario.casa_id).order('nome');
     const area = document.getElementById('pagEstoqueLista');
     const itens = data||[];
     area.innerHTML = itens.length ? itens.map(i=>{
       const prob = i.tipo==='nivel_visual'?['quase_acabando','acabou'].includes(i.nivel):i.quantidade<=i.minimo;
-      return `<div class="estoque-row"><div style="flex:1"><div class="estoque-nome">${i.nome}</div><div class="estoque-local">${i.local||'—'}</div></div><span style="font-size:12px;color:var(--faint)">${i.tipo!=='nivel_visual'?i.quantidade+' '+(i.unidade||''):i.nivel}</span>${prob?'<span class="estoque-badge baixo">Atenção</span>':''}</div>`;
+      return `<div class="estoque-row"><div style="flex:1"><div class="estoque-nome">${tabletEscapeHtml(i.nome)}</div><div class="estoque-local">${tabletEscapeHtml(i.local||'—')}</div></div><span style="font-size:12px;color:var(--faint)">${i.tipo!=='nivel_visual'?i.quantidade+' '+(i.unidade||''):i.nivel}</span>${prob?'<span class="estoque-badge baixo">Atenção</span>':''}</div>`;
     }).join('') : '<div class="vazio">Nenhum item</div>';
   } else if (pag === 'contas') {
     const { data } = await supa.from('contas').select('id,nome,valor,vencimento,paga').eq('casa_id',usuario.casa_id).order('paga').order('vencimento');
-    const hoje = new Date().toISOString().slice(0,10);
+    const hoje = tabletDataCivil();
     const area = document.getElementById('pagContasLista');
     const contas = data||[];
     area.innerHTML = contas.length ? contas.map(c=>{
       const dias = Math.round((new Date(c.vencimento)-new Date(hoje))/86400000);
       const cor = c.paga?'verde':dias<0?'vermelho':dias<=3?'amarelo':'verde';
       const quando = c.paga?'Paga':dias<0?'Vencida':dias===0?'Hoje':`em ${dias}d`;
-      return `<div class="conta-row"><div class="conta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="conta-info"><div class="conta-nome">${c.nome}</div><div class="conta-venc">${quando} · ${c.vencimento.slice(0,10).split('-').reverse().join('/')}</div></div><div class="conta-valor">${c.valor?'R$ '+Number(c.valor).toFixed(2):'—'}</div><div class="status-dot ${cor}"></div></div>`;
+      return `<div class="conta-row"><div class="conta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="conta-info"><div class="conta-nome">${tabletEscapeHtml(c.nome)}</div><div class="conta-venc">${tabletEscapeHtml(quando)} · ${tabletEscapeHtml(c.vencimento.slice(0,10).split('-').reverse().join('/'))}</div></div><div class="conta-valor">${c.valor?'R$ '+Number(c.valor).toFixed(2):'—'}</div><div class="status-dot ${cor}"></div></div>`;
     }).join('') : '<div class="vazio">Nenhuma conta</div>';
   } else if (pag === 'rotinas') {
     const { data } = await supa.from('rituais').select('id,nome,frequencia,privado,ritual_sessoes(realizado_em)').eq('casa_id',usuario.casa_id).eq('privado',false);
@@ -1636,7 +1658,7 @@ async function carregarPaginaSecundaria(pag) {
     const freqLabel = {semanal:'Semanal',mensal:'Mensal',bimestral:'Bimestral',livre:'Livre'};
     area.innerHTML = rotinas.length ? rotinas.map(r=>{
       const ultima = (r.ritual_sessoes||[]).sort((a,b)=>new Date(b.realizado_em)-new Date(a.realizado_em))[0];
-      return `<div style="padding:12px 0;border-bottom:1px solid var(--linha)"><div style="font-size:14px;font-weight:700">${r.nome}</div><div style="font-size:11px;color:var(--faint);margin-top:3px">${freqLabel[r.frequencia]||r.frequencia}${ultima?` · última: ${new Date(ultima.realizado_em).toLocaleDateString('pt-BR')}`:''}</div></div>`;
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--linha)"><div style="font-size:14px;font-weight:700">${tabletEscapeHtml(r.nome)}</div><div style="font-size:11px;color:var(--faint);margin-top:3px">${tabletEscapeHtml(freqLabel[r.frequencia]||r.frequencia)}${ultima?` · última: ${new Date(ultima.realizado_em).toLocaleDateString('pt-BR')}`:''}</div></div>`;
     }).join('') : '<div class="vazio">Nenhuma rotina pública</div>';
   }
 }
