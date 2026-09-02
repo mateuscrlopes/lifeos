@@ -1,5 +1,5 @@
 -- LIFEOS - MIGRACAO 053: HARDENING RLS DAS TABELAS LEGADAS
--- Substitui políticas abertas "using (true)" por isolamento real por Casa.
+-- Substitui políticas permissivas legadas por isolamento real por Casa.
 -- Depende das funções lifeos_usuario_atual_id/lifeos_usuario_na_casa criadas na 032.
 
 -- Núcleo ---------------------------------------------------------------------
