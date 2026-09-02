@@ -111,3 +111,30 @@ test('viewport permite zoom e usa viewport dinâmica', () => {
   assert.match(mobile, /height:100dvh/);
   assert.match(tablet, /height: 100dvh/);
 });
+
+
+test('conteúdo persistido é escapado antes de entrar em templates HTML', () => {
+  const app = read('../public/app.js');
+  const tablet = read('../public/tablet.html');
+
+  assert.match(app, /const escapeHtml=/);
+  assert.match(app, /escapeHtml\(nomeEspecie\)/);
+  assert.match(app, /escapeHtml\(projeto\.descricao\)/);
+  assert.match(app, /escapeHtml\(e\.endereco\|\|'Sem endereço'\)/);
+  assert.match(app, /escapeHtml\(nome\)/);
+
+  assert.match(tablet, /const tabletEscapeHtml/);
+  assert.match(tablet, /tabletEscapeHtml\(t\.titulo\)/);
+  assert.match(tablet, /tabletEscapeHtml\(c\.nome\)/);
+  assert.match(tablet, /tabletEscapeHtml\(p\.especies\?\.nome_popular\|\|p\.codigo\)/);
+});
+
+test('tablet e painel da Casa usam data civil local', () => {
+  const tablet = read('../public/tablet.html');
+  const painel = read('../public/painel-casa-v4.js');
+
+  assert.match(tablet, /function tabletDataCivil/);
+  assert.match(tablet, /function tabletSomarDiasCivil/);
+  assert.match(painel, /function hojeIso\(\)[\s\S]*getFullYear\(\)/);
+  assert.doesNotMatch(painel, /function hojeIso\(\)[\s\S]{0,120}toISOString\(\)\.slice\(0, 10\)/);
+});
