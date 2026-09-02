@@ -1463,7 +1463,7 @@ async function renderizarPainelProjeto(projeto){
   for(const o of(objs||[])){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--linha);font-size:14px';
     const txt=document.createElement('span');txt.textContent='• '+o.descricao;
-    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    const rem=document.createElement('button');rem.textContent='×';rem.dataset.uiAction='delete';rem.setAttribute('aria-label','Excluir objetivo');rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
     rem.onclick=async()=>{await supa.from('projeto_objetivos').delete().eq('id',o.id);await renderizarPainelProjeto(_projetoAtual);};
     linha.appendChild(txt);linha.appendChild(rem);ppObj.appendChild(linha);
   }
@@ -1483,7 +1483,7 @@ async function renderizarPainelProjeto(projeto){
     const partes=[];if(t.privado)partes.push({icone:'cadeado',texto:'Privada'});if(t.data)partes.push({texto:t.data.slice(0,10).split('-').reverse().join('/')});
     partes.forEach((parte,i)=>{if(i)meta.appendChild(document.createTextNode(' · '));if(parte.icone)meta.insertAdjacentHTML('beforeend',iconeSvg(parte.icone,11)+' ');meta.appendChild(document.createTextNode(parte.texto));});
     info.appendChild(nome);if(partes.length)info.appendChild(meta);
-    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    const rem=document.createElement('button');rem.textContent='×';rem.dataset.uiAction='delete';rem.setAttribute('aria-label','Excluir tarefa');rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
     rem.onclick=async()=>{await supa.from('tarefas').delete().eq('id',t.id);await renderizarPainelProjeto(_projetoAtual);};
     linha.appendChild(ch);linha.appendChild(info);linha.appendChild(rem);ppTar.appendChild(linha);
   }
@@ -1497,7 +1497,7 @@ async function renderizarPainelProjeto(projeto){
     const dir=document.createElement('div');dir.style.cssText='display:flex;gap:6px;align-items:center';
     const btnLista=document.createElement('button');btnLista.textContent='→ Lista';btnLista.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
     btnLista.onclick=async()=>{await supa.from('lista_compras').insert({casa_id:usuario.casa_id,nome:it.nome,status:'pendente',origem:'projeto',criado_por:usuario.id});await carregarLista();};
-    const rem=document.createElement('button');rem.textContent='×';rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    const rem=document.createElement('button');rem.textContent='×';rem.dataset.uiAction='delete';rem.setAttribute('aria-label','Excluir item do projeto');rem.style.cssText='background:none;color:var(--suave);padding:2px 6px';
     rem.onclick=async()=>{await supa.from('projeto_itens').delete().eq('id',it.id);await renderizarPainelProjeto(_projetoAtual);};
     dir.appendChild(btnLista);dir.appendChild(rem);linha.appendChild(txt);linha.appendChild(dir);ppIt.appendChild(linha);
   }
@@ -1759,7 +1759,7 @@ async function renderizarEventosPlanta(planta){
       };
       acoes.appendChild(btnEdit);
     }
-    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);font-size:13px;padding:2px 6px;font-weight:400';
+    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.dataset.uiAction='delete';btnDel.setAttribute('aria-label','Excluir evento');btnDel.style.cssText='background:none;color:var(--suave);font-size:13px;padding:2px 6px;font-weight:400';
     btnDel.onclick=async()=>{
       if(!confirm('Remover este evento da linha do tempo?'))return;
       await supa.from('planta_eventos').delete().eq('id',ev.id);
@@ -1857,7 +1857,7 @@ async function carregarTokens(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=t.ativo?'#2f6f4f':'#6b7280';badge.textContent=t.ativo?'Ativo':'Inativo';
     const btnRev=document.createElement('button');btnRev.textContent=t.ativo?'Revogar':'Reativar';btnRev.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
     btnRev.onclick=async()=>{await supa.from('atalho_tokens').update({ativo:!t.ativo}).eq('id',t.id);carregarTokens();};
-    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
+    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.dataset.uiAction='delete';btnDel.setAttribute('aria-label','Excluir token');btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
     btnDel.onclick=async()=>{if(!confirm('Excluir este token? O Atalho vai parar de funcionar.'))return;await supa.from('atalho_tokens').delete().eq('id',t.id);carregarTokens();};
     dir.appendChild(badge);dir.appendChild(btnRev);dir.appendChild(btnDel);
     linha.appendChild(esq);linha.appendChild(dir);area.appendChild(linha);
