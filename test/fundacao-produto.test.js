@@ -150,3 +150,14 @@ test('modais legados recebem semântica, foco e navegação por teclado centrali
   assert.match(ui, /event\.key !== 'Tab'/);
   assert.match(ui, /returnFocus\?\.focus/);
 });
+
+
+test('Histórico global inclui recorrências arquivadas e restaura pela RPC', () => {
+  const ui = read('../public/ui-refinements.js');
+
+  assert.match(ui, /\['acerto_regras', 'Recorrências'\]/);
+  assert.match(ui, /from\('acerto_regras'\)[\s\S]*not\('arquivado_em', 'is', null\)/);
+  assert.match(ui, /_ui_archive: 'acerto_regra'/);
+  assert.match(ui, /archived \? 'arquivada' : 'excluído'/);
+  assert.match(ui, /client\.rpc\('restaurar_regra_acerto'/);
+});
