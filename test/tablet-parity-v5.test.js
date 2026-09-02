@@ -88,7 +88,7 @@ test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
 
   assert.match(loader, /MutationObserver/);
   assert.match(loader, /HTMLLinkElement/);
-  assert.match(loader, /tablet-app-shell-v3\.css\?v=3/);
+  assert.match(loader, /tablet-app-shell-v3\\.css\\?v=4/);
   assert.match(html, /tablet-app-shell-v3\.js\?v=3/);
 });
 
@@ -97,4 +97,13 @@ test('alimentação contextual deixa de parecer faixa tracejada', () => {
 
   assert.match(css, /\.ac-tablet-strip\.ac-is-empty[\s\S]*border-style:\s*solid\s*!important/);
   assert.match(css, /\.ac-tablet-main strong[\s\S]*font-family:\s*var\(--sans\)\s*!important/);
+});
+
+
+test('tema claro do tablet preserva contraste da navegação e dos cards', () => {
+  const css = read('public/tablet-app-shell-v3.css');
+  assert.match(css, /html:not\(\[data-theme="dark"\]\) #painelCasa \.sidebar[\s\S]*#173124/);
+  assert.match(css, /html\[data-theme="light"\] #painelCasa \.sidebar-btn[\s\S]*rgba\(255,255,255,\.72\)/);
+  assert.match(css, /html:not\(\[data-theme="dark"\]\) #painelCasa \.panel[\s\S]*background:\s*var\(--paper\)\s*!important/);
+  assert.match(css, /color:\s*var\(--texto\)\s*!important/);
 });
