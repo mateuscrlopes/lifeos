@@ -173,11 +173,25 @@ function voltarMais(){
 
 // --- LISTA ---
 async function carregarLista(){
-  const{data:itens,error}=await supa.from('lista_compras').select('id,nome,quantidade,unidade,categoria,criado_em,origem,estoque_id').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
+  const{data:itens,error}=await supa.from('lista_compras').select('id,nome,quantidade,unidade,categoria,criado_em,origem,estoque_id,ciclo_compra').eq('casa_id',usuario.casa_id).eq('status','pendente').order('criado_em',{ascending:false});
   const area=el('itens');area.innerHTML='';
   if(error){area.innerHTML='<div class="vazio">Erro ao carregar.</div>';return;}
   if(!itens||!itens.length){area.innerHTML='<div class="vazio">Nada pendente.</div>';return;}
-  for(const item of itens){
+  let cicloAnterior=null;
+  const ordenados=[...itens].sort((a,b)=>{
+    const ordem={semanal:0,mensal:1};
+    return (ordem[a.ciclo_compra||'semanal']??0)-(ordem[b.ciclo_compra||'semanal']??0)
+      || new Date(b.criado_em)-new Date(a.criado_em);
+  });
+  for(const item of ordenados){
+    const ciclo=item.ciclo_compra||'semanal';
+    if(ciclo!==cicloAnterior){
+      const h=document.createElement('div');
+      h.style.cssText='font-size:11px;font-weight:700;color:var(--muted);padding:10px 2px 6px;text-transform:uppercase;letter-spacing:.04em';
+      h.textContent=ciclo==='mensal'?'Compra do mês':'Compra semanal';
+      area.appendChild(h);
+      cicloAnterior=ciclo;
+    }
     const l=document.createElement('div');l.className='item';
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=item.nome;
@@ -199,6 +213,7 @@ function abrirEditarLista(item){
   el('elNome').value=item.nome||'';
   el('elQtd').value=item.quantidade??'';
   el('elUnidade').value=item.unidade||'';
+  if(el('elCicloCompra'))el('elCicloCompra').value=item.ciclo_compra||'semanal';
   aviso('avisoEditarLista','');
   abrirModal('modalEditarLista');
 }
@@ -211,6 +226,7 @@ async function salvarEditarLista(){
   const qtd=el('elQtd').value?Number(el('elQtd').value):null;
   const{error}=await supa.from('lista_compras').update({
     nome,quantidade:qtd,unidade:el('elUnidade').value.trim()||null,
+    ciclo_compra:el('elCicloCompra')?.value||'semanal',
   }).eq('id',_listaEditando.id);
   el('btnSalvarEditarLista').disabled=false;
   if(error){aviso('avisoEditarLista','Erro ao salvar.','erro');return;}
@@ -235,7 +251,7 @@ async function adicionar(){
   const nome=el('novoItem').value.trim();if(!nome){aviso('avisoAdd','Digite o nome.','erro');return;}
   const destinoCompraId=el('novoItemDestino')?.value||null;
   el('btnAdd').disabled=true;
-  const payload={casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id};
+  const payload={casa_id:usuario.casa_id,nome,status:'pendente',criado_por:usuario.id,ciclo_compra:el('novoItemCiclo')?.value||'semanal'};
   if(destinoCompraId)payload.destino_compra_id=destinoCompraId;
   const{data,error}=await supa.from('lista_compras').insert(payload).select().single();
   if(data)supa.from('eventos').insert({tipo:'item_adicionado',entidade:'lista_compras',entidade_id:data.id,usuario_id:usuario.id,detalhe:usuario.nome+' adicionou '+nome});
