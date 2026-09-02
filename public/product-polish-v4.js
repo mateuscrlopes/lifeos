@@ -9,7 +9,7 @@
     link = document.createElement('link');
     link.id = ID;
     link.rel = 'stylesheet';
-    link.href = '/product-polish-v4.css?v=3';
+    link.href = '/product-polish-v4.css?v=4';
     document.head.appendChild(link);
   }
 
