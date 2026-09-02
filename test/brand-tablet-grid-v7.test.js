@@ -25,7 +25,7 @@ test('tablet usa o mesmo arquivo de logo do app', () => {
 test('dashboard tablet organiza seis módulos em pares alinhados', () => {
   const css = read('public/tablet-app-shell-v3.css');
   const painel = read('public/painel-casa.js');
-  assert.match(css, /grid-template-areas:[\s\S]*"tarefas destaques"[\s\S]*"compras plantas"[\s\S]*"contas estoque"/);
+  assert.match(css, /grid-template-areas:[\s\S]*"tarefas destaques compras"[\s\S]*"plantas contas estoque"/);
   assert.match(css, /display:\s*contents\s*!important/);
   assert.ok(painel.includes('panel.hidden = false'));
 });
@@ -38,5 +38,5 @@ test('cache v7 força atualização no mobile e tablet', () => {
   assert.ok(status.includes('product-polish-v4.js?v=3'));
   assert.ok(polish.includes('product-polish-v4.css?v=3'));
   assert.ok(enhancements.includes('painel-casa.js?v=3'));
-  assert.ok(tablet.includes('tablet-app-shell-v3.js?v=4'));
+  assert.ok(tablet.includes('tablet-app-shell-v3.js?v=5'));
 });
