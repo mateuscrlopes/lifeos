@@ -1,4 +1,4 @@
-// Tablet App Shell v5 — keeps the tablet/iOS parity layer as the final stylesheet.
+// Tablet App Shell v6 — keeps the tablet/iOS parity layer as the final stylesheet.
 (() => {
   const ID = 'lifeos-tablet-app-shell-v3';
   let timer = null;
@@ -13,7 +13,7 @@
     const link = document.createElement('link');
     link.id = ID;
     link.rel = 'stylesheet';
-    link.href = '/tablet-app-shell-v3.css?v=5';
+    link.href = '/tablet-app-shell-v3.css?v=6';
     document.head.appendChild(link);
     document.body.classList.add('tablet-app-shell-v3');
 
