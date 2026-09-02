@@ -34,7 +34,7 @@ test('shell mobile v3 é carregado por último sem duplicar a navegação da hom
   const shell = ler('public/mobile-shell-v3.js');
   const css = ler('public/mobile-shell-v3.css');
 
-  assert.match(status, /mobile-shell-v3\.js\?v=3/);
+  assert.match(status, /mobile-shell-v3\\.js\\?v=4/);
   assert.ok(
     status.lastIndexOf('mobile-shell-v3.js') > status.lastIndexOf('acertos.js'),
     'shell v3 precisa carregar depois dos módulos funcionais'
@@ -97,4 +97,26 @@ test('barra inferior sobe acima do Home Indicator', () => {
   const css = ler('public/mobile-shell-v3.css');
   assert.match(css, /bottom:\s*calc\(14px \+ env\(safe-area-inset-bottom/);
   assert.match(css, /padding-bottom:\s*calc\(112px \+ env\(safe-area-inset-bottom/);
+});
+
+
+test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
+  const app = ler('public/app.js');
+  const css = ler('public/mobile-shell-v3.css');
+  const shell = ler('public/mobile-shell-v3.js');
+
+  assert.match(app, /metrica-cardapio/);
+  assert.match(app, /data-ui-destination="cardapio"/);
+  assert.match(app, /Café da manhã · Almoço · Lanche · Jantar/);
+  assert.match(css, /#metricasHoje \.metrica-cardapio[\s\S]*grid-column:\s*1 \/ -1/);
+  assert.match(css, /#listaRefeicoes \.card-refeicao[\s\S]*max-width:\s*100%\s*!important/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.receita-row-actions[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px/);
+  assert.match(shell, /mobile-shell-v3\.css\?v=3/);
+});
+
+test('cabeçalhos e ações de página usam uma régua consistente', () => {
+  const css = ler('public/mobile-shell-v3.css');
+  assert.match(css, /\.lifeos-page-head--with-back[\s\S]*grid-template-columns:\s*42px minmax\(0, 1fr\)/);
+  assert.match(css, /\.lifeos-page-head--with-back > \.lifeos-icon-action[\s\S]*align-self:\s*center/);
+  assert.match(css, /#abaPlantas > \.lifeos-page-head \+ div[\s\S]*align-items:\s*center/);
 });
