@@ -80,7 +80,16 @@
     }
   }
 
+  function removeLegacyHomeShortcuts() {
+    document.getElementById('lifeosHomeShortcuts')?.remove();
+  }
+
   function installHomeShortcuts() {
+    // Mantido somente para compatibilidade com versões em cache.
+    // A navegação principal já vive na barra inferior; duplicá-la dentro do Hoje
+    // fazia a tela parecer uma segunda home.
+    removeLegacyHomeShortcuts();
+    return;
     const hero = document.getElementById('heroHoje');
     const metrics = document.getElementById('metricasHoje');
     if (!hero || !metrics || document.getElementById('lifeosHomeShortcuts')) return;
@@ -184,7 +193,7 @@
 
   function enhanceAll(root = document) {
     installPageHeaders();
-    installHomeShortcuts();
+    removeLegacyHomeShortcuts();
     normalizeActions(root);
     normalizeMoreMenu();
     alignFinanceStatus();
