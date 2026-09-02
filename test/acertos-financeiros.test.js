@@ -67,7 +67,7 @@ test('le valor e data de comprovante PDF sem IA', async () => {
 
 test('interface carrega acertos e tema', () => {
   const status = fs.readFileSync(new URL('../public/status-estoque.js', import.meta.url), 'utf8');
-  assert.match(status, /acertos\.js\?v=2/);
+  assert.match(status, /acertos\.js\?v=3/);
   assert.match(status, /theme\.js\?v=1/);
 });
 
@@ -167,6 +167,30 @@ test('servidor cria lote único, guarda comprovante e emite recibo agrupado', ()
   assert.match(source, /diferenca_selecao/);
   assert.match(source, /app\.get\('\/api\/acertos\/lotes\/:id\/recibo'/);
   assert.match(source, /gerarPdfReciboLifeOS/);
+});
+
+test('prints de comprovante usam OCR e nunca viram falso R$ 0,00', () => {
+  const front = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  const server = fs.readFileSync(new URL('../src/acertos.js', import.meta.url), 'utf8');
+  const cleanup = fs.readFileSync(new URL('../db/050_limpeza_pagamentos_lote.sql', import.meta.url), 'utf8');
+
+  assert.match(front, /tesseract\.js@7/);
+  assert.match(front, /extractPixValueFromOcr/);
+  assert.match(front, /Lendo o print/);
+  assert.match(front, /x-lifeos-ocr-valor/);
+  assert.match(front, /x-lifeos-ocr-confidence/);
+  assert.match(server, /x-lifeos-ocr-valor/);
+  assert.match(server, /ocr_imagem_cliente/);
+  assert.match(server, /numeroPositivoOuNull\(extracao\.valor\)/);
+  assert.match(cleanup, /valor_extraido = null/);
+  assert.match(cleanup, /imagem_sem_ocr/);
+});
+
+test('pagamento por print continua com fallback manual quando OCR não é confiável', () => {
+  const front = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(front, /Não consegui identificar o valor com segurança neste print/);
+  assert.match(front, /Você só precisa corrigir se a leitura estiver errada/);
+  assert.match(front, /valueInput\.value = ocrValue\.toFixed\(2\)/);
 });
 
 test('recibo PDF usa identidade LifeOS sem fundo pesado e inclui itens', () => {
