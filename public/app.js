@@ -8,7 +8,7 @@ import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInven
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
 import './alimentacao-contextual-mobile-fix.js?v=1';
-import './receitas-v2.js?v=1';
+import './receitas-v2.js?v=2';
 
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
