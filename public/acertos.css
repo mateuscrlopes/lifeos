@@ -896,3 +896,45 @@
     color: var(--sage);
   }
 }
+
+
+/* ================================================================
+   OCR de comprovantes — feedback leve e sem disputar espaço
+================================================================ */
+
+.ac-field > small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.ac-ocr-reading {
+  position: relative;
+  padding-left: 31px;
+}
+
+.ac-ocr-reading::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -5px;
+  border: 2px solid color-mix(in srgb, var(--sage) 25%, transparent);
+  border-top-color: var(--sage);
+  border-radius: 50%;
+  animation: ac-ocr-spin .75s linear infinite;
+}
+
+@keyframes ac-ocr-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-ocr-reading::before {
+    animation: none;
+  }
+}
