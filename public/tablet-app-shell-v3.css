@@ -966,3 +966,87 @@ html[data-theme="dark"] .panel-head {
       "estoque" !important;
   }
 }
+
+
+/* ================================================================
+   v8 — contraste explícito no tema claro
+================================================================ */
+
+/* A navegação lateral permanece escura nos dois temas para nunca
+   depender de branco sobre branco no tablet físico. */
+html:not([data-theme="dark"]) #painelCasa .sidebar,
+html[data-theme="light"] #painelCasa .sidebar {
+  background: linear-gradient(180deg, #173124, #102219) !important;
+  border-right: 1px solid rgba(16,34,25,.16);
+}
+
+html:not([data-theme="dark"]) #painelCasa .sidebar-btn,
+html:not([data-theme="dark"]) #painelCasa .sidebar-espera,
+html[data-theme="light"] #painelCasa .sidebar-btn,
+html[data-theme="light"] #painelCasa .sidebar-espera {
+  color: rgba(255,255,255,.72) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .sidebar-btn:hover,
+html:not([data-theme="dark"]) #painelCasa .sidebar-espera:hover,
+html[data-theme="light"] #painelCasa .sidebar-btn:hover,
+html[data-theme="light"] #painelCasa .sidebar-espera:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.09) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .sidebar-btn.ativo,
+html[data-theme="light"] #painelCasa .sidebar-btn.ativo {
+  color: #fff !important;
+  background: rgba(255,255,255,.16) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .sidebar-sep,
+html[data-theme="light"] #painelCasa .sidebar-sep {
+  background: rgba(255,255,255,.16) !important;
+}
+
+/* Superfícies claras usam texto e bordas do próprio tema, sem herdar
+   branco de componentes do modo escuro. */
+html:not([data-theme="dark"]) #painelCasa .metrica-card,
+html:not([data-theme="dark"]) #painelCasa .panel,
+html[data-theme="light"] #painelCasa .metrica-card,
+html[data-theme="light"] #painelCasa .panel {
+  background: var(--paper) !important;
+  color: var(--texto) !important;
+  border-color: var(--linha) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .panel-head,
+html[data-theme="light"] #painelCasa .panel-head {
+  background: color-mix(in srgb, var(--paper-2) 58%, var(--paper)) !important;
+  border-color: var(--linha) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .panel-titulo,
+html:not([data-theme="dark"]) #painelCasa .task-nome,
+html:not([data-theme="dark"]) #painelCasa .conta-nome,
+html:not([data-theme="dark"]) #painelCasa .estoque-nome,
+html:not([data-theme="dark"]) #painelCasa .planta-nome,
+html:not([data-theme="dark"]) #painelCasa .destaque-titulo,
+html[data-theme="light"] #painelCasa .panel-titulo,
+html[data-theme="light"] #painelCasa .task-nome,
+html[data-theme="light"] #painelCasa .conta-nome,
+html[data-theme="light"] #painelCasa .estoque-nome,
+html[data-theme="light"] #painelCasa .planta-nome,
+html[data-theme="light"] #painelCasa .destaque-titulo {
+  color: var(--texto) !important;
+}
+
+html:not([data-theme="dark"]) #painelCasa .task-meta,
+html:not([data-theme="dark"]) #painelCasa .conta-venc,
+html:not([data-theme="dark"]) #painelCasa .estoque-local,
+html:not([data-theme="dark"]) #painelCasa .planta-meta,
+html:not([data-theme="dark"]) #painelCasa .destaque-sub,
+html[data-theme="light"] #painelCasa .task-meta,
+html[data-theme="light"] #painelCasa .conta-venc,
+html[data-theme="light"] #painelCasa .estoque-local,
+html[data-theme="light"] #painelCasa .planta-meta,
+html[data-theme="light"] #painelCasa .destaque-sub {
+  color: var(--muted) !important;
+}

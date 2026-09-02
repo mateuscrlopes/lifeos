@@ -13,7 +13,7 @@
     const link = document.createElement('link');
     link.id = ID;
     link.rel = 'stylesheet';
-    link.href = '/tablet-app-shell-v3.css?v=3';
+    link.href = '/tablet-app-shell-v3.css?v=4';
     document.head.appendChild(link);
     document.body.classList.add('tablet-app-shell-v3');
 

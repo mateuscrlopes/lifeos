@@ -802,3 +802,177 @@ html[data-theme="dark"] .metrica {
   .cardapio-week-labels > div { font-size: 9px; }
   .cardapio-week-grid .dia-slot span { font-size: 8px; }
 }
+
+
+/* ================================================================
+   v8 — alinhamento, Cardápio visível e proteção contra overflow
+================================================================ */
+
+/* Uma única régua para os cabeçalhos internos: voltar + bloco de texto. */
+.lifeos-page-head--with-back {
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.lifeos-page-head--with-back > .lifeos-icon-action {
+  align-self: center !important;
+  margin: 0 !important;
+}
+
+.lifeos-page-head-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.lifeos-page-head-copy > * {
+  max-width: 100%;
+}
+
+/* Ações imediatamente abaixo do cabeçalho seguem a mesma régua. */
+#abaPlantas > .lifeos-page-head + div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 54px;
+  padding-top: 10px !important;
+}
+
+#plantasContador {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+#btnNovaPlanta {
+  align-self: center !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+/* Cardápio vira um atalho explícito na primeira dobra do Hoje. */
+#metricasHoje .metrica-cardapio {
+  grid-column: 1 / -1;
+  min-height: 78px !important;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+#metricasHoje .metrica-cardapio .metrica-icon {
+  width: 38px !important;
+  height: 38px !important;
+  margin: 0 !important;
+}
+
+#metricasHoje .metrica-cardapio-copy {
+  min-width: 0;
+}
+
+#metricasHoje .metrica-cardapio-titulo {
+  color: var(--texto);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -.015em;
+}
+
+#metricasHoje .metrica-cardapio .metrica-label {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+#metricasHoje .metrica-cardapio-acao {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* O shell nunca deve criar rolagem horizontal por conteúdo interno. */
+#appBody {
+  overflow-x: hidden !important;
+}
+
+.lifeos-module-page,
+.sub-conteudo,
+.secao,
+.cartao,
+#cardsHoje,
+#listaRefeicoes {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#listaRefeicoes {
+  overflow-x: hidden;
+}
+
+/* Receitas: texto e ações sempre ficam dentro do card, inclusive em iPhones estreitos. */
+#listaRefeicoes .card-refeicao {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+#listaRefeicoes .card-refeicao > .desc,
+#listaRefeicoes .card-refeicao .nome,
+#listaRefeicoes .card-refeicao .meta {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#listaRefeicoes .receita-row-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  #listaRefeicoes .card-refeicao {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    padding: 14px !important;
+  }
+
+  #listaRefeicoes .receita-row-actions {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 34px;
+    gap: 8px !important;
+  }
+
+  #listaRefeicoes .receita-open-btn {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #listaRefeicoes .receita-delete-btn.lifeos-icon-action {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 370px) {
+  #metricasHoje .metrica-cardapio {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+
+  #metricasHoje .metrica-cardapio .metrica-label {
+    font-size: 10px !important;
+  }
+}
