@@ -43,8 +43,8 @@ function conteudoComIcone(nome,texto,tamanho=15){
   return `${iconeSvg(nome,tamanho)}<span>${texto}</span>`;
 }
 function aviso(id,t,tipo=''){const a=el(id);if(!a)return;a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
-function abrirModal(id){const m=el(id);if(m){m.classList.add('aberto');}}
-function fecharModal(id){const m=el(id);if(m){m.classList.remove('aberto');}}
+function abrirModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.add('aberto');}}
+function fecharModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.remove('aberto');}}
 
 async function iniciar(){
   try{const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
