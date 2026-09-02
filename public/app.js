@@ -1680,10 +1680,12 @@ async function carregarHoje(){
       if(ch.itens?.length){
         ch.itens.slice(0,4).forEach(item=>{
           const resp=item.responsavel==='ambos'?'Ambos':item.responsavel.charAt(0).toUpperCase()+item.responsavel.slice(1);
-          card.corpo.appendChild(miniItem(item.tipo==='almoco'?`Almoço · ${resp}`:`Jantar · ${resp}`,item.nome,''));
+          card.corpo.appendChild(miniItem(`${labelTipoCardapio(item.tipo)} · ${resp}`,item.nome,item.calorias!=null?`${Number(item.calorias)} kcal`:''));
         });
       }else{
+        if(ch.cafe)card.corpo.appendChild(miniItem('Café da manhã',ch.cafe,''));
         if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
+        if(ch.lanche)card.corpo.appendChild(miniItem('Lanche',ch.lanche,''));
         if(ch.janta)card.corpo.appendChild(miniItem('Jantar',ch.janta,''));
         if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
       }
