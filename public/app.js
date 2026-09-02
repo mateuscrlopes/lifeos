@@ -295,7 +295,7 @@ async function carregarLista(){
     const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:2px;align-items:center';
     const btnComprei=document.createElement('button');btnComprei.textContent='Comprei';btnComprei.onclick=()=>comprar(item,btnComprei);
     const btnEditL=document.createElement('button');btnEditL.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditL.title='Editar';btnEditL.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditL.onclick=()=>abrirEditarLista(item);
-    const btnDelL=document.createElement('button');btnDelL.textContent='×';btnDelL.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelL.onclick=()=>removerItemLista(item);
+    const btnDelL=document.createElement('button');btnDelL.textContent='×';btnDelL.dataset.uiAction='delete';btnDelL.setAttribute('aria-label','Excluir item');btnDelL.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelL.onclick=()=>removerItemLista(item);
     acoes.appendChild(btnComprei);acoes.appendChild(btnEditL);acoes.appendChild(btnDelL);
     l.appendChild(d);l.appendChild(acoes);area.appendChild(l);
   }
@@ -395,7 +395,7 @@ async function carregarEstoque(){
     if(item.tipo==='nivel_visual'){const sel=document.createElement('select');sel.className='sel';sel.style.cssText='width:auto;padding:6px 8px;font-size:13px';NIVEIS_VISUAL.forEach(nv=>{const o=document.createElement('option');o.value=nv;o.textContent=ROTULO_NIVEL[nv];if(nv===item.nivel)o.selected=true;sel.appendChild(o);});sel.onchange=()=>ajustarNivel(item,sel.value);dir.appendChild(sel);}
     else{const p=item.tipo==='peso_volume'?100:1;const bm=document.createElement('button');bm.textContent='−';bm.onclick=()=>ajustarEstoque(item,-p);const q=document.createElement('span');q.className='est-qtd';q.textContent=item.quantidade;const bp=document.createElement('button');bp.textContent='+';bp.onclick=()=>ajustarEstoque(item,p);dir.appendChild(bm);dir.appendChild(q);dir.appendChild(bp);}
     const btnEditE=document.createElement('button');btnEditE.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditE.title='Editar';btnEditE.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditE.onclick=()=>abrirEditarEstoque(item);
-    const btnDelE=document.createElement('button');btnDelE.textContent='×';btnDelE.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelE.onclick=()=>removerEstoque(item);
+    const btnDelE=document.createElement('button');btnDelE.textContent='×';btnDelE.dataset.uiAction='delete';btnDelE.setAttribute('aria-label','Excluir item do estoque');btnDelE.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelE.onclick=()=>removerEstoque(item);
     dir.appendChild(btnEditE);dir.appendChild(btnDelE);
     l.appendChild(d);l.appendChild(dir);area.appendChild(l);
   }
