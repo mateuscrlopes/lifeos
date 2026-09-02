@@ -573,16 +573,24 @@ function moduleFromDeleteTarget(button) {
 }
 
 function isDeleteControl(button) {
-  const label = buttonLabel(button);
   const aria = (button.getAttribute('aria-label') || '').toLowerCase();
   const title = (button.title || '').toLowerCase();
-  const closeControl = button.classList.contains('modal-fechar')
+  const explicitAction = String(button.dataset.uiAction || '').toLowerCase();
+  const closeControl = explicitAction === 'close'
+    || button.classList.contains('modal-fechar')
     || button.classList.contains('ritmo-close')
-    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close],[data-ac-close],[data-cf-fechar],[data-cf-editor-fechar],[data-cfe-fechar]')
     || aria.includes('fechar')
     || title.includes('fechar');
   if (closeControl) return false;
-  return button.classList.contains('ui-delete') || label === '×' || aria.includes('excluir') || aria.includes('remover');
+
+  // Exclusão exige intenção semântica; o caractere ×, sozinho, nunca é destrutivo.
+  return explicitAction === 'delete'
+    || button.classList.contains('ui-delete')
+    || aria.includes('excluir')
+    || aria.includes('remover')
+    || title.includes('excluir')
+    || title.includes('remover');
 }
 
 function installDeletionGuard() {
