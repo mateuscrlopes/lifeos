@@ -58,6 +58,115 @@
     .reduce((sum, saldo) => sum + Number(saldo.saldo_credito || 0), 0);
   const remaining = (a) => Math.max(0, Number(a.valor_devido) - Number(a.valor_pago || 0));
 
+  let ocrScriptPromise = null;
+  let ocrWorkerPromise = null;
+
+  function parseMoneyOcr(valor) {
+    const limpo = String(valor || '').replace(/[^\d,.\-]/g, '').trim();
+    if (!limpo) return null;
+    let texto = limpo;
+    if (texto.includes(',') && texto.includes('.')) {
+      texto = texto.replace(/\./g, '').replace(',', '.');
+    } else if (texto.includes(',')) {
+      texto = texto.replace(',', '.');
+    } else if ((texto.match(/\./g) || []).length > 1) {
+      const partes = texto.split('.');
+      const decimal = partes.pop();
+      texto = partes.join('') + '.' + decimal;
+    }
+    const numero = Number(texto);
+    return Number.isFinite(numero) && numero > 0 && numero < 1000000
+      ? Math.round(numero * 100) / 100
+      : null;
+  }
+
+  function extractPixValueFromOcr(textoRecebido) {
+    const texto = String(textoRecebido || '').replace(/\r/g, '\n');
+    const linhas = texto.split(/\n+/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const semAcentos = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const dinheiroRe = /(?:R\s*\$|RS|\$)?\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})|(?:R\s*\$|RS|\$)\s*\d+(?:[.,]\d{2})/ig;
+    const rotulos = [
+      'valor da transferencia',
+      'valor da transacao',
+      'valor transferido',
+      'valor enviado',
+      'valor do pix',
+      'valor pago',
+      'valor',
+    ];
+    const ignorar = ['saldo', 'limite', 'disponivel', 'taxa', 'tarifa', 'cashback'];
+
+    for (let i = 0; i < linhas.length; i += 1) {
+      const base = semAcentos(linhas[i]);
+      if (!rotulos.some(rotulo => base.includes(rotulo))) continue;
+      if (ignorar.some(rotulo => base.includes(rotulo))) continue;
+
+      const janela = [linhas[i], linhas[i + 1] || ''].join(' ');
+      const candidatos = janela.match(dinheiroRe) || [];
+      for (const candidato of candidatos) {
+        const valor = parseMoneyOcr(candidato);
+        if (valor) return valor;
+      }
+    }
+
+    const candidatos = [];
+    for (const linha of linhas) {
+      const base = semAcentos(linha);
+      if (ignorar.some(rotulo => base.includes(rotulo))) continue;
+      for (const candidato of (linha.match(dinheiroRe) || [])) {
+        const valor = parseMoneyOcr(candidato);
+        if (valor) candidatos.push(valor);
+      }
+    }
+
+    const unicos = [...new Set(candidatos.map(v => v.toFixed(2)))].map(Number);
+    return unicos.length === 1 ? unicos[0] : null;
+  }
+
+  function loadOcrScript() {
+    if (window.Tesseract?.createWorker) return Promise.resolve(window.Tesseract);
+    if (ocrScriptPromise) return ocrScriptPromise;
+
+    ocrScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js';
+      script.async = true;
+      script.onload = () => window.Tesseract?.createWorker
+        ? resolve(window.Tesseract)
+        : reject(new Error('OCR não ficou disponível.'));
+      script.onerror = () => reject(new Error('Não foi possível carregar o leitor de imagens.'));
+      document.head.appendChild(script);
+    });
+
+    return ocrScriptPromise;
+  }
+
+  async function ocrWorker() {
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = loadOcrScript()
+        .then(Tesseract => Tesseract.createWorker('por'))
+        .catch(error => {
+          ocrWorkerPromise = null;
+          throw error;
+        });
+    }
+    return ocrWorkerPromise;
+  }
+
+  async function readImageProof(file, onProgress = () => {}) {
+    const worker = await ocrWorker();
+    onProgress('Lendo o print…');
+    const resultado = await worker.recognize(file);
+    const texto = resultado?.data?.text || '';
+    const confidence = Number(resultado?.data?.confidence);
+    const value = extractPixValueFromOcr(texto);
+    return {
+      value,
+      confidence: Number.isFinite(confidence) ? Math.round(confidence) : null,
+      textLength: texto.length,
+    };
+  }
+
   function hasPaymentHistory(acerto) {
     const ids = acerto.despesa_id
       ? A.acertos.filter((item) => item.despesa_id === acerto.despesa_id).map((item) => item.id)
@@ -559,7 +668,8 @@
           '<input name="value" type="number" min="0.01" step="0.01" inputmode="decimal" required></div></label>' +
         '<div id="acPayVariance"></div>' +
         '<label class="ac-field"><span>Comprovante</span><input name="file" type="file" accept="application/pdf,image/png,image/jpeg" required></label>' +
-        '<p class="ac-note">Em PDF, o LifeOS tenta conferir o valor automaticamente. Em imagem, usamos o valor informado e o recebedor confirma olhando o comprovante.</p>' +
+        '<div id="acOcrStatus"></div>' +
+        '<p class="ac-note">PDF e print são conferidos automaticamente. Se o leitor não conseguir identificar o valor, você pode confirmar o valor do Pix manualmente.</p>' +
         '<div id="acPayError"></div>' +
         '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button class="ac-primary" type="submit">Enviar para confirmação</button></div>' +
       '</form>'
@@ -575,7 +685,12 @@
     const valueInput = root.querySelector('[name="value"]');
     const totalEl = root.querySelector('#acSelectedTotal');
     const variance = root.querySelector('#acPayVariance');
+    const fileInput = root.querySelector('[name="file"]');
+    const ocrStatus = root.querySelector('#acOcrStatus');
     let valueTouched = false;
+    let ocrBusy = false;
+    let ocrValue = null;
+    let ocrConfidence = null;
 
     const selected = () => boxes.filter((box) => box.checked);
     const selectedTotal = () => selected().reduce((sum, box) => sum + Number(box.dataset.acBatchValue || 0), 0);
@@ -613,6 +728,49 @@
       valueTouched = true;
       renderVariance();
     });
+
+    fileInput?.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      ocrValue = null;
+      ocrConfidence = null;
+      ocrStatus.innerHTML = '';
+      if (!file) return;
+
+      if (file.type === 'application/pdf') {
+        ocrStatus.innerHTML = '<p class="ac-note">O PDF será lido pelo LifeOS ao enviar.</p>';
+        return;
+      }
+
+      if (!['image/png','image/jpeg'].includes(file.type)) return;
+
+      ocrBusy = true;
+      const submit = root.querySelector('#acPayForm [type="submit"]');
+      if (submit) submit.disabled = true;
+      ocrStatus.innerHTML = '<p class="ac-note ac-ocr-reading">Lendo o print e procurando o valor do Pix…</p>';
+
+      try {
+        const leitura = await readImageProof(file);
+        ocrValue = leitura.value;
+        ocrConfidence = leitura.confidence;
+
+        if (ocrValue != null) {
+          valueInput.value = ocrValue.toFixed(2);
+          valueTouched = true;
+          renderVariance();
+          ocrStatus.innerHTML = '<p class="ac-note ok"><strong>' + money(ocrValue) +
+            '</strong> identificado no print' +
+            (ocrConfidence != null ? ' · confiança OCR ' + ocrConfidence + '%' : '') + '.</p>';
+        } else {
+          ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui identificar o valor com segurança neste print. Confira o campo “Valor do Pix” antes de enviar.</p>';
+        }
+      } catch (error) {
+        ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui ler este print automaticamente. Confira o valor do Pix manualmente.</p>';
+      } finally {
+        ocrBusy = false;
+        if (submit) submit.disabled = false;
+      }
+    });
+
     syncTotal();
 
     root.querySelector('#acPayForm')?.addEventListener('submit', async (event) => {
@@ -631,6 +789,11 @@
 
       if (!(file instanceof File) || !file.size) {
         error.innerHTML = '<p class="ac-note warn">Escolha um comprovante.</p>';
+        return;
+      }
+
+      if (ocrBusy) {
+        error.innerHTML = '<p class="ac-note warn">Ainda estou lendo o print. Aguarde alguns segundos.</p>';
         return;
       }
 
@@ -660,6 +823,8 @@
             'Content-Type': file.type || 'application/octet-stream',
             'x-lifeos-tipo': file.type || 'application/octet-stream',
             'x-lifeos-valor': String(value),
+            'x-lifeos-ocr-valor': ocrValue != null ? String(ocrValue) : '',
+            'x-lifeos-ocr-confidence': ocrConfidence != null ? String(ocrConfidence) : '',
             'x-lifeos-acertos': escolhidos.map((box) => box.dataset.acBatchId).join(','),
             'x-lifeos-arquivo': encodeURIComponent(file.name),
           },
