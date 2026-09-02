@@ -527,6 +527,7 @@
 
   function renderHoje() {
     const atual = refeicaoAtual();
+    const atualPlano = planejadoParaCheckin(atual.tipo);
     const c = checkin(atual.tipo);
     const agua = Number(checkin('agua')?.valor || 0);
     const metaAgua = Number(R.perfil?.meta_agua_ml || 2000);
@@ -536,22 +537,28 @@
     const agendaHoje = R.agenda.filter(a => a.dia_semana === new Date().getDay());
     const foto = progressoFotos();
     const consumosHoje = R.consumos.filter(x => x.data === isoLocal());
-    const kcalHoje = consumosHoje.reduce((s, x) => s + Number(x.calorias || 0), 0);
-    const proteinaHoje = consumosHoje.reduce((s, x) => s + Number(x.proteina_g || 0), 0);
+    const kcalHoje = consumosHoje.reduce((sum, x) => sum + Number(x.calorias || 0), 0);
+    const proteinaHoje = consumosHoje.reduce((sum, x) => sum + Number(x.proteina_g || 0), 0);
+    const carboHoje = consumosHoje.reduce((sum, x) => sum + Number(x.carboidratos_g || 0), 0);
     const metaKcal = Number(R.perfil?.meta_calorias || 0);
     const metaProteina = Number(R.perfil?.meta_proteina_g || 0);
     const kcalPct = metaKcal ? Math.min(100, Math.round((kcalHoje / metaKcal) * 100)) : 0;
     const protPct = metaProteina ? Math.min(100, Math.round((proteinaHoje / metaProteina) * 100)) : 0;
+    const resumoAtual = atualPlano?.nome || 'Nenhuma refeição definida para este horário';
+    const macroAtual = atualPlano?.calorias != null
+      ? `${numero(atualPlano.calorias,0)} kcal · ${numero(atualPlano.proteina || 0,0)} g proteína · ${numero(atualPlano.carboidratos || 0,0)} g carb.`
+      : '';
 
     return `
-      <section class="ritmo-section">
+      <section class="ritmo-section ritmo-now-section">
         <div class="ritmo-card ritmo-primary-checkin">
-          <div class="ritmo-eyebrow">Agora</div>
-          <h3>${escapar(atual.nome)}</h3>
-          <p>${c ? escapar(statusLabel(c.status)) : 'Quando concluir, registre em um toque.'}</p>
+          <div class="ritmo-eyebrow">${escapar(atual.nome)}${atualPlano?.horario ? ' · ' + escapar(atualPlano.horario) : ''}</div>
+          <h3>${escapar(resumoAtual)}</h3>
+          ${macroAtual ? `<p class="ritmo-now-macros">${macroAtual}</p>` : ''}
+          <p>${c ? escapar(statusLabel(c.status)) : (atualPlano?.origem === 'casa' ? 'Refeição preparada no Cardápio da Casa.' : 'Sugestão do seu plano alimentar pessoal.')}</p>
           ${c
             ? `<div class="ritmo-status-line">${svg('check')} ${escapar(statusCurto(c.status))}</div>
-               <div class="ritmo-actions"><button class="ritmo-btn secondary" data-checkin="${atual.tipo}">Alterar check-in</button></div>`
+               <div class="ritmo-actions ritmo-checkin-actions"><button class="ritmo-btn secondary" data-checkin="${atual.tipo}">Alterar</button><button class="ritmo-btn ghost danger-text" data-excluir-checkin="${atual.tipo}">Excluir check-in</button></div>`
             : `<div class="ritmo-actions"><button class="ritmo-btn" data-checkin="${atual.tipo}">Fazer check-in</button></div>`
           }
         </div>
@@ -560,34 +567,37 @@
         </div>
       </section>
 
-      <section class="ritmo-section ritmo-cardapio-today">
-        <div class="ritmo-section-head"><div><h3>Cardápio de hoje</h3><span>Refeições planejadas e calorias por porção.</span></div><button id="ritmoAbrirCardapio">Abrir cardápio</button></div>
-        <div class="ritmo-card">
-          ${renderCardapioHoje()}
+      <section class="ritmo-section ritmo-plano-hoje-section">
+        <div class="ritmo-section-head"><div><h3>Plano de hoje</h3><span>Seu plano pessoal + almoço e jantar da Casa, sem duplicação.</span></div></div>
+        <div class="ritmo-card ritmo-daily-plan">
+          ${renderPlanoHoje()}
         </div>
       </section>
 
       <section class="ritmo-section">
-        <div class="ritmo-section-head"><h3>Alimentação de hoje</h3><button id="ritmoAdicionarConsumo">+ Registrar</button></div>
-        <div class="ritmo-grid-2">
+        <div class="ritmo-section-head"><h3>Alimentação de hoje</h3><button class="ritmo-register-button" id="ritmoAdicionarConsumo">+ Registrar</button></div>
+        <div class="ritmo-nutrition-grid">
           <div class="ritmo-stat">
             <div class="ritmo-stat-label">Calorias</div>
-            <div class="ritmo-stat-value">${numero(kcalHoje,0)} <span style="font-size:11px;color:var(--muted)">/ ${metaKcal ? numero(metaKcal,0) : '—'}</span></div>
-            <div class="ritmo-progress" style="background:var(--paper-2);margin-top:8px"><span style="width:${kcalPct}%;background:var(--sage)"></span></div>
-            <div class="ritmo-stat-meta">${kcalPct}% da meta registrada</div>
+            <div class="ritmo-stat-value">${numero(kcalHoje,0)} <span>/ ${metaKcal ? numero(metaKcal,0) : '—'}</span></div>
+            <div class="ritmo-progress"><span style="width:${kcalPct}%"></span></div>
           </div>
           <div class="ritmo-stat">
             <div class="ritmo-stat-label">Proteína</div>
-            <div class="ritmo-stat-value">${numero(proteinaHoje,0)} g <span style="font-size:11px;color:var(--muted)">/ ${metaProteina ? numero(metaProteina,0) + ' g' : '—'}</span></div>
-            <div class="ritmo-progress" style="background:var(--paper-2);margin-top:8px"><span style="width:${protPct}%;background:var(--sky)"></span></div>
-            <div class="ritmo-stat-meta">${protPct}% da meta registrada</div>
+            <div class="ritmo-stat-value">${numero(proteinaHoje,0)} g <span>/ ${metaProteina ? numero(metaProteina,0) + ' g' : '—'}</span></div>
+            <div class="ritmo-progress"><span style="width:${protPct}%"></span></div>
+          </div>
+          <div class="ritmo-stat">
+            <div class="ritmo-stat-label">Carboidratos</div>
+            <div class="ritmo-stat-value">${numero(carboHoje,0)} g</div>
+            <div class="ritmo-stat-meta">registrados hoje</div>
           </div>
         </div>
-        ${consumosHoje.length ? `<div class="ritmo-card" style="margin-top:9px">
-          ${consumosHoje.slice(0,4).map(c => `<div class="ritmo-meal-row">
+        ${consumosHoje.length ? `<div class="ritmo-card ritmo-consumos-list" style="margin-top:9px">
+          ${consumosHoje.slice(0,6).map(consumo => `<div class="ritmo-meal-row">
             <div class="ritmo-row-icon">${svg('refeicao')}</div>
-            <div class="ritmo-row-main"><strong>${escapar(c.descricao || rotuloRefeicaoConsumo(c.refeicao))}</strong><small>${numero(c.calorias || 0,0)} kcal · ${numero(c.proteina_g || 0,0)} g proteína</small></div>
-            <button class="ritmo-btn ghost" data-remover-consumo="${c.id}">Remover</button>
+            <div class="ritmo-row-main"><strong>${escapar(consumo.descricao || rotuloRefeicaoConsumo(consumo.refeicao))}</strong><small>${numero(consumo.calorias || 0,0)} kcal · ${numero(consumo.proteina_g || 0,0)} g prot. · ${numero(consumo.carboidratos_g || 0,0)} g carb.</small></div>
+            <button class="ritmo-btn ghost" data-remover-consumo="${consumo.id}">Remover</button>
           </div>`).join('')}
         </div>` : ''}
       </section>
@@ -618,31 +628,19 @@
         <div class="ritmo-section-head"><h3>Semana em Ritmo</h3><span>${cons.feitos}/${cons.esperados || 0} registros</span></div>
         <div class="ritmo-card ritmo-consistency-card">
           <div class="ritmo-donut" style="--p:${cons.pct}%"><strong>${cons.pct}%</strong></div>
-          <div class="ritmo-row-main">
-            <strong>Consistência, não perfeição</strong>
-            <small>Refeições prioritárias e atividades realizadas até hoje.</small>
-          </div>
+          <div class="ritmo-row-main"><strong>Consistência, não perfeição</strong><small>Refeições e atividades realizadas até hoje.</small></div>
         </div>
-        <div class="ritmo-card" style="margin-top:9px">
-          ${renderSemanaMini()}
-        </div>
+        <div class="ritmo-card" style="margin-top:9px">${renderSemanaMini()}</div>
       </section>
 
       ${foto.devido ? `
         <section class="ritmo-section">
-          <div class="ritmo-card">
-            <div class="ritmo-meal-row">
-              <div class="ritmo-row-icon">${svg('foto')}</div>
-              <div class="ritmo-row-main">
-                <strong>Registro visual</strong>
-                <small>${escapar(foto.texto)}</small>
-              </div>
-              <button class="ritmo-btn secondary" data-ritmo-go="evolucao">Abrir</button>
-            </div>
-          </div>
-        </section>
-      ` : ''}
-
+          <div class="ritmo-card"><div class="ritmo-meal-row">
+            <div class="ritmo-row-icon">${svg('foto')}</div>
+            <div class="ritmo-row-main"><strong>Registro visual</strong><small>${escapar(foto.texto)}</small></div>
+            <button class="ritmo-btn secondary" data-ritmo-go="evolucao">Abrir</button>
+          </div></div>
+        </section>` : ''}
     `;
   }
 
@@ -678,29 +676,26 @@
     }).join('')}</div>`;
   }
 
+  function renderPlanoHoje() {
+    return planoDoDia().map(item => {
+      const c = checkin(item.tipo);
+      const vazio = !item.nome;
+      const macros = item.calorias != null
+        ? `${numero(item.calorias,0)} kcal · ${numero(item.proteina || 0,0)} g prot. · ${numero(item.carboidratos || 0,0)} g carb.`
+        : 'Valores nutricionais ainda não estimados';
+      return `<button type="button" class="ritmo-plan-row ${vazio ? 'is-empty' : ''} ${c ? 'is-checked' : ''}" data-plano-checkin="${item.tipo}" ${vazio ? 'disabled' : ''}>
+        <span class="ritmo-plan-time">${item.horario ? escapar(item.horario) : ''}</span>
+        <span class="ritmo-row-icon">${svg(c ? 'check' : 'refeicao')}</span>
+        <span class="ritmo-plan-copy"><strong>${escapar(item.label)}</strong><span>${vazio ? 'Não definido' : escapar(item.nome)}</span><small>${vazio ? 'Revise o plano alimentar pessoal' : macros}</small></span>
+        <span class="ritmo-plan-source">${item.origem === 'casa' ? 'Casa' : item.origem === 'pessoal' ? 'Plano' : ''}</span>
+      </button>`;
+    }).join('');
+  }
+
   function renderCardapioHoje() {
-    const resp = chaveResponsavelUsuario();
-    const porTipo = new Map();
-    for (const item of R.cardapioHoje) {
-      const existente = porTipo.get(item.tipo);
-      const prioridade = item.responsavel === resp ? 3 : item.responsavel === 'ambos' ? 2 : 1;
-      const prioridadeExistente = existente?.responsavel === resp ? 3 : existente?.responsavel === 'ambos' ? 2 : 1;
-      if (!existente || prioridade > prioridadeExistente) porTipo.set(item.tipo, item);
-    }
-    const tipos = [
-      ['cafe','Café da manhã'],
-      ['almoco','Almoço'],
-      ['lanche','Lanche'],
-      ['janta','Jantar'],
-    ];
-    return `<div class="ritmo-menu-grid">${tipos.map(([tipo,label]) => {
-      const item = porTipo.get(tipo);
-      if (!item) return `<div class="ritmo-menu-item is-empty"><strong>${label}</strong><small>Não planejado</small></div>`;
-      const nutri = item.calorias != null
-        ? `${numero(item.calorias,0)} kcal${item.proteina != null ? ` · ${numero(item.proteina,0)} g proteína` : ''}`
-        : 'Calorias não informadas';
-      return `<div class="ritmo-menu-item"><strong>${label}</strong><span>${escapar(item.nome)}</span><small>${nutri}</small></div>`;
-    }).join('')}</div>`;
+    const itens = ['almoco','jantar'].map(tipo => planejadoParaCheckin(tipo)).filter(item => item?.origem === 'casa');
+    if (!itens.length) return '<div class="ritmo-empty">Nenhum almoço ou jantar compartilhado definido para hoje.</div>';
+    return itens.map(item => `<div class="ritmo-meal-row"><div class="ritmo-row-icon">${svg('casa')}</div><div class="ritmo-row-main"><strong>${escapar(item.label)}</strong><small>${escapar(item.nome)}${item.calorias != null ? ` · ${numero(item.calorias,0)} kcal` : ''}</small></div></div>`).join('');
   }
 
   function renderMovimento() {
