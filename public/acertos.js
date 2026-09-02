@@ -332,7 +332,10 @@
 
     const net = receive - owe;
     const credit = creditForCurrentUser();
-    const rule = A.rules.find((r) => r.ativo) || A.rules[0] || null;
+    const rules = [...A.rules].sort((a, b) =>
+      Number(Boolean(b.ativo)) - Number(Boolean(a.ativo))
+      || String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR')
+    );
     const legacyApprovals = A.payments.filter((p) =>
       p.status === 'aguardando_confirmacao' &&
       A.acertos.some((a) => a.id === p.acerto_id && a.credor_id === A.profile.id)
@@ -363,15 +366,28 @@
           : '') +
         '<div class="ac-section-title" style="margin-top:14px"><strong>Em aberto</strong><span>' + open.length + ' item(ns)</span></div>' +
         (open.length ? '<div class="ac-list">' + open.map(row).join('') + '</div>' : '<div class="ac-empty">Nenhum acerto em aberto.</div>') +
-        (rule ? '<div class="ac-rule"><div class="ac-rule-line"><div><strong>' + esc(rule.titulo) + '</strong>' +
-          '<span>' + esc(nameById(rule.devedor_id)) + ' → ' + esc(nameById(rule.credor_id)) +
-          ' · ' + money(rule.valor) + ' por mês · gera dia ' + rule.gerar_dia +
-          ' · vence no ' + rule.vencimento_valor + 'º ' + (rule.vencimento_tipo === 'dia_util' ? 'dia útil' : 'dia do mês') +
-          '</span></div><button type="button" id="acEditRule">Configurar</button></div></div>' : '') +
+        '<div class="ac-recurring-head"><div><strong>Cobranças recorrentes</strong><span>Geradas automaticamente todos os meses.</span></div>' +
+          '<button type="button" id="acNewRule">+ Recorrente</button></div>' +
+        (rules.length
+          ? '<div class="ac-rule-list">' + rules.map((rule) =>
+              '<article class="ac-rule ' + (rule.ativo ? '' : 'is-paused') + '">' +
+                '<div class="ac-rule-line"><div class="ac-rule-copy"><div class="ac-rule-title">' +
+                  '<strong>' + esc(rule.titulo) + '</strong>' +
+                  '<span class="ac-chip ' + (rule.ativo ? '' : 'muted') + '">' + (rule.ativo ? 'Ativa' : 'Pausada') + '</span>' +
+                '</div><span>' + esc(nameById(rule.devedor_id)) + ' → ' + esc(nameById(rule.credor_id)) +
+                  ' · ' + money(rule.valor) + '/mês</span>' +
+                '<small>Gera dia ' + rule.gerar_dia + ' · vence no ' + rule.vencimento_valor + 'º ' +
+                  (rule.vencimento_tipo === 'dia_util' ? 'dia útil' : 'dia do mês') + '</small></div>' +
+                '<button type="button" data-ac-edit-rule="' + rule.id + '">Editar</button></div>' +
+              '</article>'
+            ).join('') + '</div>'
+          : '<div class="ac-empty ac-empty-compact">Nenhuma cobrança recorrente cadastrada.</div>') +
       '</div>';
 
     root.querySelector('#acNewExpense')?.addEventListener('click', showNewExpense);
-    root.querySelector('#acEditRule')?.addEventListener('click', () => showRule(rule));
+    root.querySelector('#acNewRule')?.addEventListener('click', () => showRule(null));
+    root.querySelectorAll('[data-ac-edit-rule]').forEach((btn) =>
+      btn.addEventListener('click', () => showRule(A.rules.find((rule) => rule.id === btn.dataset.acEditRule) || null)));
     root.querySelectorAll('[data-ac-pay]').forEach((btn) =>
       btn.addEventListener('click', () => showPayment(btn.dataset.acPay)));
     root.querySelectorAll('[data-ac-review]').forEach((btn) =>
@@ -461,25 +477,26 @@
     ).join('');
 
     const root = modal(
-      sheetHead('Despesa compartilhada', 'Quem pagou esta compra?') +
-      '<form class="ac-form" id="acExpenseForm">' +
-        '<label class="ac-field"><span>Descrição</span><input name="title" required placeholder="Ex.: Hospedagem em Natal"></label>' +
-        '<div class="ac-grid-2">' +
-          '<label class="ac-field"><span>Valor total</span><div class="ac-money-input"><span>R$</span>' +
-            '<input name="total" type="number" min="0.01" step="0.01" inputmode="decimal" required value="' + totalDefault + '" placeholder="0,00"></div></label>' +
-          '<label class="ac-field"><span>Pago por</span><select name="payer" required>' + userOptions + '</select></label>' +
-        '</div>' +
-        '<div class="ac-split"><div class="ac-split-head"><strong>Divisão</strong>' +
-          '<label class="ac-split-toggle"><input type="checkbox" id="acHalf" checked><span>50% para cada</span></label></div>' +
-          '<div class="ac-grid-2">' + fields + '</div>' +
-          '<small id="acSplitHint">Divisão automática ativa. Desmarque para informar valores diferentes.</small></div>' +
-        '<div class="ac-grid-2">' +
-          '<label class="ac-field"><span>Parcelas</span><input name="installments" type="number" min="1" max="60" value="1" required></label>' +
-          '<label class="ac-field"><span>Vencimento da 1ª</span><input name="due" type="date" required value="' + today() + '"></label>' +
-        '</div>' +
-        '<label class="ac-field"><span>Forma usada</span><select name="method"><option value="credit_card">Cartão de crédito</option><option value="pix">Pix</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="other">Outro</option></select></label>' +
-        '<label class="ac-field"><span>Observação</span><textarea name="notes" placeholder="Opcional"></textarea></label>' +
-        '<p class="ac-note">O valor da pessoa que não pagou vira um acerto. Se houver parcelas, a obrigação acompanha os vencimentos mensais.</p>' +
+      sheetHead('Nova despesa', 'Registrar compra ou gasto') +
+      '<form class="ac-form ac-expense-form" id="acExpenseForm">' +
+        '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Dados da compra</strong><span>O básico para identificar a despesa.</span></div>' +
+          '<label class="ac-field"><span>Descrição</span><input name="title" required placeholder="Ex.: Hospedagem em Natal"></label>' +
+          '<div class="ac-grid-2 ac-grid-responsive">' +
+            '<label class="ac-field"><span>Valor total</span><div class="ac-money-input"><span>R$</span>' +
+              '<input name="total" type="number" min="0.01" step="0.01" inputmode="decimal" required value="' + totalDefault + '" placeholder="0,00"></div></label>' +
+            '<label class="ac-field"><span>Quem pagou</span><select name="payer" required>' + userOptions + '</select></label>' +
+          '</div></section>' +
+        '<section class="ac-form-section ac-split"><div class="ac-split-head"><div><strong>Quem deve o quê</strong><span id="acSplitHint">50% para cada pessoa.</span></div>' +
+          '<label class="ac-split-toggle"><input type="checkbox" id="acHalf" checked><span>Dividir 50% / 50%</span></label></div>' +
+          '<div class="ac-grid-2 ac-grid-responsive ac-share-grid">' + fields + '</div></section>' +
+        '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Pagamento e vencimento</strong><span>Como essa compra entra nos acertos.</span></div>' +
+          '<div class="ac-grid-2 ac-grid-responsive">' +
+            '<label class="ac-field"><span>Parcelas</span><input name="installments" type="number" min="1" max="60" value="1" required></label>' +
+            '<label class="ac-field"><span>Vencimento da 1ª</span><input name="due" type="date" required value="' + today() + '"></label>' +
+          '</div>' +
+          '<label class="ac-field"><span>Forma usada</span><select name="method"><option value="credit_card">Cartão de crédito</option><option value="pix">Pix</option><option value="debit">Débito</option><option value="cash">Dinheiro</option><option value="other">Outro</option></select></label>' +
+          '<label class="ac-field"><span>Observação</span><textarea name="notes" placeholder="Opcional"></textarea></label></section>' +
+        '<p class="ac-note">O LifeOS cria a dívida de quem não pagou. Se houver parcelas, os acertos acompanham os vencimentos mensais.</p>' +
         '<div id="acExpenseError"></div>' +
         '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button class="ac-primary" type="submit">Criar despesa</button></div>' +
       '</form>'
@@ -489,6 +506,8 @@
     const halfToggle = root.querySelector('#acHalf');
     const shareInputs = [...root.querySelectorAll('[data-ac-share]')];
     const splitHint = root.querySelector('#acSplitHint');
+    const payerInput = root.querySelector('[name="payer"]');
+    let manualDirty = false;
 
     const fillHalf = () => {
       const total = Math.max(0, Number(totalInput.value || 0));
@@ -499,23 +518,54 @@
       shareInputs[1].value = second ? second.toFixed(2) : '';
     };
 
-    const syncSplitMode = () => {
-      const automatic = Boolean(halfToggle?.checked);
-      shareInputs.forEach((input) => {
-        input.readOnly = automatic;
+    const fillFullToNonPayer = () => {
+      const total = Math.max(0, Number(totalInput.value || 0));
+      const payerId = String(payerInput?.value || '');
+      const debtors = shareInputs.filter((input) => input.dataset.acShare !== payerId);
+      const payerShare = shareInputs.find((input) => input.dataset.acShare === payerId);
+      if (payerShare) payerShare.value = total ? '0.00' : '';
+      if (!debtors.length) return;
+      const base = Math.round((total / debtors.length) * 100) / 100;
+      let used = 0;
+      debtors.forEach((input, index) => {
+        const value = index === debtors.length - 1 ? Math.max(0, total - used) : base;
+        input.value = total ? value.toFixed(2) : '';
+        used += value;
       });
-      root.querySelector('.ac-split')?.classList.toggle('is-manual', !automatic);
-      if (splitHint) {
-        splitHint.textContent = automatic
-          ? 'Divisão automática ativa. Desmarque para informar valores diferentes.'
-          : 'Divisão manual ativa. Os valores precisam fechar o total.';
-      }
-      if (automatic) fillHalf();
+      manualDirty = false;
     };
 
+    const syncSplitMode = () => {
+      const half = Boolean(halfToggle?.checked);
+      shareInputs.forEach((input) => {
+        input.readOnly = half;
+      });
+      root.querySelector('.ac-split')?.classList.toggle('is-manual', !half);
+      if (half) {
+        fillHalf();
+        if (splitHint) splitHint.textContent = '50% para cada pessoa.';
+      } else {
+        fillFullToNonPayer();
+        const payerId = String(payerInput?.value || '');
+        const devedor = A.users.find((u) => u.id !== payerId);
+        if (splitHint) splitHint.textContent = devedor
+          ? 'Como ' + nameById(payerId) + ' pagou, ' + devedor.nome + ' começa devendo o valor total. Você pode ajustar.'
+          : 'O valor total foi atribuído a quem não pagou. Você pode ajustar.';
+      }
+    };
+
+    shareInputs.forEach((input) => input.addEventListener('input', () => {
+      if (!halfToggle?.checked) manualDirty = true;
+    }));
+
     halfToggle?.addEventListener('change', syncSplitMode);
+    payerInput?.addEventListener('change', () => {
+      if (halfToggle?.checked) fillHalf();
+      else fillFullToNonPayer();
+    });
     totalInput?.addEventListener('input', () => {
       if (halfToggle?.checked) fillHalf();
+      else if (!manualDirty) fillFullToNonPayer();
     });
     syncSplitMode();
 
@@ -1059,49 +1109,103 @@
     }
   }
 
-  function showRule(rule) {
-    if (!rule) return;
+  function showRule(rule = null) {
+    const editing = Boolean(rule?.id);
     const options = A.users.map((u) => '<option value="' + u.id + '">' + esc(u.nome) + '</option>').join('');
+    const other = A.users.find((u) => u.id !== A.profile.id) || A.users[0] || null;
+    const defaults = rule || {
+      titulo: '',
+      valor: '',
+      devedor_id: other?.id || A.profile.id,
+      credor_id: A.profile.id,
+      gerar_dia: 1,
+      vencimento_tipo: 'dia_mes',
+      vencimento_valor: 5,
+      inicia_em: today(),
+      ativo: true,
+    };
+
     const root = modal(
-      sheetHead('Regra recorrente', 'Contribuição da Casa') +
-      '<form class="ac-form" id="acRuleForm">' +
-        '<label class="ac-field"><span>Nome</span><input name="title" value="' + esc(rule.titulo) + '" required></label>' +
-        '<div class="ac-grid-2"><label class="ac-field"><span>Valor mensal</span><input name="value" type="number" min="0.01" step="0.01" value="' + Number(rule.valor).toFixed(2) + '"></label>' +
-        '<label class="ac-field"><span>Gerar no dia</span><input name="generate" type="number" min="1" max="28" value="' + rule.gerar_dia + '"></label></div>' +
-        '<div class="ac-grid-2"><label class="ac-field"><span>Quem paga</span><select name="debtor">' + options + '</select></label>' +
-        '<label class="ac-field"><span>Quem recebe</span><select name="creditor">' + options + '</select></label></div>' +
-        '<div class="ac-grid-2"><label class="ac-field"><span>Regra de vencimento</span><select name="dueType"><option value="dia_util">Dia útil</option><option value="dia_mes">Dia do mês</option></select></label>' +
-        '<label class="ac-field"><span>Número do dia</span><input name="dueValue" type="number" min="1" max="28" value="' + rule.vencimento_valor + '"></label></div>' +
-        '<label class="ac-field"><span>Status</span><select name="active"><option value="true">Ativa</option><option value="false">Pausada</option></select></label>' +
-        '<p class="ac-note">Mudanças atingem a regra e acertos do mês atual/futuros que ainda não receberam pagamento. Histórico pago não é alterado.</p>' +
+      sheetHead('Cobrança recorrente', editing ? 'Editar recorrência' : 'Nova cobrança mensal') +
+      '<form class="ac-form ac-recurring-form" id="acRuleForm">' +
+        '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Cobrança</strong><span>O LifeOS cria um acerto novo a cada mês.</span></div>' +
+          '<label class="ac-field"><span>Nome</span><input name="title" value="' + esc(defaults.titulo || '') + '" required placeholder="Ex.: El Hub"></label>' +
+          '<div class="ac-grid-2 ac-grid-responsive"><label class="ac-field"><span>Valor mensal</span><div class="ac-money-input"><span>R$</span>' +
+            '<input name="value" type="number" min="0.01" step="0.01" inputmode="decimal" value="' + (defaults.valor !== '' ? Number(defaults.valor).toFixed(2) : '') + '" required placeholder="0,00"></div></label>' +
+          '<label class="ac-field"><span>Gerar todo dia</span><input name="generate" type="number" min="1" max="28" value="' + defaults.gerar_dia + '"></label></div>' +
+        '</section>' +
+        '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Pessoas</strong><span>Quem deve e quem recebe.</span></div>' +
+          '<div class="ac-grid-2 ac-grid-responsive"><label class="ac-field"><span>Quem paga</span><select name="debtor">' + options + '</select></label>' +
+          '<label class="ac-field"><span>Quem recebe</span><select name="creditor">' + options + '</select></label></div>' +
+        '</section>' +
+        '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Vencimento</strong><span>Define quando a cobrança mensal vence.</span></div>' +
+          '<div class="ac-grid-2 ac-grid-responsive"><label class="ac-field"><span>Tipo</span><select name="dueType"><option value="dia_mes">Dia do mês</option><option value="dia_util">Dia útil</option></select></label>' +
+          '<label class="ac-field"><span>Dia</span><input name="dueValue" type="number" min="1" max="28" value="' + defaults.vencimento_valor + '"></label></div>' +
+          (!editing ? '<label class="ac-field"><span>Começa em</span><input name="starts" type="date" value="' + esc(defaults.inicia_em || today()) + '" required></label>' : '') +
+          (editing ? '<label class="ac-field"><span>Status</span><select name="active"><option value="true">Ativa</option><option value="false">Pausada</option></select></label>' : '') +
+        '</section>' +
+        '<p class="ac-note">' + (editing
+          ? 'Mudanças ajustam a regra e cobranças do mês atual/futuras ainda sem pagamento. Histórico pago não muda.'
+          : 'Depois de salvar, o LifeOS gera automaticamente a cobrança de cada mês quando chegar o dia configurado.') + '</p>' +
         '<div id="acRuleError"></div>' +
-        '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button type="submit" class="ac-primary">Salvar regra</button></div>' +
+        '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button type="submit" class="ac-primary">' +
+          (editing ? 'Salvar regra' : 'Criar recorrência') + '</button></div>' +
       '</form>'
     );
 
-    root.querySelector('[name="debtor"]').value = rule.devedor_id;
-    root.querySelector('[name="creditor"]').value = rule.credor_id;
-    root.querySelector('[name="dueType"]').value = rule.vencimento_tipo;
-    root.querySelector('[name="active"]').value = String(rule.ativo);
+    root.querySelector('[name="debtor"]').value = defaults.devedor_id;
+    root.querySelector('[name="creditor"]').value = defaults.credor_id;
+    root.querySelector('[name="dueType"]').value = defaults.vencimento_tipo || 'dia_mes';
+    if (editing) root.querySelector('[name="active"]').value = String(Boolean(defaults.ativo));
 
     root.querySelector('#acRuleForm')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      const result = await A.client.rpc('atualizar_regra_acerto', {
-        p_regra_id: rule.id,
-        p_titulo: String(form.get('title')),
-        p_valor: Number(form.get('value')),
-        p_devedor_id: String(form.get('debtor')),
-        p_credor_id: String(form.get('creditor')),
-        p_gerar_dia: Number(form.get('generate')),
-        p_vencimento_tipo: String(form.get('dueType')),
-        p_vencimento_valor: Number(form.get('dueValue')),
-        p_ativo: String(form.get('active')) === 'true',
-      });
+      const debtor = String(form.get('debtor'));
+      const creditor = String(form.get('creditor'));
+      const error = root.querySelector('#acRuleError');
+
+      if (debtor === creditor) {
+        error.innerHTML = '<p class="ac-note warn">Quem paga e quem recebe precisam ser pessoas diferentes.</p>';
+        return;
+      }
+
+      const submit = event.currentTarget.querySelector('[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = editing ? 'Salvando…' : 'Criando…';
+
+      const result = editing
+        ? await A.client.rpc('atualizar_regra_acerto', {
+            p_regra_id: rule.id,
+            p_titulo: String(form.get('title')).trim(),
+            p_valor: Number(form.get('value')),
+            p_devedor_id: debtor,
+            p_credor_id: creditor,
+            p_gerar_dia: Number(form.get('generate')),
+            p_vencimento_tipo: String(form.get('dueType')),
+            p_vencimento_valor: Number(form.get('dueValue')),
+            p_ativo: String(form.get('active')) === 'true',
+          })
+        : await A.client.rpc('criar_regra_acerto_recorrente', {
+            p_titulo: String(form.get('title')).trim(),
+            p_valor: Number(form.get('value')),
+            p_devedor_id: debtor,
+            p_credor_id: creditor,
+            p_gerar_dia: Number(form.get('generate')),
+            p_vencimento_tipo: String(form.get('dueType')),
+            p_vencimento_valor: Number(form.get('dueValue')),
+            p_inicia_em: String(form.get('starts') || today()),
+          });
 
       if (result.error) {
-        root.querySelector('#acRuleError').innerHTML = '<p class="ac-note warn">' + esc(result.error.message) + '</p>';
+        submit.disabled = false;
+        submit.textContent = editing ? 'Salvar regra' : 'Criar recorrência';
+        error.innerHTML = '<p class="ac-note warn">' + esc(result.error.message) + '</p>';
         return;
+      }
+
+      if (!editing) {
+        await A.client.rpc('gerar_acertos_recorrentes', { p_data: today() });
       }
 
       closeModal();
