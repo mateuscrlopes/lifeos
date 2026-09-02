@@ -138,3 +138,15 @@ test('tablet e painel da Casa usam data civil local', () => {
   assert.match(painel, /function hojeIso\(\)[\s\S]*getFullYear\(\)/);
   assert.doesNotMatch(painel, /function hojeIso\(\)[\s\S]{0,120}toISOString\(\)\.slice\(0, 10\)/);
 });
+
+
+test('modais legados recebem semântica, foco e navegação por teclado centralizados', () => {
+  const ui = read('../public/ui-refinements.js');
+
+  assert.match(ui, /const legacyModalReturnFocus = new WeakMap/);
+  assert.match(ui, /modal\.setAttribute\('role',[\s\S]*'dialog'/);
+  assert.match(ui, /modal\.setAttribute\('aria-modal', 'true'\)/);
+  assert.match(ui, /button\.dataset\.uiAction = 'close'/);
+  assert.match(ui, /event\.key !== 'Tab'/);
+  assert.match(ui, /returnFocus\?\.focus/);
+});
