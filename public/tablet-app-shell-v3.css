@@ -860,3 +860,109 @@ html[data-theme="dark"] .panel-head {
     min-height: 52px !important;
   }
 }
+
+
+/* ================================================================
+   v7 — brand parity and aligned home grid
+================================================================ */
+
+/* Same LifeOS artwork as the mobile app. */
+.login-logo,
+.espera-logo,
+.sidebar-logo,
+.header-logo {
+  color: inherit;
+}
+
+.login-logo img,
+.espera-logo img,
+.sidebar-logo img,
+.header-logo img {
+  display: block;
+  object-fit: cover;
+}
+
+.login-logo img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.espera-logo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.sidebar-logo {
+  overflow: hidden;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.sidebar-logo img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.header-logo > img {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+
+/* Six dashboard modules align as deliberate pairs:
+   Tarefas | Destaques
+   Compras | Plantas
+   Contas | Estoque
+*/
+#pag-inicio .conteudo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-areas:
+    "tarefas destaques"
+    "compras plantas"
+    "contas estoque" !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+}
+
+#pag-inicio .col-esq,
+#pag-inicio .col-mid,
+#pag-inicio .col-dir {
+  display: contents !important;
+}
+
+#pag-inicio .col-esq > .panel:nth-child(1) { grid-area: tarefas; }
+#pag-inicio .col-esq > .panel:nth-child(2) { grid-area: compras; }
+#pag-inicio .col-mid > .panel:nth-child(1) { grid-area: destaques; }
+#pag-inicio .col-mid > .panel:nth-child(2) { grid-area: plantas; }
+#pag-inicio .col-dir > .panel:nth-child(1) { grid-area: contas; }
+#pag-inicio .col-dir > .panel:nth-child(2) { grid-area: estoque; }
+
+#pag-inicio .conteudo-grid .panel {
+  height: 100%;
+  min-height: 0;
+}
+
+#pag-inicio .conteudo-grid .panel[hidden] {
+  display: block !important;
+}
+
+#pag-inicio .conteudo-grid .pc-is-empty {
+  opacity: .82;
+}
+
+@media (max-width: 900px) {
+  #pag-inicio .conteudo-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "tarefas"
+      "destaques"
+      "compras"
+      "plantas"
+      "contas"
+      "estoque" !important;
+  }
+}
