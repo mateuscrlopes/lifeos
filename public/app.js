@@ -745,6 +745,16 @@ let _planRespAtual='ambos';
 let _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
 const CARDAPIO_RESPONSAVEIS=['ambos','mateus','ghustavo'];
 const CARDAPIO_DIAS={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',7:'Dom'};
+const CARDAPIO_TIPOS={cafe:'Café da manhã',almoco:'Almoço',lanche:'Lanche',janta:'Jantar'};
+
+function labelTipoCardapio(tipo){
+  return CARDAPIO_TIPOS[tipo]||({ambos:'Almoço/Janta'}[tipo])||tipo;
+}
+
+function receitaCompativelComSlot(receita,tipo){
+  if(receita.tipo===tipo)return true;
+  return receita.tipo==='ambos'&&(tipo==='almoco'||tipo==='janta');
+}
 
 function selecionarResponsavelCardapio(resp,{render=true}={}){
   _planRespAtual=CARDAPIO_RESPONSAVEIS.includes(resp)?resp:'ambos';
@@ -753,7 +763,7 @@ function selecionarResponsavelCardapio(resp,{render=true}={}){
   if(render)renderizarSlotsCardapio();
 }
 async function carregarRefeicoes(){
-  const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
+  const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,calorias_por_porcao,proteina_por_porcao,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
   const area=el('listaRefeicoes');area.innerHTML='';
   if(error||!_refeicoes.length){area.innerHTML='<div class="vazio">Nenhuma refeição cadastrada.</div>';return;}
@@ -761,7 +771,7 @@ async function carregarRefeicoes(){
     const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;
     const d=document.createElement('div');d.className='desc';
     const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);
-    const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);
+    const m=document.createElement('span');m.className='meta';m.textContent=`${labelTipoCardapio(r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}${r.calorias_por_porcao!=null?` · ${Number(r.calorias_por_porcao)} kcal/porção`:''}`;d.appendChild(m);
     const acoes=document.createElement('div');acoes.className='receita-row-actions';
     const abrir=document.createElement('button');abrir.type='button';abrir.className='receita-open-btn';abrir.dataset.rv2Open=r.id;abrir.textContent='Abrir';
     const apagar=document.createElement('button');apagar.type='button';apagar.className='lifeos-icon-action is-danger receita-delete-btn';apagar.setAttribute('aria-label',`Excluir ${r.nome}`);apagar.title='Excluir';apagar.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/></svg>';
@@ -775,11 +785,11 @@ async function carregarRefeicoes(){
 async function salvarRefeicao(){
   const nome=el('refNome').value.trim();if(!nome){aviso('avisoRefeicao','Digite o nome.','erro');return;}
   el('btnSalvarRefeicao').disabled=true;
-  const{data:ref,error}=await supa.from('refeicoes').insert({casa_id:usuario.casa_id,nome,tipo:el('refTipo').value,porcoes:Number(el('refPorcoes').value)||2,tempo_minutos:Number(el('refTempo')?.value)||null,fonte_url:el('refFonte')?.value.trim()||null,observacoes:el('refObservacoes')?.value.trim()||null,modo_preparo:el('refPreparo')?.value.trim()||null,criada_por:usuario.id,atualizado_em:new Date().toISOString()}).select().single();
+  const{data:ref,error}=await supa.from('refeicoes').insert({casa_id:usuario.casa_id,nome,tipo:el('refTipo').value,porcoes:Number(el('refPorcoes').value)||2,tempo_minutos:Number(el('refTempo')?.value)||null,calorias_por_porcao:el('refKcal')?.value?Number(el('refKcal').value):null,proteina_por_porcao:el('refProteina')?.value?Number(el('refProteina').value):null,fonte_url:el('refFonte')?.value.trim()||null,observacoes:el('refObservacoes')?.value.trim()||null,modo_preparo:el('refPreparo')?.value.trim()||null,criada_por:usuario.id,atualizado_em:new Date().toISOString()}).select().single();
   if(error){aviso('avisoRefeicao','Erro.','erro');el('btnSalvarRefeicao').disabled=false;return;}
   const linhas=el('refIngredientes').querySelectorAll('.linha-ingrediente');
   for(const l of linhas){const n=l.querySelector('.ing-nome').value.trim();const q=l.querySelector('.ing-qtd').value;const u=l.querySelector('.ing-un').value.trim();if(n)await supa.from('refeicao_ingredientes').insert({refeicao_id:ref.id,nome:n,quantidade:q?Number(q):null,unidade:u||null});}
-  el('refNome').value='';el('refPorcoes').value='2';if(el('refTempo'))el('refTempo').value='';if(el('refFonte'))el('refFonte').value='';if(el('refObservacoes'))el('refObservacoes').value='';if(el('refPreparo'))el('refPreparo').value='';el('refIngredientes').innerHTML='';
+  el('refNome').value='';el('refPorcoes').value='2';if(el('refKcal'))el('refKcal').value='';if(el('refProteina'))el('refProteina').value='';if(el('refTempo'))el('refTempo').value='';if(el('refFonte'))el('refFonte').value='';if(el('refObservacoes'))el('refObservacoes').value='';if(el('refPreparo'))el('refPreparo').value='';el('refIngredientes').innerHTML='';
   aviso('avisoRefeicao','Refeição salva.','ok');setTimeout(()=>aviso('avisoRefeicao',''),1500);el('btnSalvarRefeicao').disabled=false;await carregarRefeicoes();
 }
 
@@ -799,7 +809,7 @@ function adicionarLinhaIngrediente(){
 }
 
 function renderizarSlotsCardapio(){
-  ['almoco','janta'].forEach(tipo=>{
+  ['cafe','almoco','lanche','janta'].forEach(tipo=>{
     const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);
     if(!grid)return;
     grid.innerHTML='';
@@ -809,8 +819,8 @@ function renderizarSlotsCardapio(){
       const btn=document.createElement('button');
       btn.type='button';
       btn.className='dia-slot'+(slot?' preenchido':'');
-      btn.innerHTML=slot?`<span>${slot.nome}</span>`:'<span>+</span>';
-      btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${tipo==='almoco'?'Almoço':'Jantar'}${slot?' · '+slot.nome:''}`);
+      btn.innerHTML=slot?`<span>${slot.nome}</span>${slot.calorias!=null?`<small>${Number(slot.calorias)} kcal</small>`:''}`:'<span>+</span>';
+      btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${labelTipoCardapio(tipo)}${slot?' · '+slot.nome:''}${slot?.calorias!=null?' · '+Number(slot.calorias)+' kcal':''}`);
       btn.onclick=()=>abrirModalRefeicao(d,tipo);
       grid.appendChild(btn);
     }
@@ -874,7 +884,7 @@ async function sugerirPlanejamentoSemana(){
 
         const escolha=ranking[0]||null;
         if(!escolha)continue;
-        _planDias[`${d}-${tipo}`]={nome:escolha.r.nome,refeicaoId:escolha.r.id};
+        _planDias[`${d}-${tipo}`]={nome:escolha.r.nome,refeicaoId:escolha.r.id,calorias:escolha.r.calorias_por_porcao??null,proteina:escolha.r.proteina_por_porcao??null};
         usados.add(escolha.r.id);
         ultimaFamilia=escolha.familia;
       }
@@ -892,21 +902,46 @@ async function sugerirPlanejamentoSemana(){
 }
 
 function abrirModalRefeicao(dia,tipo){
-  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${CARDAPIO_DIAS[dia]||'Dia'} — ${tipo==='almoco'?'Almoço':'Jantar'} · ${_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1)}`;
-  const chave=`${dia}-${tipo}`;el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
+  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${CARDAPIO_DIAS[dia]||'Dia'} — ${labelTipoCardapio(tipo)} · ${_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1)}`;
+  const chave=`${dia}-${tipo}`;
+  const atual=_planDias[chave]||{};
+  el('modalRefNomeAvulso').value=atual.nome||'';
+  if(el('modalRefKcal'))el('modalRefKcal').value=atual.calorias??'';
+  if(el('modalRefProteina'))el('modalRefProteina').value=atual.proteina??'';
   const lista=el('modalRefLista');lista.innerHTML='';
-  _refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos').forEach(r=>{const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';btn.innerHTML=`<span class="nome">${r.nome}</span>`;btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};lista.appendChild(btn);});
+  _refeicoes.filter(r=>receitaCompativelComSlot(r,tipo)).forEach(r=>{
+    const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';
+    btn.innerHTML=`<div class="desc"><span class="nome">${r.nome}</span><span class="meta">${r.calorias_por_porcao!=null?Number(r.calorias_por_porcao)+' kcal por porção':'Calorias não informadas'}</span></div>`;
+    btn.onclick=()=>{
+      el('modalRefNomeAvulso').value=r.nome;
+      if(el('modalRefKcal'))el('modalRefKcal').value=r.calorias_por_porcao??'';
+      if(el('modalRefProteina'))el('modalRefProteina').value=r.proteina_por_porcao??'';
+      _slotAtual.refeicaoId=r.id;
+    };
+    lista.appendChild(btn);
+  });
   abrirModal('modalRefeicao');
 }
 
-function confirmarSlot(){if(!_slotAtual)return;const nome=el('modalRefNomeAvulso').value.trim();const chave=`${_slotAtual.dia}-${_slotAtual.tipo}`;if(nome)_planDias[chave]={nome,refeicaoId:_slotAtual.refeicaoId||null};fecharModalRefeicao();renderizarSlotsCardapio();}
+function confirmarSlot(){
+  if(!_slotAtual)return;
+  const nome=el('modalRefNomeAvulso').value.trim();
+  const chave=`${_slotAtual.dia}-${_slotAtual.tipo}`;
+  if(nome)_planDias[chave]={
+    nome,
+    refeicaoId:_slotAtual.refeicaoId||null,
+    calorias:el('modalRefKcal')?.value?Number(el('modalRefKcal').value):null,
+    proteina:el('modalRefProteina')?.value?Number(el('modalRefProteina').value):null
+  };
+  fecharModalRefeicao();renderizarSlotsCardapio();
+}
 function limparSlot(){if(!_slotAtual)return;delete _planDias[`${_slotAtual.dia}-${_slotAtual.tipo}`];fecharModalRefeicao();renderizarSlotsCardapio();}
 function fecharModalRefeicao(){fecharModal('modalRefeicao');_slotAtual=null;}
 
 async function carregarPlanejamento(){
   const seg=formatarDataISO(inicioSemana());
   const{data:planos,error}=await supa.from('planejamento_semana')
-    .select('id,responsavel,planejamento_dias(dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome))')
+    .select('id,responsavel,planejamento_dias(id,dia_semana,tipo,refeicao_id,refeicao_nome,calorias,proteina_g,refeicoes(nome,calorias_por_porcao,proteina_por_porcao))')
     .eq('casa_id',usuario.casa_id)
     .eq('semana_inicio',seg);
   _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
@@ -920,7 +955,9 @@ async function carregarPlanejamento(){
     for(const d of(plano.planejamento_dias||[])){
       _planDiasPorResp[resp][`${d.dia_semana}-${d.tipo}`]={
         nome:d.refeicoes?.nome||d.refeicao_nome||'',
-        refeicaoId:d.refeicao_id
+        refeicaoId:d.refeicao_id,
+        calorias:d.calorias??d.refeicoes?.calorias_por_porcao??null,
+        proteina:d.proteina_g??d.refeicoes?.proteina_por_porcao??null
       };
     }
   }
@@ -958,7 +995,7 @@ async function salvarPlanejamento(){
       if(delErr)throw delErr;
       const inserir=Object.entries(slots).map(([chave,val])=>{
         const[dia,tipo]=chave.split('-');
-        return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};
+        return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome,calorias:val.calorias??null,proteina_g:val.proteina??null};
       });
       if(inserir.length){
         const{error:insErr}=await supa.from('planejamento_dias').insert(inserir);
