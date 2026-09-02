@@ -31,29 +31,25 @@ test('tablet v3 troca densidade de dashboard por leitura e scroll', () => {
   const css = read('public/tablet-app-shell-v3.css');
 
   assert.match(css, /\.painel-body[\s\S]*overflow-y:\s*auto\s*!important/);
-  assert.match(css, /\.conteudo-grid[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /#pag-inicio \\.conteudo-grid[\\s\\S]*grid-template-columns: repeat\\(3, minmax\\(0, 1fr\\)\\) !important/);
   assert.match(css, /\.col-dir[\s\S]*grid-column:\s*1\s*\/\s*-1/);
   assert.match(css, /\.hero-banner-bg[\s\S]*display:\s*none\s*!important/);
 });
 
-test('cards de métricas do tablet seguem gramática visual do iOS', () => {
+test('home do tablet esconde KPIs e prioriza os seis módulos', () => {
   const html = read('public/tablet.html');
   const css = read('public/tablet-app-shell-v3.css');
 
-  assert.match(html, /<div class="metrica-card mi-sage"/);
-  assert.match(html, /<div class="metrica-card mi-sky"/);
-  assert.match(html, /<div class="metrica-card mi-clay"/);
-  assert.match(html, /<div class="metrica-card mi-sun"/);
-  assert.match(css, /\.metrica-card[\s\S]*border-radius:\s*24px/);
-  assert.match(css, /\.metrica-icon[\s\S]*width:\s*42px/);
-  assert.match(css, /\.metrica-link[\s\S]*display:\s*none/);
+  assert.match(html, /id="metricasGrid"/);
+  assert.match(css, /#pag-inicio #metricasGrid[\s\S]*display:\s*none\s*!important/);
+  assert.match(css, /grid-template-areas:[\s\S]*"tarefas destaques compras"[\s\S]*"plantas contas estoque"/);
 });
 
 test('tablet exibe marca GhuMat e shell v3 carrega por último', () => {
   const html = read('public/tablet.html');
 
   assert.match(html, /header-brand-parent">by GhuMat/);
-  assert.match(html, /tablet-app-shell-v3\.js\?v=4/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=5/);
   assert.ok(
     html.lastIndexOf('tablet-app-shell-v3.js') > html.lastIndexOf('tablet-product-shell-v2.js'),
     'shell v3 precisa carregar depois do shell v2'
@@ -88,8 +84,8 @@ test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
 
   assert.match(loader, /MutationObserver/);
   assert.match(loader, /HTMLLinkElement/);
-  assert.match(loader, /tablet-app-shell-v3\.css\?v=4/);
-  assert.match(html, /tablet-app-shell-v3\.js\?v=4/);
+  assert.match(loader, /tablet-app-shell-v3\.css\?v=5/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=5/);
 });
 
 test('alimentação contextual deixa de parecer faixa tracejada', () => {
