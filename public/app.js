@@ -147,7 +147,36 @@ function trocarSub(qual,btn){
   document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
 }
 
-function abrirSecao(qual){
+const _origensSecao = new Map();
+
+function localizacaoAtual(){
+  for(const id of SECOES_MAIS){
+    const node=el(id);
+    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
+      if(id==='abaPainelProjeto') return {tipo:'painel-projeto'};
+      return {tipo:'secao',secao:id.replace(/^secao/,'').toLowerCase()};
+    }
+  }
+  for(const id of ABAS_PRINCIPAIS){
+    const node=el(id);
+    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
+      const tab=id.replace(/^aba/,'').toLowerCase();
+      if(tab==='casa'){
+        const sub=[...document.querySelectorAll('.sub-aba[data-sub]')].find(b=>b.classList.contains('ativa'))?.dataset.sub || 'compras';
+        return {tipo:'casa',sub};
+      }
+      return {tipo:'tab',tab};
+    }
+  }
+  return {tipo:'tab',tab:'hoje'};
+}
+
+function abrirSecao(qual,{preservarOrigem=false}={}){
+  if(!preservarOrigem){
+    const atual=localizacaoAtual();
+    const mesmaSecao=atual.tipo==='secao' && atual.secao===qual;
+    if(!mesmaSecao) _origensSecao.set(qual,atual);
+  }
   [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
     const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
   });
@@ -160,6 +189,27 @@ function abrirSecao(qual){
   if(qual==='projetos')carregarProjetos();
   if(qual==='rituais')carregarRituais();
   if(qual==='config'){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
+}
+
+function voltarContexto(){
+  const atual=localizacaoAtual();
+  const qual=atual.tipo==='secao' ? atual.secao : null;
+  const origem=qual ? _origensSecao.get(qual) : null;
+
+  if(origem?.tipo==='casa'){
+    trocarAba('casa');
+    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
+    return;
+  }
+  if(origem?.tipo==='tab'){
+    trocarAba(origem.tab);
+    return;
+  }
+  if(origem?.tipo==='secao'){
+    abrirSecao(origem.secao,{preservarOrigem:true});
+    return;
+  }
+  trocarAba('mais');
 }
 
 function voltarMais(){
@@ -1885,7 +1935,7 @@ el('btnNovoProjeto').onclick=()=>{
 };
 el('btnFecharModalProjeto').onclick=()=>{fecharModal('modalProjeto');};
 el('btnSalvarProjeto').onclick=salvarProjeto;
-el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;abrirSecao('projetos');};
+el('btnVoltarProjetos').onclick=()=>{_projetoAtual=null;abrirSecao('projetos',{preservarOrigem:true});};
 el('btnEditarProjeto').onclick=()=>{
   if(!_projetoAtual)return;
   el('modalProjetoTitulo').textContent='Editar projeto';
@@ -1970,6 +2020,7 @@ window.trocarAba = trocarAba;
 window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
+window.voltarContexto = voltarContexto;
 if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
 
 
