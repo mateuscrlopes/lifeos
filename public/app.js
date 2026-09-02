@@ -18,6 +18,12 @@ let _plantaAberta=null;
 let _plantaEditando=null;
 let _especies=[];
 const el=(id)=>document.getElementById(id);
+const escapeHtml=(valor='')=>String(valor)
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;')
+  .replaceAll('"','&quot;')
+  .replaceAll("'",'&#039;');
 
 // Ícones vetoriais da interface. Mantidos aqui para substituir emojis
 // sem depender de fonte, sistema operacional ou biblioteca externa.
@@ -558,7 +564,7 @@ function renderizarPlantas(){
       const esq=document.createElement('div');
       const cod=document.createElement('div');cod.className='planta-codigo';cod.textContent=`${planta.codigo} · Etiq. ${planta.numero_etiqueta}`;
       const nome=document.createElement('div');nome.className='planta-nome';
-      nome.innerHTML=`<span class="dot-perfil" style="background:${perfil.cor}"></span>${nomeEspecie}`;
+      nome.innerHTML=`<span class="dot-perfil" style="background:${perfil.cor}"></span>${escapeHtml(nomeEspecie)}`;
       if(planta.nome_personalizado){const apelido=document.createElement('span');apelido.style.cssText='font-size:12px;color:var(--suave);margin-left:4px';apelido.textContent=`(${planta.nome_personalizado})`;nome.appendChild(apelido);}
       const meta=document.createElement('div');meta.className='planta-meta';
       if(rotinaPrincipal){
@@ -623,7 +629,7 @@ async function abrirFichaPlanta(planta){
     ['Perfil hídrico',COR_PERFIL[planta.perfil_hidrico]?.label||planta.perfil_hidrico],
     ['Observações',planta.observacoes||'—'],
   ];
-  for(const[k,v]of info){const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linha);font-size:13px';linha.innerHTML=`<span style="color:var(--suave)">${k}</span><span>${v}</span>`;dados.appendChild(linha);}
+  for(const[k,v]of info){const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linha);font-size:13px';linha.innerHTML=`<span style="color:var(--suave)">${escapeHtml(k)}</span><span>${escapeHtml(v)}</span>`;dados.appendChild(linha);}
 
   // Botoes de cuidado manual
   const acoes=el('mpAcoes');acoes.innerHTML='';
@@ -655,7 +661,7 @@ async function abrirFichaPlanta(planta){
     const quando=dias===null?'—':dias<0?`${Math.abs(dias)}d atrás`:dias===0?'hoje':`em ${dias}d`;
     // Linha principal
     const topo=document.createElement('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
-    topo.innerHTML=`<span style="font-size:13px">${r.tipo} · <strong>${quando}</strong></span>`;
+    topo.innerHTML=`<span style="font-size:13px">${escapeHtml(r.tipo)} · <strong>${escapeHtml(quando)}</strong></span>`;
     if(dias===null||dias<=0){
       const btn=document.createElement('button');btn.textContent='Cuidar';btn.style.cssText='padding:6px 10px;font-size:12px';
       btn.onclick=async()=>{
@@ -827,7 +833,7 @@ function renderizarSlotsCardapio(){
       const btn=document.createElement('button');
       btn.type='button';
       btn.className='dia-slot'+(slot?' preenchido':'');
-      btn.innerHTML=slot?`<span>${slot.nome}</span>${slot.calorias!=null?`<small>${Number(slot.calorias)} kcal</small>`:''}`:'<span>+</span>';
+      btn.innerHTML=slot?`<span>${escapeHtml(slot.nome)}</span>${slot.calorias!=null?`<small>${Number(slot.calorias)} kcal</small>`:''}`:'<span>+</span>';
       btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${labelTipoCardapio(tipo)}${slot?' · '+slot.nome:''}${slot?.calorias!=null?' · '+Number(slot.calorias)+' kcal':''}`);
       btn.onclick=()=>abrirModalRefeicao(d,tipo);
       grid.appendChild(btn);
@@ -920,7 +926,7 @@ function abrirModalRefeicao(dia,tipo){
   const lista=el('modalRefLista');lista.innerHTML='';
   _refeicoes.filter(r=>receitaCompativelComSlot(r,tipo)).forEach(r=>{
     const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';
-    btn.innerHTML=`<div class="desc"><span class="nome">${r.nome}</span><span class="meta">${r.calorias_por_porcao!=null?Number(r.calorias_por_porcao)+' kcal por porção':'Calorias não informadas'}</span></div>`;
+    btn.innerHTML=`<div class="desc"><span class="nome">${escapeHtml(r.nome)}</span><span class="meta">${r.calorias_por_porcao!=null?Number(r.calorias_por_porcao)+' kcal por porção':'Calorias não informadas'}</span></div>`;
     btn.onclick=()=>{
       el('modalRefNomeAvulso').value=r.nome;
       if(el('modalRefKcal'))el('modalRefKcal').value=r.calorias_por_porcao??'';
@@ -1453,7 +1459,7 @@ async function renderizarPainelProjeto(projeto){
     </div>
     <div class="progresso-barra"><div class="progresso-fill" style="width:${pct}%"></div></div>
     <div style="font-size:12px;color:var(--suave);margin-top:4px">${concluidas} de ${todas.length} tarefas concluídas</div>
-    ${projeto.descricao?`<div style="font-size:13px;color:var(--suave);margin-top:8px">${projeto.descricao}</div>`:''}
+    ${projeto.descricao?`<div style="font-size:13px;color:var(--suave);margin-top:8px">${escapeHtml(projeto.descricao)}</div>`:''}
     ${projeto.inicio||projeto.termino?`<div style="font-size:12px;color:var(--suave);margin-top:4px">${projeto.inicio?projeto.inicio.slice(0,10).split('-').reverse().join('/'):'?'} → ${projeto.termino?projeto.termino.slice(0,10).split('-').reverse().join('/'):'?'}</div>`:''}
   `;
   // Objetivos
@@ -1852,7 +1858,7 @@ async function carregarTokens(){
   for(const t of data){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha);font-size:13px';
     const esq=document.createElement('div');
-    esq.innerHTML=`<div style="font-weight:600">${t.nome||'Sem nome'}</div><div style="font-size:11px;color:var(--suave);margin-top:2px">${t.token.slice(0,16)}…</div>`;
+    esq.innerHTML=`<div style="font-weight:600">${escapeHtml(t.nome||'Sem nome')}</div><div style="font-size:11px;color:var(--suave);margin-top:2px">${escapeHtml(t.token.slice(0,16))}…</div>`;
     const dir=document.createElement('div');dir.style.cssText='display:flex;gap:6px';
     const badge=document.createElement('span');badge.className='badge';badge.style.background=t.ativo?'#2f6f4f':'#6b7280';badge.textContent=t.ativo?'Ativo':'Inativo';
     const btnRev=document.createElement('button');btnRev.textContent=t.ativo?'Revogar':'Reativar';btnRev.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
@@ -1966,7 +1972,7 @@ function renderizarEnderecos(){
   const area=el('elcEnderecos');area.innerHTML='';
   for(const e of _localCompraEnderecos){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--linha);font-size:12px';
-    linha.innerHTML=`<span>${e.endereco||'Sem endereço'} ${e.latitude?`(${Number(e.latitude).toFixed(4)}, ${Number(e.longitude).toFixed(4)})`:'sem coords'}</span>`;
+    linha.innerHTML=`<span>${escapeHtml(e.endereco||'Sem endereço')} ${e.latitude?`(${Number(e.latitude).toFixed(4)}, ${Number(e.longitude).toFixed(4)})`:'sem coords'}</span>`;
     const btnD=document.createElement('button');btnD.textContent='×';btnD.style.cssText='background:none;color:var(--suave);padding:2px 6px';
     btnD.onclick=async()=>{if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
     linha.appendChild(btnD);area.appendChild(linha);
@@ -2046,7 +2052,7 @@ async function carregarHistoricoExcluidos(modulo){
     const quando=new Date(h.excluido_em).toLocaleDateString('pt-BR');
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--linha)';
     const esq=document.createElement('div');
-    esq.innerHTML=`<div style="font-size:13px;font-weight:600">${nome}</div><div style="font-size:11px;color:var(--suave)">${MOD_LABEL[h.modulo]||h.modulo} · excluído em ${quando}${h.restaurado_em?' · restaurado':''}</div>`;
+    esq.innerHTML=`<div style="font-size:13px;font-weight:600">${escapeHtml(nome)}</div><div style="font-size:11px;color:var(--suave)">${escapeHtml(MOD_LABEL[h.modulo]||h.modulo)} · excluído em ${escapeHtml(quando)}${h.restaurado_em?' · restaurado':''}</div>`;
     const btnRest=document.createElement('button');btnRest.textContent='Restaurar';btnRest.style.cssText='font-size:12px;padding:6px 10px;background:var(--acao-clara);color:var(--acao)';
     btnRest.disabled=!!h.restaurado_em;
     btnRest.onclick=async()=>{await restaurarItem(h);btnRest.disabled=true;btnRest.textContent='Restaurado';};
