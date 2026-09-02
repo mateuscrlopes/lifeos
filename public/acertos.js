@@ -190,7 +190,7 @@
     if (document.querySelector('link[data-acertos]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/acertos.css?v=3';
+    link.href = '/acertos.css?v=4';
     link.dataset.acertos = '1';
     document.head.appendChild(link);
   }
