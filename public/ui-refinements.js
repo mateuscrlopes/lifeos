@@ -212,8 +212,15 @@ function enhanceButton(button) {
   if (liveLabel && !button.dataset.uiOriginalLabel) button.dataset.uiOriginalLabel = liveLabel;
   const label = buttonLabel(button);
   const title = (button.title || '').toLowerCase();
+  const aria = (button.getAttribute('aria-label') || '').toLowerCase();
+  const closeControl = button.classList.contains('modal-fechar')
+    || button.classList.contains('ritmo-close')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || aria.includes('fechar')
+    || title.includes('fechar');
 
-  if (button.classList.contains('modal-fechar')) {
+  if (closeControl) {
+    button.classList.remove('ui-delete', 'ui-danger', 'is-danger');
     button.classList.add('ui-icon-button');
     button.setAttribute('aria-label', 'Fechar');
     button.title = 'Fechar';
@@ -491,6 +498,13 @@ function moduleFromDeleteTarget(button) {
 function isDeleteControl(button) {
   const label = buttonLabel(button);
   const aria = (button.getAttribute('aria-label') || '').toLowerCase();
+  const title = (button.title || '').toLowerCase();
+  const closeControl = button.classList.contains('modal-fechar')
+    || button.classList.contains('ritmo-close')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || aria.includes('fechar')
+    || title.includes('fechar');
+  if (closeControl) return false;
   return button.classList.contains('ui-delete') || label === '×' || aria.includes('excluir') || aria.includes('remover');
 }
 
