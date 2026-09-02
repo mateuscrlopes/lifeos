@@ -701,3 +701,195 @@ html[data-theme="dark"] #cfCentral #cfeInbox {
     justify-content: space-between;
   }
 }
+
+
+/* ================================================================
+   0.38 — Hoje compacto, alinhado e com hierarquia visual consistente
+================================================================ */
+
+#abaHoje .hero-hoje {
+  min-height: 118px !important;
+  margin-top: 13px !important;
+  padding: 17px 21px !important;
+  justify-content: center !important;
+  border-radius: 27px !important;
+}
+
+#abaHoje .hero-kicker {
+  margin: 0 0 6px !important;
+  font-size: 9px !important;
+  line-height: 1.2 !important;
+}
+
+#abaHoje .hero-titulo {
+  max-width: 100% !important;
+  margin: 0 !important;
+  font-size: 20px !important;
+  line-height: 1.18 !important;
+  letter-spacing: -.025em !important;
+}
+
+#abaHoje .hero-sub {
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+}
+
+/* Os quatro indicadores principais cabem em uma única linha. */
+#metricasHoje.metricas-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  padding-top: 12px !important;
+}
+
+#metricasHoje .metrica:not(.metrica-cardapio) {
+  min-width: 0 !important;
+  min-height: 82px !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px !important;
+  border-radius: 18px !important;
+  text-align: center;
+}
+
+#metricasHoje .metrica:not(.metrica-cardapio) .metrica-icon {
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 0 2px !important;
+  border-radius: 10px !important;
+}
+
+#metricasHoje .metrica:not(.metrica-cardapio) .metrica-icon svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+#metricasHoje .metrica:not(.metrica-cardapio) .metrica-num {
+  font-size: 20px !important;
+  line-height: 1 !important;
+}
+
+#metricasHoje .metrica:not(.metrica-cardapio) .metrica-label {
+  min-width: 0;
+  margin: 0 !important;
+  font-size: 9px !important;
+  font-weight: 750 !important;
+  line-height: 1.1 !important;
+  white-space: nowrap;
+}
+
+#metricasHoje .metrica-cardapio {
+  margin-top: 2px;
+  min-height: 70px !important;
+  grid-template-columns: 36px minmax(0, 1fr) auto !important;
+  padding: 11px 13px !important;
+  border-radius: 20px !important;
+}
+
+#metricasHoje .metrica-cardapio .metrica-label {
+  margin-top: 2px !important;
+  font-size: 10px !important;
+  line-height: 1.25 !important;
+}
+
+#metricasHoje .metrica-cardapio-titulo {
+  font-size: 14px !important;
+}
+
+/* Cabeçalhos dos módulos do Hoje: ícone + título + ação. */
+#cardsHoje .card-hoje-head {
+  min-height: 58px !important;
+  padding: 13px 16px !important;
+}
+
+#cardsHoje .card-hoje-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#cardsHoje .card-hoje-head-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--sage-soft) 82%, var(--paper));
+  color: var(--sage);
+}
+
+#cardsHoje .card-hoje-head-icon .icone-svg,
+#cardsHoje .card-hoje-head-icon svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+#cardsHoje .card-hoje-titulo-txt {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+#cardsHoje .card-hoje-abrir {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px !important;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage) !important;
+}
+
+#cardsHoje .card-hoje .mini-item {
+  min-height: 46px !important;
+  padding: 10px 0 !important;
+}
+
+#cardsHoje .card-hoje .mini-item > span:first-child {
+  font-size: 12px;
+}
+
+#cardsHoje .card-hoje .mini-meta {
+  font-size: 10.5px;
+}
+
+/* A grade nutricional dos formulários usa três campos sem quebrar o modal. */
+.lifeos-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cardapio-shared-note {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--sage-soft);
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+@media (max-width: 370px) {
+  #metricasHoje.metricas-grid {
+    gap: 4px !important;
+  }
+
+  #metricasHoje .metrica:not(.metrica-cardapio) {
+    min-height: 78px !important;
+    padding-inline: 2px !important;
+  }
+
+  #metricasHoje .metrica:not(.metrica-cardapio) .metrica-label {
+    font-size: 8px !important;
+  }
+
+  .lifeos-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
