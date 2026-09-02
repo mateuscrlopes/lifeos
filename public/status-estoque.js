@@ -9,7 +9,7 @@
 // Design System deve carregar antes das camadas de refinamento.
 import './design-system.js?v=1';
 import './theme.js?v=1';
-import './ui-refinements.js?v=5';
+import './ui-refinements.js?v=6';
 import './central-financeira.js?v=5';
 import './central-financeira-email.js?v=5';
 import './acertos.js?v=1';
