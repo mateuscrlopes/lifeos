@@ -99,7 +99,7 @@ async function sair(){
 
 // Mapeamento das abas principais
 const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
-const SECOES_MAIS=['secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
+const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
 
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
@@ -156,6 +156,7 @@ function abrirSecao(qual){
   if(secao){secao.style.display='block';secao.classList.remove('oculto');}
   const body=el('appBody');if(body)body.scrollTop=0;
   // Carregar dados da seção
+  if(qual==='ritmo')window.dispatchEvent(new CustomEvent('lifeos:ritmo-abrir'));
   if(qual==='projetos')carregarProjetos();
   if(qual==='rituais')carregarRituais();
   if(qual==='config'){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
