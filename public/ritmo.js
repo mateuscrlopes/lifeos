@@ -177,7 +177,7 @@
 
       R.perfil = perfil.data || null;
       R.ciclo = ciclos.data?.[0] || null;
-      R.metas = metas.data || [];
+      R.metas = (metas.data || []).filter(m => R.ciclo ? m.ciclo_id === R.ciclo.id : !m.ciclo_id);
       R.medidas = medidas.data || [];
       R.checkins = checkins.data || [];
       R.planos = (planos.data || []).map(p => ({
@@ -203,8 +203,7 @@
 
   function montarCardapioHoje(planejamentos, data) {
     const jsDia = data.getDay();
-    if (jsDia === 0 || jsDia === 6) return [];
-    const dia = jsDia;
+    const dia = jsDia === 0 ? 7 : jsDia;
     const linhas = [];
     for (const plano of planejamentos) {
       for (const item of (plano.planejamento_dias || [])) {
@@ -330,13 +329,12 @@
     const ciclo = cicloProgresso();
     mount.innerHTML = `
       <div class="ritmo-shell">
-        <div class="ritmo-context-bar">
-          <span>LifeOS</span><span>›</span><strong>Ritmo</strong>
-        </div>
-
         <section class="ritmo-hero">
-          <div class="ritmo-kicker">Seu ritmo pessoal</div>
-          <h2>${escapar(R.ciclo?.nome || 'Ritmo')}</h2>
+          <div class="ritmo-hero-top">
+            <div class="ritmo-kicker">Seu ritmo pessoal</div>
+            <button type="button" class="ritmo-hero-edit" id="ritmoEditarCiclo">${R.ciclo ? 'Editar ciclo' : '+ Criar ciclo'}</button>
+          </div>
+          <h2>${escapar(R.ciclo?.nome || 'Crie seu primeiro ciclo')}</h2>
           <p>${escapar(R.ciclo?.objetivo || 'Alimentação, movimento e evolução no seu contexto.')}</p>
           <div class="ritmo-cycle-row">
             <div>
@@ -552,14 +550,20 @@
         <div class="ritmo-card">
           ${ordem.map(dia => {
             const g = grupos.find(x => x.dia === dia);
-            return `
-              <div class="ritmo-activity-row">
+            if (!g.itens.length) return `
+              <div class="ritmo-activity-row is-empty">
+                <div class="ritmo-row-icon">${svg('calendario')}</div>
+                <div class="ritmo-row-main"><strong>${DIAS[dia]}</strong><small>Sem atividade planejada</small></div>
+              </div>`;
+            return g.itens.map(item => `
+              <button type="button" class="ritmo-activity-row ritmo-activity-open" data-abrir-atividade="${item.id}">
                 <div class="ritmo-row-icon">${svg('calendario')}</div>
                 <div class="ritmo-row-main">
-                  <strong>${DIAS[dia]}</strong>
-                  <small>${g.itens.length ? g.itens.map(i => i.titulo).join(' · ') : 'Sem atividade planejada'}</small>
+                  <strong>${DIAS[dia]} · ${escapar(item.titulo)}</strong>
+                  <small>${escapar(item.ritmo_planos_atividade?.local || item.ritmo_planos_atividade?.tipo || 'Abrir plano')}</small>
                 </div>
-              </div>`;
+                <span class="ritmo-row-chevron">${svg('seta')}</span>
+              </button>`).join('');
           }).join('')}
         </div>
       </section>
@@ -810,31 +814,54 @@
     `;
   }
 
+  let ritmoModalDirty = false;
+
   function renderModalBase() {
-    return `<div class="ritmo-modal" id="ritmoModal" hidden><div class="ritmo-sheet"><div id="ritmoModalConteudo"></div></div></div>`;
+    return `<div class="ritmo-modal" id="ritmoModal" hidden><div class="ritmo-sheet" role="dialog" aria-modal="true"><div id="ritmoModalConteudo"></div></div></div>`;
   }
 
   function abrirModal(html) {
     const modal = el('ritmoModal');
     const conteudo = el('ritmoModalConteudo');
     if (!modal || !conteudo) return;
+    ritmoModalDirty = false;
     conteudo.innerHTML = html;
     modal.hidden = false;
-    conteudo.querySelectorAll('[data-fechar-ritmo]').forEach(b => b.addEventListener('click', fecharModal));
-    modal.addEventListener('click', eventoFundoModal, { once: true });
+    conteudo.querySelectorAll('[data-fechar-ritmo]').forEach(b => b.addEventListener('click', solicitarFecharModal));
+    conteudo.addEventListener('input', marcarModalSujo);
+    conteudo.addEventListener('change', marcarModalSujo);
+    modal.onclick = eventoFundoModal;
+  }
+
+  function marcarModalSujo(e) {
+    if (e.target.matches('input,select,textarea')) ritmoModalDirty = true;
+  }
+
+  function solicitarFecharModal() {
+    if (ritmoModalDirty && !confirm('Deseja sair sem salvar as alterações?')) return;
+    fecharModal();
   }
 
   function eventoFundoModal(e) {
-    if (e.target?.id === 'ritmoModal') fecharModal();
+    if (e.target?.id === 'ritmoModal') solicitarFecharModal();
   }
 
   function fecharModal() {
     const modal = el('ritmoModal');
-    if (modal) modal.hidden = true;
+    const conteudo = el('ritmoModalConteudo');
+    ritmoModalDirty = false;
+    if (conteudo) {
+      conteudo.removeEventListener('input', marcarModalSujo);
+      conteudo.removeEventListener('change', marcarModalSujo);
+    }
+    if (modal) {
+      modal.hidden = true;
+      modal.onclick = null;
+    }
   }
 
   function modalHead(titulo, subtitulo = '') {
-    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button class="ritmo-close" data-fechar-ritmo>×</button></div>`;
+    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button type="button" class="ritmo-close" data-fechar-ritmo aria-label="Fechar" title="Fechar">×</button></div>`;
   }
 
   function ligarEventos() {
@@ -852,6 +879,7 @@
     document.querySelectorAll('[data-editar-plano-alimentar]').forEach(b => b.addEventListener('click', () => abrirEditorPlanoAlimentar(b.dataset.editarPlanoAlimentar)));
     document.querySelectorAll('[data-foto-posicao]').forEach(b => b.addEventListener('click', () => iniciarFoto(b.dataset.fotoPosicao)));
 
+    el('ritmoEditarCiclo')?.addEventListener('click', abrirEditarCiclo);
     el('ritmoDiaCompleto')?.addEventListener('click', abrirDiaCompleto);
     el('ritmoAdicionarConsumo')?.addEventListener('click', abrirRegistroConsumo);
     document.querySelectorAll('[data-remover-consumo]').forEach(b => b.addEventListener('click', () => removerConsumo(b.dataset.removerConsumo)));
@@ -1139,8 +1167,21 @@
         </select></div>
         <div class="ritmo-field"><label>Horário (opcional)</label><input id="ritmoAtivHora" type="time" value="${agenda?.horario?.slice(0,5) || ''}"></div>
       </div>
-      <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarAtividade">Salvar</button></div>
+      <div class="ritmo-actions">
+        <button class="ritmo-btn" id="ritmoSalvarAtividade">Salvar</button>
+        ${plano ? '<button class="ritmo-btn danger" type="button" id="ritmoExcluirAtividade">Excluir atividade</button>' : ''}
+      </div>
     `);
+
+    el('ritmoExcluirAtividade')?.addEventListener('click', async () => {
+      if (!plano || !confirm(`Excluir "${plano.nome}" e sua agenda? O histórico de sessões será preservado quando possível.`)) return;
+      const { error: agendaErro } = await R.client.from('ritmo_agenda').delete().eq('plano_id', plano.id);
+      if (agendaErro) throw agendaErro;
+      const { error } = await R.client.from('ritmo_planos_atividade').delete().eq('id', plano.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
 
     el('ritmoSalvarAtividade')?.addEventListener('click', async () => {
       const nome = el('ritmoAtivNome').value.trim();
