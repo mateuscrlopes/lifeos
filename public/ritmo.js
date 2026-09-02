@@ -89,6 +89,7 @@
       seta: '<path d="m9 18 6-6-6-6"/>',
       grafico: '<path d="M4 19V9M10 19V5M16 19v-8M22 19H2"/>',
       calendario: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+      lixeira: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/>',
     };
     return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icones[nome] || icones.plano}</svg>`;
   }
@@ -1145,6 +1146,99 @@
         botao.disabled = false;
         botao.textContent = 'Não foi possível salvar';
       }
+    });
+  }
+
+  const METAS_PADRAO_CICLO = [
+    ['peso','reduzir','kg'],
+    ['cintura','reduzir','cm'],
+    ['abdomen','reduzir','cm'],
+    ['quadril_alto','acompanhar','cm'],
+    ['quadril_max','acompanhar','cm'],
+    ['peito','acompanhar','cm'],
+    ['coxa_d','acompanhar','cm'],
+    ['braco_d','acompanhar','cm'],
+    ['panturrilha_d','acompanhar','cm'],
+  ];
+
+  function abrirEditarCiclo() {
+    const ciclo = R.ciclo;
+    abrirModal(`
+      ${modalHead(ciclo ? 'Editar ciclo' : 'Novo ciclo', 'Nome, objetivo e duração ficam totalmente editáveis.')}
+      <div class="ritmo-field"><label>Nome do ciclo</label><input id="ritmoCicloNome" value="${escapar(ciclo?.nome || '')}" placeholder="Ex.: Ciclo verão, Manutenção, Corrida 10 km"></div>
+      <div class="ritmo-field" style="margin-top:9px"><label>Objetivo</label><textarea id="ritmoCicloObjetivo" rows="3" placeholder="O que você quer acompanhar neste período?">${escapar(ciclo?.objetivo || '')}</textarea></div>
+      <div class="ritmo-field" style="margin-top:9px"><label>Fase</label><input id="ritmoCicloFase" value="${escapar(ciclo?.fase || '')}" placeholder="Ex.: ataque, consolidação, manutenção"></div>
+      <div class="ritmo-form-grid" style="margin-top:9px">
+        <div class="ritmo-field"><label>Início</label><input id="ritmoCicloInicio" type="date" value="${escapar(ciclo?.inicio || isoLocal())}"></div>
+        <div class="ritmo-field"><label>Fim</label><input id="ritmoCicloFim" type="date" value="${escapar(ciclo?.fim || '')}"></div>
+      </div>
+      <div class="ritmo-note">A quantidade de dias não fica presa no código: ela é recalculada automaticamente a partir das datas.</div>
+      <div class="ritmo-actions ritmo-actions--cycle">
+        <button class="ritmo-btn" id="ritmoSalvarCiclo">Salvar ciclo</button>
+        ${ciclo ? '<button class="ritmo-btn secondary" type="button" id="ritmoEncerrarCiclo">Encerrar</button><button class="ritmo-icon-danger" type="button" id="ritmoExcluirCiclo" aria-label="Excluir ciclo" title="Excluir ciclo">' + svg('lixeira') + '</button>' : ''}
+      </div>
+    `);
+
+    el('ritmoSalvarCiclo')?.addEventListener('click', async () => {
+      const nome = el('ritmoCicloNome').value.trim();
+      const inicio = el('ritmoCicloInicio').value;
+      const fim = el('ritmoCicloFim').value || null;
+      if (!nome || !inicio) return;
+      if (fim && fim < inicio) {
+        alert('A data final não pode ser anterior ao início.');
+        return;
+      }
+      const payload = {
+        usuario_id: R.usuario.id,
+        nome,
+        objetivo: el('ritmoCicloObjetivo').value.trim() || null,
+        fase: el('ritmoCicloFase').value.trim() || null,
+        inicio,
+        fim,
+        ativo: true,
+        atualizado_em: new Date().toISOString(),
+      };
+      if (ciclo) {
+        const { error } = await R.client.from('ritmo_ciclos').update(payload).eq('id', ciclo.id);
+        if (error) throw error;
+      } else {
+        const { error: desativarErro } = await R.client.from('ritmo_ciclos').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('usuario_id', R.usuario.id).eq('ativo', true);
+        if (desativarErro) throw desativarErro;
+        const { data: novo, error } = await R.client.from('ritmo_ciclos').insert(payload).select('id').single();
+        if (error) throw error;
+        const metas = METAS_PADRAO_CICLO.map(([indicador,estrategia,unidade]) => ({
+          usuario_id: R.usuario.id,
+          ciclo_id: novo.id,
+          indicador,
+          estrategia,
+          valor_meta: null,
+          unidade,
+        }));
+        const { error: metaErro } = await R.client.from('ritmo_metas').insert(metas);
+        if (metaErro) throw metaErro;
+      }
+      fecharModal();
+      await carregarTudo();
+    });
+
+    el('ritmoEncerrarCiclo')?.addEventListener('click', async () => {
+      if (!ciclo || !confirm(`Encerrar "${ciclo.nome}"? O histórico e as metas permanecem salvos.`)) return;
+      const { error } = await R.client.from('ritmo_ciclos').update({
+        ativo: false,
+        fim: ciclo.fim || isoLocal(),
+        atualizado_em: new Date().toISOString(),
+      }).eq('id', ciclo.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
+
+    el('ritmoExcluirCiclo')?.addEventListener('click', async () => {
+      if (!ciclo || !confirm(`Excluir definitivamente "${ciclo.nome}"? As metas deste ciclo também serão removidas.`)) return;
+      const { error } = await R.client.from('ritmo_ciclos').delete().eq('id', ciclo.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
     });
   }
 
