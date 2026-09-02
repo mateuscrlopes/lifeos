@@ -938,16 +938,16 @@
               <!-- Tarefas da Casa -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Tarefas da Casa</span>
-                  <span class="panel-link" onclick="mudarPagina('tarefas',null)">Ver todas</span>
+                  <span class="panel-heading"><span class="panel-titulo">Tarefas da casa</span><span class="panel-sub" id="painelTarefasSub">Tarefas para hoje</span></span>
+                  <span class="panel-link" onclick="mudarPagina('tarefas',null)">Ver todas as tarefas</span>
                 </div>
                 <div class="task-list" id="painelTarefas"><div class="loading">Carregando...</div></div>
               </div>
               <!-- Lista de compras -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Compras</span>
-                  <span class="panel-link" onclick="mudarPagina('compras',null)">Ver todas</span>
+                  <span class="panel-heading"><span class="panel-titulo">Compras</span><span class="panel-sub" id="painelComprasSub">Itens na lista</span></span>
+                  <span class="panel-link" onclick="mudarPagina('compras',null)">Ver lista completa</span>
                 </div>
                 <div id="painelCompras"><div class="loading">Carregando...</div></div>
               </div>
@@ -957,14 +957,15 @@
               <!-- Destaques -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Destaques</span>
+                  <span class="panel-heading"><span class="panel-titulo">Destaques</span><span class="panel-sub">O que importa agora</span></span>
                 </div>
                 <div class="destaque-list" id="painelDestaques"><div class="loading">Carregando...</div></div>
               </div>
               <!-- Plantas -->
               <div class="panel" id="painelPlantasBox">
                 <div class="panel-head">
-                  <span class="panel-titulo">Plantas</span>
+                  <span class="panel-heading"><span class="panel-titulo">Plantas</span><span class="panel-sub" id="painelPlantasSub">Plantas ativas</span></span>
+                  <span class="panel-link" onclick="abrirModuloApp('plantas')">Ver todas as plantas</span>
                 </div>
                 <div id="painelPlantas"><div class="loading">Carregando...</div></div>
               </div>
@@ -974,16 +975,16 @@
               <!-- Contas próximas -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Contas próximas</span>
-                  <span class="panel-link" onclick="mudarPagina('contas',null)">Todas</span>
+                  <span class="panel-heading"><span class="panel-titulo">Contas próximas</span><span class="panel-sub" id="painelContasSub">Contas a vencer</span></span>
+                  <span class="panel-link" onclick="mudarPagina('contas',null)">Ver todas as contas</span>
                 </div>
                 <div id="painelContas"><div class="loading">Carregando...</div></div>
               </div>
               <!-- Estoque em atenção -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Estoque</span>
-                  <span class="panel-link" onclick="mudarPagina('estoque',null)">Abrir</span>
+                  <span class="panel-heading"><span class="panel-titulo">Estoque</span><span class="panel-sub" id="painelEstoqueSub">Itens monitorados</span></span>
+                  <span class="panel-link" onclick="mudarPagina('estoque',null)">Ver estoque completo</span>
                 </div>
                 <div id="painelEstoque"><div class="loading">Carregando...</div></div>
               </div>
@@ -1355,6 +1356,8 @@ async function carregarTarefasHome() {
     .order('data', { nullsFirst: true })
     .limit(20);
   const tarefas = data || [];
+  const tarefasSub = document.getElementById('painelTarefasSub');
+  if (tarefasSub) tarefasSub.textContent = `${tarefas.length} ${tarefas.length === 1 ? 'tarefa para hoje' : 'tarefas para hoje'}`;
   document.getElementById('mTarefas').textContent = tarefas.length;
   document.getElementById('mTarefasMini').textContent = tarefas.length > 0 ? `${tarefas.slice(0,2).map(t=>t.titulo).join(', ')}` : 'Nenhuma pendente';
   renderizarTarefas('painelTarefas', tarefas.slice(0,5));
@@ -1368,6 +1371,8 @@ async function carregarComprasHome() {
     .order('criado_em', { ascending: false })
     .limit(20);
   const itens = data || [];
+  const comprasSub = document.getElementById('painelComprasSub');
+  if (comprasSub) comprasSub.textContent = `${itens.length} ${itens.length === 1 ? 'item na lista' : 'itens na lista'}`;
   document.getElementById('mCompras').textContent = itens.length;
   document.getElementById('mComprasMini').textContent = itens.length > 0 ? `${itens[0].nome}${itens.length>1?` e mais ${itens.length-1}`:''}` : 'Lista vazia';
   // Renderizar compras
@@ -1391,6 +1396,8 @@ async function carregarContasHome() {
     .lte('vencimento', em15)
     .order('vencimento');
   const contas = data || [];
+  const contasSub = document.getElementById('painelContasSub');
+  if (contasSub) contasSub.textContent = `${contas.length} ${contas.length === 1 ? 'conta a vencer' : 'contas a vencer'}`;
   document.getElementById('mContas').textContent = contas.length;
   const proxima = contas[0];
   document.getElementById('mContasMini').textContent = proxima ? `${proxima.nome} — ${proxima.vencimento.slice(0,10).split('-').reverse().join('/')}` : 'Nenhuma no prazo';
@@ -1414,6 +1421,8 @@ async function carregarEstoqueHome() {
     .select('id,nome,tipo,quantidade,minimo,nivel,minimo_nivel,local')
     .eq('casa_id', usuario.casa_id);
   const itens = data || [];
+  const estoqueSub = document.getElementById('painelEstoqueSub');
+  if (estoqueSub) estoqueSub.textContent = `${itens.length} ${itens.length === 1 ? 'item monitorado' : 'itens monitorados'}`;
   // Filtra itens com problema
   const problema = itens.filter(item => {
     if (item.tipo === 'nivel_visual') {
@@ -1442,6 +1451,8 @@ async function carregarPlantasHome() {
     .eq('casa_id', usuario.casa_id)
     .eq('status', 'ativa');
   const plantas = data || [];
+  const plantasSub = document.getElementById('painelPlantasSub');
+  if (plantasSub) plantasSub.textContent = `${plantas.length} ${plantas.length === 1 ? 'planta ativa' : 'plantas ativas'}`;
   const corPerfil = { alto: '#3b7dbf', medio: '#2f6f4f', baixo: '#b8860b' };
   const area = document.getElementById('painelPlantas');
   const box = document.getElementById('painelPlantasBox');
