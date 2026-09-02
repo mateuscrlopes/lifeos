@@ -639,7 +639,7 @@ async function salvarEditarPlanta(){
 }
 
 // --- CARDAPIO ---
-let _refeicoes=[],_planDias={},_slotAtual=null;
+let _refeicoes=[],_planDias={},_slotAtual=null,_sugestaoCardapioOffset=0;
 async function carregarRefeicoes(){
   const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
@@ -673,6 +673,80 @@ function adicionarLinhaIngrediente(){
 
 function renderizarSlotsCardapio(){
   ['almoco','janta'].forEach(tipo=>{const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);if(!grid)return;grid.innerHTML='';for(let d=1;d<=5;d++){const chave=`${d}-${tipo}`;const slot=_planDias[chave];const btn=document.createElement('div');btn.className='dia-slot'+(slot?' preenchido':'');btn.textContent=slot?slot.nome:'+ add';btn.onclick=()=>abrirModalRefeicao(d,tipo);grid.appendChild(btn);}});
+}
+
+function normalizarCardapioTexto(valor=''){
+  return String(valor||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+function familiaProteinaReceita(receita){
+  const texto=normalizarCardapioTexto([receita.nome,...(receita.refeicao_ingredientes||[]).map(i=>i.nome)].join(' '));
+  if(/frango|sassami|sobrecoxa/.test(texto))return 'frango';
+  if(/tilapia|peixe|atum|sardinha/.test(texto))return 'peixe';
+  if(/suino|lombo|porco/.test(texto))return 'porco';
+  if(/carne|acem|bife|almondega/.test(texto))return 'carne';
+  if(/ovo|omelete/.test(texto))return 'ovos';
+  return 'outro';
+}
+
+function ingredienteDisponivelNoEstoque(ingrediente,nomesEstoque){
+  const nome=normalizarCardapioTexto(ingrediente);
+  if(!nome)return false;
+  return nomesEstoque.some(est=>est.includes(nome)||nome.includes(est));
+}
+
+async function sugerirPlanejamentoSemana(){
+  const botao=el('btnSugerirPlan');
+  if(botao){botao.disabled=true;botao.textContent='Montando...';}
+  try{
+    if(!_refeicoes.length)await carregarRefeicoes();
+    const candidatas=_refeicoes.filter(r=>['almoco','janta','ambos'].includes(r.tipo));
+    if(!candidatas.length){aviso('avisoPlan','Cadastre ao menos uma refeição de almoço/janta.','erro');return;}
+
+    const{data:estoque}=await supa.from('estoque')
+      .select('nome,quantidade,nivel')
+      .eq('casa_id',usuario.casa_id);
+    const nomesEstoque=(estoque||[])
+      .filter(i=>i.nivel!=='acabou'&&(i.quantidade==null||Number(i.quantidade)>0))
+      .map(i=>normalizarCardapioTexto(i.nome))
+      .filter(Boolean);
+
+    const usados=new Set();
+    let ultimaFamilia=null;
+    const semana=formatarDataISO(inicioSemana());
+    const baseHash=[...semana].reduce((a,c)=>a+c.charCodeAt(0),0)+_sugestaoCardapioOffset++;
+
+    for(let d=1;d<=5;d++){
+      for(const tipo of ['almoco','janta']){
+        const compativeis=candidatas.filter(r=>r.tipo===tipo||r.tipo==='ambos');
+        const ranking=compativeis.map((r,idx)=>{
+          const disponiveis=(r.refeicao_ingredientes||[])
+            .filter(i=>ingredienteDisponivelNoEstoque(i.nome,nomesEstoque)).length;
+          const familia=familiaProteinaReceita(r);
+          let score=disponiveis*3;
+          if(usados.has(r.id))score-=20;
+          if(familia===ultimaFamilia&&familia!=='outro')score-=4;
+          score+=((baseHash+idx+d+(tipo==='janta'?7:0))%7)/100;
+          return{r,score,familia};
+        }).sort((a,b)=>b.score-a.score||a.r.nome.localeCompare(b.r.nome,'pt-BR'));
+
+        const escolha=ranking[0]||null;
+        if(!escolha)continue;
+        _planDias[`${d}-${tipo}`]={nome:escolha.r.nome,refeicaoId:escolha.r.id};
+        usados.add(escolha.r.id);
+        ultimaFamilia=escolha.familia;
+      }
+    }
+    renderizarSlotsCardapio();
+    aviso('avisoPlan',nomesEstoque.length
+      ?'Sugestão pronta priorizando o que já existe no estoque. Revise e salve quando quiser.'
+      :'Sugestão pronta com variedade. Revise e salve quando quiser.','ok');
+  }catch(erro){
+    console.error('[Cardápio] Falha ao sugerir semana:',erro);
+    aviso('avisoPlan','Não foi possível montar a sugestão agora.','erro');
+  }finally{
+    if(botao){botao.disabled=false;botao.textContent='Sugerir semana';}
+  }
 }
 
 function abrirModalRefeicao(dia,tipo){
@@ -1754,6 +1828,7 @@ el('btnAddIngrediente').onclick=adicionarLinhaIngrediente;
 el('btnConfirmarRef').onclick=confirmarSlot;
 el('btnLimparSlot').onclick=limparSlot;
 el('btnFecharModalRef').onclick=fecharModalRefeicao;
+el('btnSugerirPlan').onclick=sugerirPlanejamentoSemana;
 el('btnSalvarPlan').onclick=salvarPlanejamento;
 el('btnGerarLista').onclick=gerarListaCardapio;
 el('btnSalvarRitual').onclick=salvarRitual;
