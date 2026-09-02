@@ -947,7 +947,7 @@
               <!-- Lista de compras -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Lista de compras</span>
+                  <span class="panel-titulo">Compras</span>
                   <span class="panel-link" onclick="mudarPagina('compras',null)">Ver todas</span>
                 </div>
                 <div id="painelCompras"><div class="loading">Carregando...</div></div>
@@ -983,7 +983,7 @@
               <!-- Estoque em atenção -->
               <div class="panel">
                 <div class="panel-head">
-                  <span class="panel-titulo">Estoque em atenção</span>
+                  <span class="panel-titulo">Estoque</span>
                   <span class="panel-link" onclick="mudarPagina('estoque',null)">Abrir</span>
                 </div>
                 <div id="painelEstoque"><div class="loading">Carregando...</div></div>
@@ -1164,9 +1164,8 @@ function atualizarRelogio() {
   atualizarHeroKicker(agora);
 }
 
-function atualizarHeroKicker(agora) {
-  const diasSem = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-  document.getElementById('heroKicker').textContent = `${diasSem[agora.getDay()]} em casa`;
+function atualizarHeroKicker() {
+  document.getElementById('heroKicker').textContent = '';
 }
 
 // ---- CLIMA ----
@@ -1332,6 +1331,7 @@ async function carregarTudo() {
     carregarContasHome(),
     carregarEstoqueHome(),
     carregarPlantasHome(),
+    carregarDestaquesHome(),
   ]);
   montarHero();
   montarWidgetsEspera();
@@ -1434,64 +1434,97 @@ async function carregarPlantasHome() {
     .eq('casa_id', usuario.casa_id)
     .eq('status', 'ativa');
   const plantas = data || [];
-  const urgentes = plantas.filter(p => {
-    const r = (p.planta_rotinas||[]).find(r=>r.ativa);
-    return r && r.proxima_realizacao && r.proxima_realizacao <= hoje;
-  });
   const corPerfil = { alto: '#3b7dbf', medio: '#2f6f4f', baixo: '#b8860b' };
   const area = document.getElementById('painelPlantas');
-  if (!urgentes.length) { area.innerHTML = '<div class="vazio">Todas as plantas em dia</div>'; document.getElementById('painelPlantasBox').style.display='none'; montarDestaques(0); return; }
-  document.getElementById('painelPlantasBox').style.display='block';
-  area.innerHTML = urgentes.slice(0,5).map(p => {
-    const r = (p.planta_rotinas||[]).find(r=>r.ativa);
-    const dias = r ? Math.round((new Date(r.proxima_realizacao)-new Date(hoje))/86400000) : null;
-    const quando = dias === null ? '—' : dias < 0 ? `${Math.abs(dias)}d atrás` : 'hoje';
+  const box = document.getElementById('painelPlantasBox');
+  if (box) box.style.display='block';
+  if (!plantas.length) { area.innerHTML = '<div class="vazio">Nenhuma planta ativa</div>'; return; }
+  const ordenadas = [...plantas].sort((a,b) => {
+    const ra=(a.planta_rotinas||[]).filter(r=>r.ativa&&r.proxima_realizacao).sort((x,y)=>x.proxima_realizacao.localeCompare(y.proxima_realizacao))[0];
+    const rb=(b.planta_rotinas||[]).filter(r=>r.ativa&&r.proxima_realizacao).sort((x,y)=>x.proxima_realizacao.localeCompare(y.proxima_realizacao))[0];
+    return String(ra?.proxima_realizacao||'9999').localeCompare(String(rb?.proxima_realizacao||'9999'));
+  });
+  area.innerHTML = ordenadas.slice(0,4).map(p => {
+    const r = (p.planta_rotinas||[]).filter(r=>r.ativa&&r.proxima_realizacao).sort((a,b)=>a.proxima_realizacao.localeCompare(b.proxima_realizacao))[0];
+    const dias = r ? Math.round((new Date(r.proxima_realizacao+'T12:00:00')-new Date(hoje+'T12:00:00'))/86400000) : null;
+    const quando = dias == null ? 'Sem rotina' : dias < 0 ? `${Math.abs(dias)}d atrasada` : dias === 0 ? 'Hoje' : `em ${dias}d`;
+    const urgente = dias != null && dias <= 0;
     return `<div class="planta-row">
       <div class="planta-dot" style="background:${corPerfil[p.perfil_hidrico]||'#6b7280'}"></div>
-      <div style="flex:1"><div class="planta-nome">${p.especies?.nome_popular||p.codigo}</div><div class="planta-meta">${r?.tipo||''}</div></div>
-      <span class="planta-tag" style="background:var(--alert-soft);color:var(--alert)">${quando}</span>
+      <div style="flex:1;min-width:0"><div class="planta-nome">${p.especies?.nome_popular||p.codigo}</div><div class="planta-meta">${r?.tipo||'Cuidados em dia'} · ${quando}</div></div>
+      <span class="planta-tag" style="background:${urgente?'var(--alert-soft)':'var(--paper-2)'};color:${urgente?'var(--alert)':'var(--muted)'}">${urgente?'Atenção':'Em dia'}</span>
     </div>`;
   }).join('');
-  // Adicionar às métricas de destaque
-  montarDestaques(urgentes.length);
 }
 
-function montarDestaques(plantasUrgentes) {
+async function carregarDestaquesHome() {
   const area = document.getElementById('painelDestaques');
-  const destaques = [];
-  if (plantasUrgentes > 0) {
+  const hoje = new Date();
+  const jsDia = hoje.getDay();
+  const diaCardapio = jsDia === 0 ? 7 : jsDia;
+  const segunda = new Date(hoje);
+  segunda.setDate(hoje.getDate() + (jsDia === 0 ? -6 : 1-jsDia));
+  const semana = `${segunda.getFullYear()}-${String(segunda.getMonth()+1).padStart(2,'0')}-${String(segunda.getDate()).padStart(2,'0')}`;
+  const [cicloResp, cardapioResp] = await Promise.all([
+    supa.from('ritmo_ciclos').select('id,nome,objetivo,inicio,fim').eq('usuario_id',usuario.id).eq('ativo',true).order('inicio',{ascending:false}).limit(1),
+    supa.from('planejamento_semana').select('responsavel,planejamento_dias(dia_semana,tipo,refeicao_nome,calorias,refeicoes(nome,calorias_por_porcao))').eq('casa_id',usuario.casa_id).eq('semana_inicio',semana),
+  ]);
+  const destaques=[];
+  const ciclo=cicloResp.data?.[0];
+  if(ciclo){
+    const inicio=new Date(ciclo.inicio+'T12:00:00');
+    const fim=ciclo.fim?new Date(ciclo.fim+'T12:00:00'):null;
+    const atual=Math.max(1,Math.floor((hoje-inicio)/86400000)+1);
+    const total=fim?Math.max(1,Math.floor((fim-inicio)/86400000)+1):null;
+    const pct=total?Math.max(0,Math.min(100,Math.round(atual/total*100))):null;
     destaques.push({
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V12M12 12C12 12 8 10 6 7c-1-1.5-1-4 2-4s4 3 4 3M12 12c0 0 4-2 6-5 1-1.5 1-4-2-4s-4 3-4 3"/></svg>`,
-      cor: 'var(--sage-soft)', corIcon: 'var(--sage)',
-      titulo: `${plantasUrgentes} ${plantasUrgentes===1?'planta precisa':'plantas precisam'} de cuidado`,
-      sub: 'Verifique a aba de plantas para detalhes',
+      icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>`,
+      titulo:ciclo.nome,
+      sub:`Dia ${atual}${total?' de '+total:''}${ciclo.objetivo?' · '+ciclo.objetivo:''}`,
+      progresso:pct,
+      tom:'sage'
     });
   }
-  if (!destaques.length) {
-    area.innerHTML = '<div class="vazio">Sem destaques no momento</div>';
-    return;
+  const nomeUsuario=String(usuario.nome||'').toLowerCase();
+  const respUsuario=nomeUsuario.startsWith('mateus')?'mateus':(nomeUsuario.startsWith('ghustavo')||nomeUsuario.startsWith('gustavo'))?'ghustavo':null;
+  const itens=[];
+  for(const plano of cardapioResp.data||[]){
+    if(plano.responsavel!=='ambos' && plano.responsavel!==respUsuario) continue;
+    for(const d of plano.planejamento_dias||[]){
+      if(d.dia_semana!==diaCardapio) continue;
+      itens.push({...d,responsavel:plano.responsavel});
+    }
   }
-  area.innerHTML = destaques.map(d => `
+  const ordem=['cafe','almoco','lanche','janta'];
+  const hora=hoje.getHours();
+  const alvo=hora<11?'cafe':hora<15?'almoco':hora<18?'lanche':'janta';
+  const refeicao=itens.find(i=>i.tipo===alvo)||itens.sort((a,b)=>ordem.indexOf(a.tipo)-ordem.indexOf(b.tipo))[0];
+  if(refeicao){
+    const nome=refeicao.refeicoes?.nome||refeicao.refeicao_nome||'Refeição planejada';
+    const kcal=refeicao.calorias??refeicao.refeicoes?.calorias_por_porcao??null;
+    const label={cafe:'Café da manhã',almoco:'Almoço',lanche:'Lanche',janta:'Jantar'}[refeicao.tipo]||'Cardápio';
+    destaques.push({
+      icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3v7a3 3 0 0 0 3 3h1V3M8 3v10M18 3v18M15 8c0-3 1-5 3-5v10h-3Z"/></svg>`,
+      titulo:label,
+      sub:`${nome}${kcal!=null?' · '+Number(kcal)+' kcal':''}`,
+      tom:'sun'
+    });
+  }
+  if(!destaques.length){ area.innerHTML='<div class="vazio">Sem destaques no momento</div>'; return; }
+  area.innerHTML=destaques.slice(0,2).map(d=>`
     <div class="destaque">
-      <div class="destaque-icon" style="background:${d.cor};color:${d.corIcon}">${d.icon}</div>
-      <div><div class="destaque-titulo">${d.titulo}</div><div class="destaque-sub">${d.sub}</div></div>
-    </div>
-  `).join('');
+      <div class="destaque-icon" style="background:${d.tom==='sun'?'var(--sun-soft)':'var(--sage-soft)'};color:${d.tom==='sun'?'var(--sun)':'var(--sage)'}">${d.icon}</div>
+      <div style="flex:1;min-width:0"><div class="destaque-titulo">${d.titulo}</div><div class="destaque-sub">${d.sub}</div>${d.progresso!=null?`<div style="height:5px;margin-top:8px;border-radius:999px;background:var(--paper-2);overflow:hidden"><span style="display:block;width:${d.progresso}%;height:100%;background:var(--sage)"></span></div>`:''}</div>
+    </div>`).join('');
 }
 
 function montarHero() {
   const s = saudacao();
-  document.getElementById('heroTitulo').textContent = `${s}, Mateus e Ghustavo.`;
-  // Subtítulo dinâmico
-  const tarefas = parseInt(document.getElementById('mTarefas').textContent)||0;
-  const contas = parseInt(document.getElementById('mContas').textContent)||0;
-  const partes = [];
-  if (tarefas === 0 && contas === 0) partes.push('O essencial da Casa está organizado.');
-  else {
-    if (tarefas > 0) partes.push(`${tarefas} ${tarefas===1?'tarefa pendente':'tarefas pendentes'}.`);
-    if (contas > 0) partes.push(`${contas} ${contas===1?'conta vence':'contas vencem'} em breve.`);
-  }
-  document.getElementById('heroSub').textContent = partes.join(' ');
+  const primeiroNome = String(usuario?.nome || 'Mateus').trim().split(/\s+/)[0];
+  const hoje = new Date();
+  const data = hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('heroTitulo').textContent = `${s}, ${primeiroNome}!`;
+  document.getElementById('heroSub').textContent = data.charAt(0).toUpperCase()+data.slice(1);
 }
 
 function montarWidgetsEspera() {
@@ -1637,6 +1670,6 @@ iniciar();
 </script>
   <script src="/tablet-enhancements.js?v=1"></script>
   <script src="/tablet-product-shell-v2.js?v=2"></script>
-  <script src="/tablet-app-shell-v3.js?v=4"></script>
+  <script src="/tablet-app-shell-v3.js?v=5"></script>
 </body>
 </html>
