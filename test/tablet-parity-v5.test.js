@@ -75,7 +75,7 @@ test('tablet v6 abandona contexto legado e preserva hero nativo', () => {
   assert.match(painel, /painelContextoCasa/);
   assert.match(css, /#painelContextoCasa[\s\S]*display:\s*none\s*!important/);
   assert.match(css, /\.hero-banner[\s\S]*display:\s*block\s*!important/);
-  assert.match(enhancements, /painel-casa\.js\?v=3/);
+  assert.match(enhancements, /painel-casa\.js\?v=4/);
 });
 
 test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
