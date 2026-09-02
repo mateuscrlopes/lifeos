@@ -1164,7 +1164,8 @@
       await carregarTudo();
     }));
     el('ritmoExcluirCheckinModal')?.addEventListener('click', async () => {
-      await excluirCheckin(tipo, referenciaId, false);
+      const excluiu = await excluirCheckin(tipo, referenciaId, false);
+      if (!excluiu) return;
       fecharModal();
       await carregarTudo();
     });
@@ -1227,20 +1228,24 @@
 
   async function excluirCheckin(tipo, referenciaId = null, recarregar = true) {
     const atual = checkin(tipo, isoLocal(), referenciaId);
-    if (!atual?.id) return;
-    if (!confirm('Excluir este check-in? O consumo automático ligado a ele também será removido.')) return;
+    if (!atual?.id) return false;
+    if (!confirm('Excluir este check-in? O consumo automático ligado a ele também será removido.')) return false;
     const planejado = REFEICOES_PRIORITARIAS.some(r => r.tipo === tipo) ? planejadoParaCheckin(tipo) : null;
     const { error } = await R.client.from('ritmo_checkins').delete().eq('id', atual.id);
     if (error) throw error;
     if (planejado?.chave) {
-      let q = R.client.from('ritmo_consumos').delete().eq('usuario_id', R.usuario.id).eq('data', isoLocal());
-      if (planejado.id) q = q.or(`referencia_chave.eq.${planejado.chave},planejamento_dia_id.eq.${planejado.id}`);
-      else q = q.eq('referencia_chave', planejado.chave);
-      const { error: consumoErro } = await q;
-      if (consumoErro) throw consumoErro;
+      const porChave = await R.client.from('ritmo_consumos').delete()
+        .eq('usuario_id', R.usuario.id).eq('data', isoLocal()).eq('referencia_chave', planejado.chave);
+      if (porChave.error) throw porChave.error;
+      if (planejado.id) {
+        const antigo = await R.client.from('ritmo_consumos').delete()
+          .eq('usuario_id', R.usuario.id).eq('data', isoLocal()).eq('planejamento_dia_id', planejado.id);
+        if (antigo.error) throw antigo.error;
+      }
     }
     R.checkins = R.checkins.filter(c => c.id !== atual.id);
     if (recarregar) await carregarTudo();
+    return true;
   }
 
   function abrirDiaCompleto() {
