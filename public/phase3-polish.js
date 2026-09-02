@@ -2,6 +2,7 @@
   'use strict';
 
   const STYLE_ID = 'lifeos-phase3-polish';
+  let plantSnapshot = null;
 
   function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
@@ -80,20 +81,71 @@
     overview.querySelector('[data-phase3-plant-today]').textContent = String(today);
   }
 
+  function capturePlantSnapshot() {
+    const list = document.getElementById('listaPlantas');
+    const activeFilter = document.querySelector('#abaPlantas .filtro-btn.ativo');
+    if (!list || !activeFilter) return;
+    const filter = activeFilter.dataset.filtro || activeFilter.textContent.trim().toLocaleLowerCase('pt-BR');
+    const isAll = filter === 'todas' || filter === 'todas as plantas' || filter === 'todas';
+    if (!isAll) return;
+
+    const cards = [...list.querySelectorAll('.planta-card')];
+    if (!cards.length) {
+      const counter = document.getElementById('plantasContador')?.textContent || '';
+      const total = Number(counter.match(/\d+/)?.[0] || 0);
+      plantSnapshot = { total, overdue: 0, today: 0 };
+      updatePlantOverview(plantSnapshot);
+      return;
+    }
+
+    let overdue = 0;
+    let today = 0;
+    cards.forEach(card => {
+      const status = card.querySelector('.badge')?.textContent?.trim().toLocaleLowerCase('pt-BR') || '';
+      if (status === 'vencida') overdue += 1;
+      if (status === 'hoje') today += 1;
+    });
+    plantSnapshot = { total: cards.length, overdue, today };
+    updatePlantOverview(plantSnapshot);
+  }
+
+  function refreshPlants() {
+    ensurePlantOverview();
+    window.requestAnimationFrame(() => {
+      capturePlantSnapshot();
+      if (plantSnapshot) updatePlantOverview(plantSnapshot);
+    });
+  }
+
   function enhance(root = document) {
     ensureStyle();
     ensureTodayHeading();
     ensurePlantOverview();
     decorateMealRows(root);
+    refreshPlants();
   }
 
-  window.addEventListener('lifeos:plants-updated', event => updatePlantOverview(event.detail || {}));
+  window.addEventListener('lifeos:plants-updated', event => {
+    plantSnapshot = event.detail || plantSnapshot;
+    updatePlantOverview(event.detail || {});
+  });
   window.addEventListener('lifeos:ready', () => window.setTimeout(() => enhance(document), 100));
 
+  document.addEventListener('click', event => {
+    if (event.target.closest('#abaPlantas .filtro-btn')) window.setTimeout(refreshPlants, 80);
+  });
+
   const observer = new MutationObserver(records => {
-    records.forEach(record => decorateMealRows(record.target instanceof Element ? record.target : document));
+    let plantListChanged = false;
+    records.forEach(record => {
+      decorateMealRows(record.target instanceof Element ? record.target : document);
+      if (record.target instanceof Element && (record.target.id === 'listaPlantas' || record.target.closest?.('#listaPlantas'))) {
+        plantListChanged = true;
+      }
+    });
     ensureTodayHeading();
     ensurePlantOverview();
+    if (plantListChanged) refreshPlants();
   });
 
   function start() {
