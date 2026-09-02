@@ -194,6 +194,7 @@
       R.consumos = consumos.data || [];
       R.cardapioHoje = montarCardapioHoje(cardapio.data || [], hoje);
 
+      await reconciliarCheckinsHoje();
       await anexarUrlsFotos();
       render();
     } catch (erro) {
@@ -1036,6 +1037,8 @@
       render();
     }));
     document.querySelectorAll('[data-checkin]').forEach(b => b.addEventListener('click', () => abrirCheckin(b.dataset.checkin)));
+    document.querySelectorAll('[data-plano-checkin]').forEach(b => b.addEventListener('click', () => abrirCheckin(b.dataset.planoCheckin)));
+    document.querySelectorAll('[data-excluir-checkin]').forEach(b => b.addEventListener('click', () => excluirCheckin(b.dataset.excluirCheckin)));
     document.querySelectorAll('[data-abrir-atividade]').forEach(b => b.addEventListener('click', () => abrirAtividadeAgenda(b.dataset.abrirAtividade)));
     document.querySelectorAll('[data-plano-detalhe]').forEach(b => b.addEventListener('click', () => abrirPlanoDetalhe(b.dataset.planoDetalhe)));
     document.querySelectorAll('[data-editar-plano-alimentar]').forEach(b => b.addEventListener('click', () => abrirEditorPlanoAlimentar(b.dataset.editarPlanoAlimentar)));
@@ -1081,9 +1084,10 @@
         ].map(([v,n]) => `<option value="${v}" ${v === atual.tipo ? 'selected' : ''}>${n}</option>`).join('')}
       </select></div>
       <div class="ritmo-field" style="margin-top:9px"><label>O que comeu?</label><input id="ritmoConsumoDesc" placeholder="Ex.: arroz, feijão, frango e brócolis"></div>
-      <div class="ritmo-form-grid" style="margin-top:9px">
+      <div class="ritmo-form-grid ritmo-form-grid-3" style="margin-top:9px">
         <div class="ritmo-field"><label>Calorias</label><input id="ritmoConsumoKcal" type="number" min="0" step="1" placeholder="kcal"></div>
         <div class="ritmo-field"><label>Proteína</label><input id="ritmoConsumoProteina" type="number" min="0" step="0.1" placeholder="g"></div>
+        <div class="ritmo-field"><label>Carboidratos</label><input id="ritmoConsumoCarbo" type="number" min="0" step="0.1" placeholder="g"></div>
       </div>
       <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarConsumo">Salvar registro</button></div>
       <div class="ritmo-note">Você não precisa registrar cada ingrediente. Um total aproximado da refeição já é suficiente para acompanhar tendência.</div>
@@ -1091,8 +1095,9 @@
     el('ritmoSalvarConsumo')?.addEventListener('click', async () => {
       const kcal = numOuNull(el('ritmoConsumoKcal').value);
       const proteina = numOuNull(el('ritmoConsumoProteina').value);
+      const carboidratos = numOuNull(el('ritmoConsumoCarbo').value);
       const descricao = el('ritmoConsumoDesc').value.trim();
-      if (kcal == null && proteina == null && !descricao) return;
+      if (kcal == null && proteina == null && carboidratos == null && !descricao) return;
       const { error } = await R.client.from('ritmo_consumos').insert({
         usuario_id: R.usuario.id,
         data: isoLocal(),
@@ -1100,6 +1105,7 @@
         descricao: descricao || null,
         calorias: kcal,
         proteina_g: proteina,
+        carboidratos_g: carboidratos,
         fonte: 'manual',
       });
       if (error) throw error;
@@ -1118,49 +1124,61 @@
     const refeicao = REFEICOES_PRIORITARIAS.find(r => r.tipo === tipo);
     const titulo = refeicao?.nome || 'Atividade';
     const planejado = refeicao ? planejadoParaCheckin(tipo) : null;
-    const temNutri = planejado && (planejado.calorias != null || planejado.proteina != null);
+    const existente = checkin(tipo, isoLocal(), referenciaId);
+    const temNutri = planejado && (planejado.calorias != null || planejado.proteina != null || planejado.carboidratos != null);
     abrirModal(`
-      ${modalHead(`Check-in · ${titulo}`, 'Registre como aconteceu de verdade.')}
-      ${planejado ? `<div class="ritmo-planned-summary"><div><span>Planejado</span><strong>${escapar(planejado.nome)}</strong></div><small>${planejado.calorias != null ? `${numero(planejado.calorias,0)} kcal` : 'Calorias não informadas'}${planejado.proteina != null ? ` · ${numero(planejado.proteina,0)} g proteína` : ''}</small></div>` : (refeicao ? '<div class="ritmo-note">Não há uma refeição planejada para este horário. O check-in ainda pode ser registrado.</div>' : '')}
-      ${refeicao ? `<div class="ritmo-note">Se você comeu exatamente o planejado, as calorias acima entram automaticamente no total do dia. Se fez ajustes, corrija os valores abaixo.</div>
-      <div class="ritmo-form-grid" style="margin-top:10px">
+      ${modalHead(`Check-in · ${titulo}`, refeicao ? 'Confirme o que você realmente comeu.' : 'Registre como aconteceu de verdade.')}
+      ${planejado?.nome ? `<div class="ritmo-planned-summary"><div><span>Planejado</span><strong>${escapar(planejado.nome)}</strong>${planejado.origem ? `<em>${planejado.origem === 'casa' ? 'Cardápio da Casa' : 'Plano alimentar pessoal'}</em>` : ''}</div><small>${planejado.calorias != null ? `${numero(planejado.calorias,0)} kcal` : '—'} · ${planejado.proteina != null ? `${numero(planejado.proteina,0)} g prot.` : '—'} · ${planejado.carboidratos != null ? `${numero(planejado.carboidratos,0)} g carb.` : '—'}</small></div>` : (refeicao ? '<div class="ritmo-note">Não há uma refeição definida para este horário. Você ainda pode registrar manualmente em Alimentação de hoje.</div>' : '')}
+      ${refeicao && planejado?.nome ? `<div class="ritmo-note">Ao confirmar o planejado, calorias, proteína e carboidratos entram automaticamente no total do dia.</div>
+      <div class="ritmo-form-grid ritmo-form-grid-3" style="margin-top:10px">
         <div class="ritmo-field"><label>Calorias após ajustes</label><input id="ritmoCheckinKcal" type="number" min="0" step="1" value="${planejado?.calorias ?? ''}" placeholder="kcal"></div>
         <div class="ritmo-field"><label>Proteína após ajustes</label><input id="ritmoCheckinProteina" type="number" min="0" step="0.1" value="${planejado?.proteina ?? ''}" placeholder="g"></div>
+        <div class="ritmo-field"><label>Carboidratos após ajustes</label><input id="ritmoCheckinCarbo" type="number" min="0" step="0.1" value="${planejado?.carboidratos ?? ''}" placeholder="g"></div>
       </div>` : ''}
-      <div class="ritmo-actions" style="display:grid;grid-template-columns:1fr">
-        <button class="ritmo-btn" data-checkin-status="conforme" ${refeicao && planejado && !temNutri ? 'title="Defina as calorias no Cardápio para soma automática"' : ''}>${refeicao ? 'Comi o que estava planejado' : 'Feito conforme planejado'}</button>
+      <div class="ritmo-actions ritmo-checkin-choice" style="display:grid;grid-template-columns:1fr">
+        <button class="ritmo-btn" data-checkin-status="conforme" ${refeicao && !planejado?.nome ? 'disabled' : ''}>${refeicao ? 'Comi o que estava planejado' : 'Feito conforme planejado'}</button>
         <button class="ritmo-btn secondary" data-checkin-status="ajustes">${refeicao ? 'Comi, mas fiz ajustes' : 'Fiz com ajustes'}</button>
         <button class="ritmo-btn danger" data-checkin-status="nao_feito">${refeicao ? 'Não comi' : 'Não fiz'}</button>
       </div>
-      <div class="ritmo-field" style="margin-top:14px"><label>Observação opcional</label><textarea id="ritmoCheckinObs" placeholder="Ex.: almocei fora, troquei a proteína..."></textarea></div>
+      <div class="ritmo-field" style="margin-top:14px"><label>Observação opcional</label><textarea id="ritmoCheckinObs" placeholder="Ex.: almocei fora, troquei a proteína...">${escapar(existente?.observacao || '')}</textarea></div>
+      ${existente ? '<div class="ritmo-actions"><button class="ritmo-btn ghost danger-text" id="ritmoExcluirCheckinModal">Excluir este check-in</button></div>' : ''}
     `);
     document.querySelectorAll('[data-checkin-status]').forEach(btn => btn.addEventListener('click', async () => {
       const status = btn.dataset.checkinStatus;
       const ajustes = status === 'ajustes' ? {
         calorias: numOuNull(el('ritmoCheckinKcal')?.value),
         proteina: numOuNull(el('ritmoCheckinProteina')?.value),
+        carboidratos: numOuNull(el('ritmoCheckinCarbo')?.value),
       } : null;
       await salvarCheckin(tipo, status, referenciaId, el('ritmoCheckinObs')?.value || '');
-      if (refeicao) await sincronizarConsumoPlanejado(tipo, status, planejado, ajustes);
+      if (refeicao && planejado?.nome) await sincronizarConsumoPlanejado(tipo, status, planejado, ajustes);
       fecharModal();
       await carregarTudo();
     }));
+    el('ritmoExcluirCheckinModal')?.addEventListener('click', async () => {
+      await excluirCheckin(tipo, referenciaId, false);
+      fecharModal();
+      await carregarTudo();
+    });
   }
 
   async function sincronizarConsumoPlanejado(tipo, status, planejado, ajustes = null) {
-    if (!planejado?.id) return;
+    if (!planejado?.chave) return false;
     const data = isoLocal();
-    const existente = R.consumos.find(c => c.data === data && c.planejamento_dia_id === planejado.id) || null;
+    const existente = R.consumos.find(c => c.data === data && (c.referencia_chave === planejado.chave || (planejado.id && c.planejamento_dia_id === planejado.id))) || null;
     if (status === 'nao_feito') {
       if (existente?.id) {
         const { error } = await R.client.from('ritmo_consumos').delete().eq('id', existente.id);
         if (error) throw error;
+        R.consumos = R.consumos.filter(c => c.id !== existente.id);
+        return true;
       }
-      return;
+      return false;
     }
     const calorias = status === 'conforme' ? planejado.calorias : ajustes?.calorias;
     const proteina = status === 'conforme' ? planejado.proteina : ajustes?.proteina;
-    if (calorias == null && proteina == null) return;
+    const carboidratos = status === 'conforme' ? planejado.carboidratos : ajustes?.carboidratos;
+    if (calorias == null && proteina == null && carboidratos == null) return false;
     const payload = {
       usuario_id: R.usuario.id,
       data,
@@ -1168,31 +1186,67 @@
       descricao: planejado.nome,
       calorias,
       proteina_g: proteina,
+      carboidratos_g: carboidratos,
       fonte: 'plano',
-      planejamento_dia_id: planejado.id,
+      referencia_chave: planejado.chave,
+      planejamento_dia_id: planejado.origem === 'casa' ? planejado.id : null,
     };
     if (existente?.id) {
-      const { error } = await R.client.from('ritmo_consumos').update(payload).eq('id', existente.id);
+      const { data: atualizado, error } = await R.client.from('ritmo_consumos').update(payload).eq('id', existente.id).select('*').single();
       if (error) throw error;
+      R.consumos = R.consumos.map(c => c.id === existente.id ? atualizado : c);
     } else {
-      const { error } = await R.client.from('ritmo_consumos').insert(payload);
+      const { data: criado, error } = await R.client.from('ritmo_consumos').insert(payload).select('*').single();
       if (error) throw error;
+      if (criado) R.consumos.push(criado);
     }
+    return true;
+  }
+
+  async function reconciliarCheckinsHoje() {
+    const hoje = isoLocal();
+    const checkinsHoje = R.checkins.filter(c => c.data === hoje);
+    for (const ref of REFEICOES_PRIORITARIAS) {
+      const c = checkinsHoje.find(item => item.tipo === ref.tipo && !item.referencia_id);
+      if (!c) continue;
+      const planejado = planejadoParaCheckin(ref.tipo);
+      if (!planejado?.nome) continue;
+      if (c.status === 'conforme' || c.status === 'nao_feito') {
+        await sincronizarConsumoPlanejado(ref.tipo, c.status, planejado);
+      }
+    }
+  }
+
+  async function excluirCheckin(tipo, referenciaId = null, recarregar = true) {
+    const atual = checkin(tipo, isoLocal(), referenciaId);
+    if (!atual?.id) return;
+    if (!confirm('Excluir este check-in? O consumo automático ligado a ele também será removido.')) return;
+    const planejado = REFEICOES_PRIORITARIAS.some(r => r.tipo === tipo) ? planejadoParaCheckin(tipo) : null;
+    const { error } = await R.client.from('ritmo_checkins').delete().eq('id', atual.id);
+    if (error) throw error;
+    if (planejado?.chave) {
+      let q = R.client.from('ritmo_consumos').delete().eq('usuario_id', R.usuario.id).eq('data', isoLocal());
+      if (planejado.id) q = q.or(`referencia_chave.eq.${planejado.chave},planejamento_dia_id.eq.${planejado.id}`);
+      else q = q.eq('referencia_chave', planejado.chave);
+      const { error: consumoErro } = await q;
+      if (consumoErro) throw consumoErro;
+    }
+    R.checkins = R.checkins.filter(c => c.id !== atual.id);
+    if (recarregar) await carregarTudo();
   }
 
   function abrirDiaCompleto() {
     abrirModal(`
-      ${modalHead('Seu dia', 'Você pode registrar uma refeição mesmo depois do horário.')}
-      ${REFEICOES_PRIORITARIAS.map(r => {
-        const c = checkin(r.tipo);
-        const planejado = planejadoParaCheckin(r.tipo);
-        const detalhe = planejado
-          ? `${escapar(planejado.nome)}${planejado.calorias != null ? ` · ${numero(planejado.calorias,0)} kcal` : ''}`
-          : 'Sem refeição planejada';
+      ${modalHead('Seu dia', 'Tudo o que está planejado para hoje, em uma única sequência.')}
+      ${planoDoDia().map(item => {
+        const c = checkin(item.tipo);
+        const detalhe = item.nome
+          ? `${escapar(item.nome)}${item.calorias != null ? ` · ${numero(item.calorias,0)} kcal · ${numero(item.proteina || 0,0)} g prot. · ${numero(item.carboidratos || 0,0)} g carb.` : ''}`
+          : 'Sem refeição definida';
         return `<div class="ritmo-meal-row">
-          <div class="ritmo-row-icon">${svg('refeicao')}</div>
-          <div class="ritmo-row-main"><strong>${escapar(r.nome)}</strong><small>${detalhe}<br>${c ? escapar(statusLabel(c.status)) : 'Ainda não registrado'}</small></div>
-          <button class="ritmo-btn secondary" data-dia-checkin="${r.tipo}">${c ? 'Alterar' : 'Registrar'}</button>
+          <div class="ritmo-row-icon">${svg(c ? 'check' : 'refeicao')}</div>
+          <div class="ritmo-row-main"><strong>${escapar(item.label)}${item.horario ? ' · ' + escapar(item.horario) : ''}</strong><small>${detalhe}<br>${c ? escapar(statusLabel(c.status)) : 'Ainda não registrado'}</small></div>
+          ${item.nome ? `<button class="ritmo-btn secondary" data-dia-checkin="${item.tipo}">${c ? 'Alterar' : 'Registrar'}</button>` : ''}
         </div>`;
       }).join('')}
     `);
