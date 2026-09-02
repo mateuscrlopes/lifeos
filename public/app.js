@@ -1635,9 +1635,16 @@ async function carregarHoje(){
   {
     const card=criarCartaoHoje('Cardápio de hoje','cardapio');const ch=dados.cardapioHoje;
     if(ch){
-      if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
-      if(ch.janta)card.corpo.appendChild(miniItem('Janta',ch.janta,''));
-      if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+      if(ch.itens?.length){
+        ch.itens.slice(0,4).forEach(item=>{
+          const resp=item.responsavel==='ambos'?'Ambos':item.responsavel.charAt(0).toUpperCase()+item.responsavel.slice(1);
+          card.corpo.appendChild(miniItem(item.tipo==='almoco'?`Almoço · ${resp}`:`Jantar · ${resp}`,item.nome,''));
+        });
+      }else{
+        if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
+        if(ch.janta)card.corpo.appendChild(miniItem('Jantar',ch.janta,''));
+        if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+      }
     }else{
       card.corpo.appendChild(miniItem('Sem refeições planejadas','Toque para montar a semana',''));
     }
