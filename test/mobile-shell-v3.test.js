@@ -103,6 +103,7 @@ test('barra inferior sobe acima do Home Indicator', () => {
 test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
   const app = ler('public/app.js');
   const css = ler('public/mobile-shell-v3.css');
+  const polish = ler('public/product-polish-v4.css');
   const shell = ler('public/mobile-shell-v3.js');
 
   assert.match(app, /metrica-cardapio/);
@@ -112,7 +113,7 @@ test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
   assert.match(css, /#listaRefeicoes \.card-refeicao[\s\S]*max-width:\s*100%\s*!important/);
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.receita-row-actions[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px/);
   assert.match(shell, /mobile-shell-v3\.css\?v=4/);
-  assert.match(css, /#metricasHoje\.metricas-grid[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(polish, /#metricasHoje\.metricas-grid[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
 });
 
 test('cabeçalhos e ações de página usam uma régua consistente', () => {
