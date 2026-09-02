@@ -136,7 +136,11 @@ test('Ritmo é item principal e ciclo é gerenciável pela interface', () => {
 test('modais do Ritmo têm fechamento separado de exclusão', () => {
   const js = ler('public/ritmo.js');
   const css = ler('public/ritmo.css');
+  const refinements = ler('public/ui-refinements.js');
   assert.match(js, /data-fechar-ritmo aria-label="Fechar"/);
+  assert.match(js, /m6 6 12 12M18 6 6 18/);
+  assert.match(refinements, /button\.classList\.contains\('ritmo-close'\)/);
+  assert.match(refinements, /if \(closeControl\) return false/);
   assert.match(js, /Deseja sair sem salvar as alterações/);
   assert.match(js, /ritmo-icon-danger/);
   assert.match(css, /\.ritmo-modal[\s\S]*align-items:\s*center/);
