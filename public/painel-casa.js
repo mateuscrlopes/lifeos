@@ -265,7 +265,7 @@
     const botao = document.querySelector('.sidebar-btn[data-pag="inicio"]');
     if (!botao) return;
     for (const no of botao.childNodes) {
-      if (no.nodeType === Node.TEXT_NODE && no.textContent.trim()) no.textContent = ' Casa';
+      if (no.nodeType === Node.TEXT_NODE && no.textContent.trim()) no.textContent = ' Hoje';
     }
   }
 
