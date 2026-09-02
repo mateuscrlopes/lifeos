@@ -646,7 +646,7 @@
       <!-- SEÇÃO: RITMO (submódulo pessoal dentro do LifeOS) -->
       <div id="secaoRitmo" class="oculto" style="display:none;">
         <header class="lifeos-page-head" style="display:flex;align-items:flex-start;gap:10px;">
-          <button class="lifeos-icon-action" onclick="voltarMais()" aria-label="Voltar para Mais" title="Voltar" style="margin-top:1px">
+          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar para Mais" title="Voltar" style="margin-top:1px">
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div style="min-width:0;flex:1">
@@ -663,7 +663,7 @@
       <!-- SEÇÃO: PROJETOS (dentro de Mais) -->
       <div id="secaoProjetos" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Projetos</span>
         </div>
         <div class="secao">
@@ -727,7 +727,7 @@
       <!-- SEÇÃO: RITUAIS -->
       <div id="secaoRituais" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Rituais</span>
         </div>
         <div class="secao">
@@ -746,7 +746,7 @@
       <!-- SEÇÃO: CONFIGURAÇÕES -->
       <div id="secaoConfig" class="oculto" style="display:none;">
         <div class="painel-proj-voltar">
-          <button class="btn-acao secundario" onclick="voltarMais()" style="font-size:13px;padding:7px 12px">← Voltar</button>
+          <button class="btn-acao secundario" onclick="voltarContexto()" style="font-size:13px;padding:7px 12px">← Voltar</button>
           <span style="font-family:var(--serif);font-size:18px;font-weight:700">Configurações</span>
         </div>
         <div class="secao">
@@ -800,7 +800,7 @@
     <nav class="tab-bar" aria-label="Navegação principal">
       <button class="tab-btn ativa" data-tab="hoje" onclick="trocarAba('hoje',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Início
+        Hoje
       </button>
       <button class="tab-btn" data-tab="casa" onclick="trocarAba('casa',this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg>
