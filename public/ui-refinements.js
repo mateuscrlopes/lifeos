@@ -1558,11 +1558,6 @@ function installStableNavigation() {
     const subtab = event.target.closest('.sub-aba[data-sub]');
     if (subtab) localStorage.setItem(LAST_SUBTAB_KEY, subtab.dataset.sub);
 
-    const casaTab = event.target.closest('.tab-btn[data-tab="casa"]');
-    if (casaTab) {
-      const last = localStorage.getItem(LAST_SUBTAB_KEY) || 'compras';
-      window.setTimeout(() => openCasaSubtab(last, { remember: false }), 0);
-    }
   }, true);
 
   document.addEventListener('keydown', event => {
