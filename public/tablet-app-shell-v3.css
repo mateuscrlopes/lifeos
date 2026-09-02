@@ -1286,3 +1286,63 @@ html[data-theme="light"] #painelCasa .destaque-sub {
 #painelCasa .sidebar-espera {
   display: none !important;
 }
+
+
+/* v9.2 — cabeçalhos e rodapés dos cards como no layout aprovado */
+#pag-inicio .conteudo-grid .panel {
+  position: relative !important;
+  padding-bottom: 54px !important;
+}
+
+#pag-inicio .panel-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  min-height: 52px !important;
+}
+
+#pag-inicio .panel-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#pag-inicio .panel-sub {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.3;
+}
+
+#pag-inicio .panel-link {
+  position: absolute !important;
+  left: 20px !important;
+  right: 20px !important;
+  bottom: 13px !important;
+  min-height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+#pag-inicio .panel-link::after {
+  content: "›";
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+#pag-inicio .panel:not(:has(.panel-link)) {
+  padding-bottom: 20px !important;
+}
+
+#painelCasa .header-sep,
+#painelCasa .header-titulo {
+  display: none !important;
+}
