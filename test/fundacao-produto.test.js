@@ -10,7 +10,7 @@ test('X de fechar nunca é inferido como lixeira', () => {
 
   assert.match(ui, /explicitAction === 'delete'/);
   assert.match(ui, /Um X sem semântica explícita é tratado como fechar/);
-  assert.doesNotMatch(ui, /\(label === '×' \|\| label === '✕'\)[\s\S]{0,180}ui-delete/);
+  assert.doesNotMatch(ui, /\(label === '×' \|\| label === '✕'\)[\s\S]{0,260}classList\.add\([^)]*ui-delete/);
   assert.match(acertos, /data-ac-close data-ui-action="close" aria-label="Fechar"/);
 });
 
