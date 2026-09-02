@@ -52,6 +52,9 @@ let marketLocationsCache = [];
 let stockConferenceLoading = false;
 let marketDestinationsCache = [];
 let purchaseRowsDecorating = false;
+let uiSheetReturnFocus = null;
+let uiSheetKeydownHandler = null;
+let uiSheetViewportCleanup = null;
 const LAST_SUBTAB_KEY = 'lifeos:last-casa-subtab';
 
 function loadStyles() {
@@ -109,12 +112,24 @@ function toast(message, type = 'ok', duration = 2800) {
 }
 
 function closeSheet() {
-  document.querySelector('.ui-sheet-overlay')?.remove();
+  const overlay = document.querySelector('.ui-sheet-overlay');
+  if (!overlay) return;
+  overlay.remove();
+  uiSheetViewportCleanup?.();
+  uiSheetViewportCleanup = null;
+  if (uiSheetKeydownHandler) document.removeEventListener('keydown', uiSheetKeydownHandler);
+  uiSheetKeydownHandler = null;
   updateBodyModalState();
+
+  const returnFocus = uiSheetReturnFocus;
+  uiSheetReturnFocus = null;
+  window.requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
 }
 
 function openSheet({ title, subtitle = '', content = '', onMount }) {
   closeSheet();
+  uiSheetReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
   const overlay = document.createElement('div');
   const overMarket = Boolean(marketOverlay);
   overlay.className = `ui-sheet-overlay${overMarket ? ' ui-sheet-over-market ui-sheet-center' : ''}`;
@@ -126,17 +141,63 @@ function openSheet({ title, subtitle = '', content = '', onMount }) {
           <div class="ui-sheet-title">${escapeHtml(title)}</div>
           ${subtitle ? `<div class="ui-sheet-sub">${escapeHtml(subtitle)}</div>` : ''}
         </div>
-        <button type="button" class="ui-icon-button ui-sheet-close" aria-label="Fechar">${icon('close')}</button>
+        <button type="button" class="ui-icon-button ui-sheet-close" data-ui-action="close" aria-label="Fechar">${icon('close')}</button>
       </div>
       <div class="ui-sheet-body">${content}</div>
     </section>`;
+
+  const syncViewport = () => {
+    const height = window.visualViewport?.height || window.innerHeight;
+    overlay.style.setProperty('--ui-viewport-height', Math.round(height) + 'px');
+  };
+  syncViewport();
+  window.visualViewport?.addEventListener('resize', syncViewport);
+  window.visualViewport?.addEventListener('scroll', syncViewport);
+  uiSheetViewportCleanup = () => {
+    window.visualViewport?.removeEventListener('resize', syncViewport);
+    window.visualViewport?.removeEventListener('scroll', syncViewport);
+  };
+
   overlay.addEventListener('click', event => {
     if (event.target === overlay) closeSheet();
+  });
+  overlay.addEventListener('focusin', event => {
+    if (!event.target?.matches?.('input, select, textarea')) return;
+    window.setTimeout(() => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 120);
   });
   overlay.querySelector('.ui-sheet-close').addEventListener('click', closeSheet);
   document.body.appendChild(overlay);
   document.body.classList.add('ui-modal-open');
-  onMount?.(overlay.querySelector('.ui-sheet'));
+
+  uiSheetKeydownHandler = event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSheet();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...overlay.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )].filter(el => !el.hidden && el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener('keydown', uiSheetKeydownHandler);
+
+  const sheet = overlay.querySelector('.ui-sheet');
+  onMount?.(sheet);
+  window.requestAnimationFrame(() => {
+    sheet?.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])')
+      ?.focus({ preventScroll: true });
+  });
   return overlay;
 }
 
@@ -294,9 +355,10 @@ function enhanceButton(button) {
 
   if (label === '×' && button.closest('.linha-ingrediente')) {
     button.classList.add('ui-icon-button', 'ui-delete');
+    button.dataset.uiAction = 'delete';
     button.setAttribute('aria-label', 'Remover ingrediente');
     button.title = 'Remover ingrediente';
-    setButtonContent(button, 'close');
+    setButtonContent(button, 'trash');
     return;
   }
 
