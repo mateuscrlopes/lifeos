@@ -96,244 +96,222 @@ function pdfEscape(valor) {
   return String(valor ?? '')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
+    .replace(/\)/g, '\\)')
+    .replace(/[^\x20-\xFF]/g, ' ');
 }
 
-function numeroPositivoOuNull(valor) {
-  if (valor === null || valor === undefined || valor === '') return null;
-  const numero = Number(valor);
-  return Number.isFinite(numero) && numero > 0 ? numero : null;
+function pdfCor([r, g, b]) {
+  return [r, g, b].map(v => Number(v).toFixed(3)).join(' ');
 }
 
-function quebrarTexto(valor, limite = 74) {
-  const texto = String(valor ?? '').replace(/\s+/g, ' ').trim();
-  if (!texto) return [''];
-  const palavras = texto.split(' ');
+function pdfTexto(x, y, tamanho, texto, negrito = false, cor = [0.11, 0.20, 0.16]) {
+  return [
+    'BT',
+    pdfCor(cor) + ' rg',
+    '/' + (negrito ? 'F2' : 'F1') + ' ' + tamanho + ' Tf',
+    '1 0 0 1 ' + x + ' ' + y + ' Tm',
+    '(' + pdfEscape(texto) + ') Tj',
+    'ET',
+  ].join('\n');
+}
+
+function pdfLinha(x1, y1, x2, y2, cor = [0.84, 0.86, 0.84], largura = 1) {
+  return [
+    pdfCor(cor) + ' RG',
+    largura + ' w',
+    x1 + ' ' + y1 + ' m',
+    x2 + ' ' + y2 + ' l',
+    'S',
+  ].join('\n');
+}
+
+function pdfRetangulo(x, y, w, h, cor = [0.84, 0.86, 0.84], raioIgnorado = 0) {
+  return [
+    pdfCor(cor) + ' RG',
+    '1 w',
+    x + ' ' + y + ' ' + w + ' ' + h + ' re',
+    'S',
+  ].join('\n');
+}
+
+function quebrarTexto(texto, maxChars = 70) {
+  const palavras = String(texto || '').split(/\s+/).filter(Boolean);
   const linhas = [];
   let atual = '';
 
   for (const palavra of palavras) {
     const candidata = atual ? atual + ' ' + palavra : palavra;
-    if (candidata.length <= limite) {
+    if (candidata.length > maxChars && atual) {
+      linhas.push(atual);
+      atual = palavra;
+    } else {
       atual = candidata;
-      continue;
     }
-    if (atual) linhas.push(atual);
-    atual = palavra;
   }
+
   if (atual) linhas.push(atual);
   return linhas.length ? linhas : [''];
 }
 
-function pdfTexto(comandos, x, y, tamanho, fonte, valor, cor = '0.10 0.18 0.14') {
-  comandos.push(
-    'BT',
-    cor + ' rg',
-    '/' + fonte + ' ' + tamanho + ' Tf',
-    x + ' ' + y + ' Td',
-    '(' + pdfEscape(valor) + ') Tj',
-    'ET'
-  );
-}
+function construirPdfPaginas(streams) {
+  const objetos = [
+    null,
+    '<< /Type /Pages /Kids [' + streams.map((_, i) => (5 + i * 2) + ' 0 R').join(' ') + '] /Count ' + streams.length + ' >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
+  ];
 
-function pdfLinha(comandos, x1, y1, x2, y2, cor = '0.84 0.86 0.84', largura = 0.7) {
-  comandos.push(cor + ' RG', largura + ' w', x1 + ' ' + y1 + ' m', x2 + ' ' + y2 + ' l', 'S');
-}
-
-function pdfRetangulo(comandos, x, y, largura, altura, cor = '0.82 0.86 0.83') {
-  comandos.push(cor + ' RG', '0.7 w', x + ' ' + y + ' ' + largura + ' ' + altura + ' re', 'S');
-}
-
-function pdfMarca(comandos, x, y) {
-  comandos.push(
-    '0.71 0.49 0.18 rg',
-    x + ' ' + (y + 12) + ' m',
-    (x + 5) + ' ' + (y + 5) + ' l',
-    (x + 12) + ' ' + y + ' l',
-    (x + 5) + ' ' + (y - 5) + ' l',
-    x + ' ' + (y - 12) + ' l',
-    (x - 5) + ' ' + (y - 5) + ' l',
-    (x - 12) + ' ' + y + ' l',
-    (x - 5) + ' ' + (y + 5) + ' l',
-    'h',
-    'f'
-  );
-}
-
-export function gerarReciboPdf({
-  titulo = 'Recibo de pagamento',
-  subtitulo = 'Acertos da Casa',
-  campos = [],
-  itens = [],
-  resumo = [],
-  id = '',
-  rodape = 'Documento interno do LifeOS. O comprovante bancario original permanece arquivado no sistema.',
-} = {}) {
-  const larguraPagina = 595;
-  const alturaPagina = 842;
-  const margem = 48;
-  const paginas = [];
-  let comandos = [];
-  let y = 0;
-
-  const cabecalho = () => {
-    pdfMarca(comandos, margem + 12, alturaPagina - 48);
-    pdfTexto(comandos, margem + 34, alturaPagina - 44, 17, 'F2', 'LifeOS', '0.08 0.20 0.15');
-    pdfTexto(comandos, margem + 34, alturaPagina - 58, 8.5, 'F1', 'by GhuMat', '0.39 0.47 0.42');
-    pdfTexto(comandos, larguraPagina - margem - 86, alturaPagina - 47, 8.5, 'F2', 'CONFIRMADO', '0.12 0.43 0.29');
-    pdfLinha(comandos, margem, alturaPagina - 76, larguraPagina - margem, alturaPagina - 76);
-    pdfTexto(comandos, margem, alturaPagina - 111, 20, 'F2', titulo, '0.08 0.20 0.15');
-    pdfTexto(comandos, margem, alturaPagina - 129, 9.5, 'F1', subtitulo, '0.39 0.47 0.42');
-    y = alturaPagina - 162;
-  };
-
-  const fecharPagina = () => {
-    paginas.push(comandos.join('\n'));
-    comandos = [];
-  };
-
-  const novaPagina = () => {
-    if (comandos.length) fecharPagina();
-    cabecalho();
-  };
-
-  const garantir = (altura) => {
-    if (y - altura < 70) novaPagina();
-  };
-
-  novaPagina();
-
-  if (campos.length) {
-    garantir(80);
-    pdfTexto(comandos, margem, y, 10, 'F2', 'Detalhes do pagamento');
-    y -= 18;
-    const colunas = 2;
-    const larguraColuna = (larguraPagina - (margem * 2) - 18) / colunas;
-    for (let i = 0; i < campos.length; i += 2) {
-      const par = campos.slice(i, i + 2);
-      let alturaLinha = 38;
-      const blocos = par.map(campo => {
-        const linhas = quebrarTexto(campo.valor, 36);
-        alturaLinha = Math.max(alturaLinha, 22 + (linhas.length * 12));
-        return { ...campo, linhas };
-      });
-      garantir(alturaLinha + 10);
-      blocos.forEach((campo, indice) => {
-        const x = margem + indice * (larguraColuna + 18);
-        pdfTexto(comandos, x, y, 8.5, 'F1', campo.label, '0.39 0.47 0.42');
-        campo.linhas.forEach((linha, linhaIndice) => {
-          pdfTexto(comandos, x, y - 15 - (linhaIndice * 12), 10.5, 'F2', linha);
-        });
-      });
-      y -= alturaLinha;
-      pdfLinha(comandos, margem, y + 7, larguraPagina - margem, y + 7, '0.90 0.91 0.90', 0.5);
-      y -= 8;
-    }
-    y -= 8;
-  }
-
-  if (itens.length) {
-    garantir(62);
-    pdfTexto(comandos, margem, y, 10, 'F2', itens.length === 1 ? 'Cobranca contemplada' : 'Cobrancas contempladas');
-    y -= 18;
-
-    itens.forEach((item, indice) => {
-      const linhasTitulo = quebrarTexto(item.titulo, 58);
-      const altura = 38 + Math.max(0, linhasTitulo.length - 1) * 12;
-      garantir(altura + 8);
-
-      pdfTexto(comandos, margem, y, 8.5, 'F1', String(indice + 1).padStart(2, '0'), '0.39 0.47 0.42');
-      linhasTitulo.forEach((linha, linhaIndice) => {
-        pdfTexto(comandos, margem + 28, y - (linhaIndice * 12), 10.5, 'F2', linha);
-      });
-      const metaY = y - (linhasTitulo.length * 12) - 4;
-      const meta = 'Aplicado: ' + dinheiro(item.valorAplicado || 0) +
-        '   |   Saldo restante: ' + dinheiro(item.saldoDepois || 0);
-      pdfTexto(comandos, margem + 28, metaY, 8.7, 'F1', meta, '0.39 0.47 0.42');
-      y = metaY - 16;
-      pdfLinha(comandos, margem + 28, y + 6, larguraPagina - margem, y + 6, '0.90 0.91 0.90', 0.5);
-      y -= 8;
-    });
-    y -= 8;
-  }
-
-  if (resumo.length) {
-    const alturaResumo = 26 + resumo.length * 22;
-    garantir(alturaResumo + 18);
-    pdfRetangulo(comandos, margem, y - alturaResumo + 10, larguraPagina - (margem * 2), alturaResumo);
-    pdfTexto(comandos, margem + 14, y - 8, 10, 'F2', 'Resumo');
-    let linhaY = y - 30;
-    resumo.forEach(item => {
-      pdfTexto(comandos, margem + 14, linhaY, 8.7, 'F1', item.label, '0.39 0.47 0.42');
-      pdfTexto(comandos, larguraPagina - margem - 150, linhaY, 10, 'F2', item.valor);
-      linhaY -= 22;
-    });
-    y -= alturaResumo + 8;
-  }
-
-  garantir(76);
-  y -= 10;
-  pdfLinha(comandos, margem, y, larguraPagina - margem, y);
-  y -= 18;
-  quebrarTexto(rodape, 92).forEach(linha => {
-    pdfTexto(comandos, margem, y, 8.2, 'F1', linha, '0.39 0.47 0.42');
-    y -= 12;
-  });
-  if (id) {
-    y -= 3;
-    pdfTexto(comandos, margem, y, 7.6, 'F1', 'ID LifeOS: ' + id, '0.50 0.56 0.52');
-  }
-
-  fecharPagina();
-
-  const objetos = new Map();
-  objetos.set(1, '<< /Type /Catalog /Pages 2 0 R >>');
-  objetos.set(3, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
-  objetos.set(4, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
-
-  const refsPaginas = [];
-  let numeroObjeto = 5;
-  paginas.forEach(stream => {
-    const paginaObj = numeroObjeto++;
-    const conteudoObj = numeroObjeto++;
-    refsPaginas.push(paginaObj + ' 0 R');
-    objetos.set(
-      paginaObj,
+  streams.forEach((stream, indice) => {
+    const pageId = 5 + indice * 2;
+    const contentId = pageId + 1;
+    objetos[pageId - 1] =
       '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ' +
-      '/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + conteudoObj + ' 0 R >>'
-    );
-    objetos.set(
-      conteudoObj,
-      '<< /Length ' + Buffer.byteLength(stream, 'latin1') + ' >>\nstream\n' + stream + '\nendstream'
-    );
+      '/Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + contentId + ' 0 R >>';
+    objetos[contentId - 1] =
+      '<< /Length ' + Buffer.byteLength(stream, 'latin1') + ' >>\nstream\n' + stream + '\nendstream';
   });
-  objetos.set(2, '<< /Type /Pages /Kids [' + refsPaginas.join(' ') + '] /Count ' + paginas.length + ' >>');
 
-  const maxObjeto = Math.max(...objetos.keys());
+  objetos[0] = '<< /Type /Catalog /Pages 2 0 R >>';
+
   const partes = [Buffer.from('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n', 'latin1')];
-  const offsets = Array(maxObjeto + 1).fill(0);
+  const offsets = [0];
   let tamanho = partes[0].length;
 
-  for (let numero = 1; numero <= maxObjeto; numero += 1) {
-    const objeto = objetos.get(numero);
-    if (!objeto) throw new Error('Objeto PDF ausente: ' + numero);
-    offsets[numero] = tamanho;
-    const bloco = Buffer.from(numero + ' 0 obj\n' + objeto + '\nendobj\n', 'latin1');
+  objetos.forEach((objeto, indice) => {
+    offsets.push(tamanho);
+    const bloco = Buffer.from((indice + 1) + ' 0 obj\n' + objeto + '\nendobj\n', 'latin1');
     partes.push(bloco);
     tamanho += bloco.length;
-  }
+  });
 
   const xrefOffset = tamanho;
-  let xref = 'xref\n0 ' + (maxObjeto + 1) + '\n';
+  let xref = 'xref\n0 ' + (objetos.length + 1) + '\n';
   xref += '0000000000 65535 f \n';
-  for (let numero = 1; numero <= maxObjeto; numero += 1) {
-    xref += String(offsets[numero]).padStart(10, '0') + ' 00000 n \n';
-  }
-  xref += 'trailer\n<< /Size ' + (maxObjeto + 1) + ' /Root 1 0 R >>\n';
+  offsets.slice(1).forEach(offset => {
+    xref += String(offset).padStart(10, '0') + ' 00000 n \n';
+  });
+  xref += 'trailer\n<< /Size ' + (objetos.length + 1) + ' /Root 1 0 R >>\n';
   xref += 'startxref\n' + xrefOffset + '\n%%EOF\n';
   partes.push(Buffer.from(xref, 'latin1'));
 
   return Buffer.concat(partes);
+}
+
+function gerarPdfReciboLifeOS(documento) {
+  const verde = [0.12, 0.38, 0.26];
+  const texto = [0.11, 0.20, 0.16];
+  const muted = [0.39, 0.45, 0.41];
+  const linha = [0.84, 0.86, 0.84];
+  const paginas = [];
+  let comandos = [];
+  let y = 0;
+  let paginaNumero = 0;
+
+  const novaPagina = () => {
+    if (comandos.length) paginas.push(comandos.join('\n'));
+    comandos = [];
+    paginaNumero += 1;
+    y = 790;
+
+    // Marca vetorial simples, segura para PDF e coerente com o LifeOS.
+    comandos.push(pdfCor(verde) + ' rg');
+    comandos.push('56 796 m 62 808 l 68 796 l 80 790 l 68 784 l 62 772 l 56 784 l 44 790 l h f');
+    comandos.push(pdfTexto(88, 794, 19, 'LifeOS', true, texto));
+    comandos.push(pdfTexto(152, 797, 8, 'by GhuMat', true, muted));
+    comandos.push(pdfTexto(44, 754, 10, paginaNumero === 1 ? 'RECIBO DE PAGAMENTO' : 'RECIBO DE PAGAMENTO - CONTINUACAO', true, verde));
+    comandos.push(pdfLinha(44, 742, 551, 742, linha));
+    y = 718;
+  };
+
+  const garantir = (altura) => {
+    if (y - altura < 62) novaPagina();
+  };
+
+  const textoQuebrado = (valor, x, tamanho = 10, negrito = false, cor = texto, maxChars = 72, passo = 14) => {
+    const linhas = quebrarTexto(valor, maxChars);
+    linhas.forEach(l => {
+      garantir(passo + 2);
+      comandos.push(pdfTexto(x, y, tamanho, l, negrito, cor));
+      y -= passo;
+    });
+  };
+
+  novaPagina();
+
+  textoQuebrado(documento.titulo || 'Pagamento confirmado', 44, 18, true, texto, 48, 22);
+  textoQuebrado(
+    (documento.pagador || 'Pagador') + ' -> ' + (documento.recebedor || 'Recebedor'),
+    44, 10, false, muted, 72, 14
+  );
+  y -= 8;
+
+  const resumo = [
+    ['Pix recebido', dinheiro(documento.valor_transferencia)],
+    ['Aplicado nas cobrancas', dinheiro(documento.valor_utilizado)],
+    ['Saldo a favor', dinheiro(documento.valor_excedente)],
+    ['Ainda em aberto', dinheiro(documento.valor_faltante)],
+  ];
+
+  garantir(84);
+  comandos.push(pdfRetangulo(44, y - 68, 507, 70, linha));
+  resumo.forEach((item, indice) => {
+    const col = indice % 2;
+    const row = Math.floor(indice / 2);
+    const x = 58 + col * 246;
+    const yy = y - 18 - row * 32;
+    comandos.push(pdfTexto(x, yy + 8, 8, item[0].toUpperCase(), true, muted));
+    comandos.push(pdfTexto(x, yy - 5, 12, item[1], true, texto));
+  });
+  y -= 92;
+
+  comandos.push(pdfTexto(44, y, 10, 'COBRANCAS INCLUIDAS', true, verde));
+  y -= 18;
+
+  for (const item of documento.itens || []) {
+    const tituloLinhas = quebrarTexto(item.titulo || 'Cobranca', 58);
+    const altura = 44 + Math.max(0, tituloLinhas.length - 1) * 12;
+    garantir(altura + 10);
+
+    tituloLinhas.forEach((linhaTitulo, idx) => {
+      comandos.push(pdfTexto(44, y - idx * 12, 10.5, linhaTitulo, idx === 0, texto));
+    });
+    y -= tituloLinhas.length * 12 + 4;
+    comandos.push(pdfTexto(
+      44, y, 8.5,
+      'Saldo antes: ' + dinheiro(item.saldo_antes) +
+      '   |   Aplicado: ' + dinheiro(item.valor_alocado) +
+      '   |   Saldo depois: ' + dinheiro(item.saldo_depois),
+      false, muted
+    ));
+    y -= 13;
+    comandos.push(pdfLinha(44, y, 551, y, linha));
+    y -= 14;
+  }
+
+  garantir(130);
+  comandos.push(pdfTexto(44, y, 10, 'DADOS DO PAGAMENTO', true, verde));
+  y -= 20;
+  const detalhes = [
+    'Data do envio: ' + (documento.enviado_em || 'Nao informada'),
+    'Confirmado em: ' + (documento.revisado_em || 'Nao informada'),
+    'Valor identificado no comprovante: ' + (documento.valor_extraido != null ? dinheiro(documento.valor_extraido) : 'Nao identificado automaticamente'),
+    'ID LifeOS: ' + (documento.id || 'Nao informado'),
+  ];
+  detalhes.forEach(detalhe => {
+    textoQuebrado(detalhe, 44, 9, false, muted, 85, 13);
+  });
+
+  y -= 10;
+  garantir(58);
+  comandos.push(pdfLinha(44, y, 551, y, linha));
+  y -= 18;
+  textoQuebrado(
+    'Documento interno do LifeOS. Nao substitui o comprovante bancario original, que permanece arquivado no sistema.',
+    44, 8.5, false, muted, 92, 12
+  );
+
+  paginas.push(comandos.join('\n'));
+  return construirPdfPaginas(paginas);
 }
 
 async function segredoServidor(admin, nome) {
@@ -427,6 +405,32 @@ async function carregarLote(admin, loteId) {
     lote,
     itens: (itens || []).map(item => ({ ...item, acerto: mapa.get(item.acerto_id) || null })),
   };
+}
+
+
+async function carregarLote(admin, loteId) {
+  const { data: lote, error } = await admin
+    .from('acerto_pagamento_lotes')
+    .select('*')
+    .eq('id', loteId)
+    .single();
+
+  if (error || !lote) return null;
+
+  const { data: itens, error: itensError } = await admin
+    .from('acerto_pagamento_itens')
+    .select('id,lote_id,acerto_id,ordem,saldo_antes,valor_alocado,saldo_depois,acertos(id,titulo,devedor_id,credor_id,competencia,parcela_numero,parcelas_total,valor_devido,valor_pago,vencimento,status)')
+    .eq('lote_id', loteId)
+    .order('ordem');
+
+  if (itensError) return null;
+  return { lote, itens: itens || [] };
+}
+
+function valorExtraidoSeguro(valor) {
+  return valor !== null && valor !== undefined && valor !== ''
+    && Number.isFinite(Number(valor))
+    && Number(valor) > 0;
 }
 
 export function registrarRotasAcertos(app) {
