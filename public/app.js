@@ -74,6 +74,10 @@ async function aoEntrar(){
   atualizarDataHoje();carregarClimaHoje();
   el('telaLogin').style.display='none';el('telaApp').style.display='flex';aviso('avisoLogin','');
   await Promise.allSettled([carregarHoje(),carregarLista(),carregarEstoque(),carregarTarefas(),carregarContas(),carregarRefeicoes(),carregarPlanejamento(),carregarRituais(),atualizarPlantas(),carregarProjetos()]);
+  const moduloSolicitado=new URLSearchParams(window.location.search).get('modulo');
+  if(moduloSolicitado==='ritmo')abrirRitmoContextual();
+  else if(['financeiro','plantas','mais','hoje'].includes(moduloSolicitado))trocarAba(moduloSolicitado);
+  if(moduloSolicitado)history.replaceState(null,'',window.location.pathname);
   carregarLocaisEstoque();
   ligarTempoReal();
 }
