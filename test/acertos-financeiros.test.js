@@ -67,7 +67,7 @@ test('le valor e data de comprovante PDF sem IA', async () => {
 
 test('interface carrega acertos e tema', () => {
   const status = fs.readFileSync(new URL('../public/status-estoque.js', import.meta.url), 'utf8');
-  assert.match(status, /acertos\.js\?v=3/);
+  assert.match(status, /acertos\.js\?v=4/);
   assert.match(status, /theme\.js\?v=1/);
 });
 
@@ -191,6 +191,8 @@ test('pagamento por print continua com fallback manual quando OCR não é confi�
   assert.match(front, /Não consegui identificar o valor com segurança neste print/);
   assert.match(front, /Você só precisa corrigir se a leitura estiver errada/);
   assert.match(front, /valueInput\.value = ocrValue\.toFixed\(2\)/);
+  assert.match(front, /Digite o valor do Pix para continuar/);
+  assert.match(front, /valueInput\.value = ''/);
 });
 
 test('recibo PDF usa identidade LifeOS sem fundo pesado e inclui itens', () => {
