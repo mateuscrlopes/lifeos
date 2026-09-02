@@ -863,7 +863,7 @@
   }
 
   function modalHead(titulo, subtitulo = '') {
-    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button type="button" class="ritmo-close" data-fechar-ritmo aria-label="Fechar" title="Fechar">×</button></div>`;
+    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button type="button" class="ritmo-close" data-fechar-ritmo aria-label="Fechar" title="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>`;
   }
 
   function ligarEventos() {
