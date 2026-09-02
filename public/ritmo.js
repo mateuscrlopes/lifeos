@@ -284,13 +284,33 @@
   }
 
   function progressoFotos() {
-    const datas = [...new Set(R.fotos.map(f => f.data))].sort().reverse();
-    const ultima = datas[0] || null;
-    if (!ultima) return { devido: true, texto: 'Seu primeiro registro visual está pendente.' };
+    const porData = new Map();
+    for (const foto of R.fotos) {
+      if (!porData.has(foto.data)) porData.set(foto.data, new Set());
+      porData.get(foto.data).add(foto.posicao);
+    }
+    const datasCompletas = [...porData.entries()]
+      .filter(([, posicoes]) => ['frente','lado','costas'].every(p => posicoes.has(p)))
+      .map(([data]) => data)
+      .sort()
+      .reverse();
+
+    const ultima = datasCompletas[0] || null;
+    const hojeSet = porData.get(isoLocal()) || new Set();
+    if (!ultima) {
+      const faltam = ['frente','lado','costas'].filter(p => !hojeSet.has(p));
+      return {
+        devido: true,
+        texto: faltam.length < 3
+          ? `Complete o registro de hoje: falta ${faltam.join(', ')}.`
+          : 'Seu primeiro registro visual está pendente.',
+      };
+    }
+
     const d = new Date(`${ultima}T00:00:00`);
     const intervalo = Number(R.perfil?.foto_intervalo_dias || 15);
     const dias = diferencaDias(d, new Date());
-    if (dias >= intervalo) return { devido: true, texto: `Último registro há ${dias} dias.` };
+    if (dias >= intervalo) return { devido: true, texto: `Último registro completo há ${dias} dias.` };
     return { devido: false, texto: `Próximo registro em ${Math.max(0, intervalo - dias)} dias.` };
   }
 
@@ -461,7 +481,7 @@
           <small>${escapar(a.ritmo_planos_atividade?.local || a.ritmo_planos_atividade?.tipo || 'Atividade')}</small>
         </div>
         ${c
-          ? `<span class="ritmo-chip is-good">${statusCurto(c.status)}</span>`
+          ? `<span class="ritmo-chip ${c.status === 'nao_feito' ? 'is-warning' : 'is-good'}">${statusCurto(c.status)}</span>`
           : `<button class="ritmo-btn secondary" data-abrir-atividade="${a.id}">Abrir</button>`
         }
       </div>
@@ -952,15 +972,27 @@
         </div>
       `}
       ${somenteDetalhe
-        ? `<div class="ritmo-actions"><button class="ritmo-btn secondary" id="ritmoEditarPlanoMeta">Editar atividade</button></div>`
+        ? `<div class="ritmo-actions">
+            <button class="ritmo-btn" id="ritmoIniciarPlano">Iniciar atividade</button>
+            <button class="ritmo-btn secondary" id="ritmoEditarPlanoMeta">Editar atividade</button>
+            ${itens.length ? '<button class="ritmo-btn secondary" id="ritmoEditarItensPlano">Editar exercícios</button>' : ''}
+          </div>`
         : `<div class="ritmo-actions"><button class="ritmo-btn" id="ritmoConcluirSessao">Concluir atividade</button></div>`
       }
     `);
 
     if (somenteDetalhe) {
+      el('ritmoIniciarPlano')?.addEventListener('click', () => {
+        fecharModal();
+        abrirSessao(plano, null, false);
+      });
       el('ritmoEditarPlanoMeta')?.addEventListener('click', () => {
         fecharModal();
         abrirNovaAtividade(plano);
+      });
+      el('ritmoEditarItensPlano')?.addEventListener('click', () => {
+        fecharModal();
+        abrirEditorItensPlano(plano);
       });
       return;
     }
@@ -1070,10 +1102,85 @@
           const { error } = await R.client.from('ritmo_agenda').insert(agendaPayload);
           if (error) throw error;
         }
+      } else if (agenda?.id) {
+        const { error } = await R.client.from('ritmo_agenda').update({ ativo: false }).eq('id', agenda.id);
+        if (error) throw error;
       }
       fecharModal();
       await carregarTudo();
     });
+  }
+
+  function abrirEditorItensPlano(plano) {
+    const itens = plano.ritmo_plano_itens || [];
+    abrirModal(`
+      ${modalHead('Editar exercícios', plano.nome)}
+      <div id="ritmoItensPlanoEditor">
+        ${itens.map((item, idx) => editorItemPlano(item, idx)).join('')}
+      </div>
+      <div class="ritmo-actions">
+        <button class="ritmo-btn secondary" id="ritmoAdicionarItemPlano">+ Exercício</button>
+        <button class="ritmo-btn" id="ritmoSalvarItensPlano">Salvar exercícios</button>
+      </div>
+      <div class="ritmo-note">Séries, repetições e descanso ficam editáveis. Carga é registrada em cada sessão.</div>
+    `);
+
+    el('ritmoAdicionarItemPlano')?.addEventListener('click', () => {
+      const box = el('ritmoItensPlanoEditor');
+      const idx = box.querySelectorAll('[data-item-plano-editor]').length;
+      box.insertAdjacentHTML('beforeend', editorItemPlano({}, idx));
+    });
+
+    el('ritmoSalvarItensPlano')?.addEventListener('click', async () => {
+      const rows = [...document.querySelectorAll('[data-item-plano-editor]')];
+      const novos = rows.map((row, idx) => ({
+        id: row.dataset.itemId || null,
+        plano_id: plano.id,
+        usuario_id: R.usuario.id,
+        ordem: idx + 1,
+        nome: row.querySelector('[data-item-nome]').value.trim(),
+        series: numOuNull(row.querySelector('[data-item-series]').value),
+        repeticoes: row.querySelector('[data-item-reps]').value.trim() || null,
+        descanso_seg: numOuNull(row.querySelector('[data-item-descanso]').value),
+      })).filter(item => item.nome);
+
+      const idsMantidos = novos.map(x => x.id).filter(Boolean);
+      const idsExistentes = itens.map(x => x.id).filter(Boolean);
+      const remover = idsExistentes.filter(id => !idsMantidos.includes(id));
+
+      if (remover.length) {
+        const { error } = await R.client.from('ritmo_plano_itens').delete().in('id', remover);
+        if (error) throw error;
+      }
+
+      for (const item of novos) {
+        if (item.id) {
+          const { id, ...payload } = item;
+          const { error } = await R.client.from('ritmo_plano_itens').update(payload).eq('id', id);
+          if (error) throw error;
+        } else {
+          const { id, ...payload } = item;
+          const { error } = await R.client.from('ritmo_plano_itens').insert(payload);
+          if (error) throw error;
+        }
+      }
+
+      fecharModal();
+      await carregarTudo();
+    });
+  }
+
+  function editorItemPlano(item = {}, idx = 0) {
+    return `<div class="ritmo-card" data-item-plano-editor data-item-id="${escapar(item.id || '')}" style="margin-bottom:9px">
+      <div class="ritmo-field"><label>Exercício</label><input data-item-nome value="${escapar(item.nome || '')}" placeholder="Ex.: Remada baixa"></div>
+      <div class="ritmo-form-grid" style="margin-top:8px">
+        <div class="ritmo-field"><label>Séries</label><input data-item-series type="number" min="1" value="${item.series ?? ''}"></div>
+        <div class="ritmo-field"><label>Repetições</label><input data-item-reps value="${escapar(item.repeticoes || '')}" placeholder="8-12"></div>
+        <div class="ritmo-field"><label>Descanso (s)</label><input data-item-descanso type="number" min="0" value="${item.descanso_seg ?? ''}"></div>
+        <div class="ritmo-field"><label>Ordem</label><input value="${idx + 1}" disabled></div>
+      </div>
+      <div class="ritmo-actions"><button class="ritmo-btn danger" type="button" data-remover-item-plano>Remover</button></div>
+    </div>`;
   }
 
   function abrirNovaMedida() {
