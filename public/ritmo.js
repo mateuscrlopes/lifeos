@@ -109,7 +109,7 @@
 
   function refeicaoAtual() {
     const h = new Date().getHours();
-    return REFEICOES_PRIORITARIAS.find(r => h >= r.inicio && h < r.fim) || REFEICOES_PRIORITARIAS[2];
+    return REFEICOES_PRIORITARIAS.find(r => h >= r.inicio && h < r.fim) || REFEICOES_PRIORITARIAS[REFEICOES_PRIORITARIAS.length - 1];
   }
 
   function checkin(tipo, data = isoLocal(), referenciaId = null) {
@@ -308,9 +308,10 @@
     const diaSemana = hoje.getDay() === 0 ? 7 : hoje.getDay();
     const hora = hoje.getHours();
 
-    let esperados = Math.max(0, diaSemana - 1) * 3;
+    let esperados = Math.max(0, diaSemana - 1) * 4;
     if (hora >= 8) esperados += 1;
     if (hora >= 12) esperados += 1;
+    if (hora >= 16) esperados += 1;
     if (hora >= 19) esperados += 1;
 
     const atividadesEsperadas = R.agenda.filter(a => {
@@ -1020,9 +1021,9 @@
         <div class="ritmo-field"><label>Proteína após ajustes</label><input id="ritmoCheckinProteina" type="number" min="0" step="0.1" value="${planejado?.proteina ?? ''}" placeholder="g"></div>
       </div>` : ''}
       <div class="ritmo-actions" style="display:grid;grid-template-columns:1fr">
-        <button class="ritmo-btn" data-checkin-status="conforme" ${refeicao && planejado && !temNutri ? 'title="Defina as calorias no Cardápio para soma automática"' : ''}>Comi o que estava planejado</button>
-        <button class="ritmo-btn secondary" data-checkin-status="ajustes">Comi, mas fiz ajustes</button>
-        <button class="ritmo-btn danger" data-checkin-status="nao_feito">Não comi / não fiz</button>
+        <button class="ritmo-btn" data-checkin-status="conforme" ${refeicao && planejado && !temNutri ? 'title="Defina as calorias no Cardápio para soma automática"' : ''}>${refeicao ? 'Comi o que estava planejado' : 'Feito conforme planejado'}</button>
+        <button class="ritmo-btn secondary" data-checkin-status="ajustes">${refeicao ? 'Comi, mas fiz ajustes' : 'Fiz com ajustes'}</button>
+        <button class="ritmo-btn danger" data-checkin-status="nao_feito">${refeicao ? 'Não comi' : 'Não fiz'}</button>
       </div>
       <div class="ritmo-field" style="margin-top:14px"><label>Observação opcional</label><textarea id="ritmoCheckinObs" placeholder="Ex.: almocei fora, troquei a proteína..."></textarea></div>
     `);
