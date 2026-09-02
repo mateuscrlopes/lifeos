@@ -1251,3 +1251,38 @@ html[data-theme="light"] #painelCasa .destaque-sub {
       "estoque" !important;
   }
 }
+
+
+/* v9.1 — perfil e hierarquia da navegação do mock aprovado */
+#painelCasa .sidebar {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#painelCasa .sidebar-nav {
+  flex: 0 0 auto;
+}
+
+#painelCasa .sidebar-profile {
+  width: 82px;
+  margin: auto auto 10px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: rgba(255,255,255,.88);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#painelCasa .sidebar-profile img {
+  width: 46px;
+  height: 46px;
+  display: block;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+}
+
+#painelCasa .sidebar-espera {
+  display: none !important;
+}
