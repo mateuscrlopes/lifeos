@@ -465,12 +465,23 @@ export function registrarRotasAcertos(app) {
       status: 'manual',
       valor: null,
       pago_em: null,
-      codigo: tipo === 'application/pdf' ? null : 'imagem_sem_ocr',
-      erro: tipo === 'application/pdf' ? null : 'Imagem armazenada para conferencia humana.',
+      codigo: null,
+      erro: null,
     };
 
     if (tipo === 'application/pdf') {
       extracao = await extrairComprovantePdf(req.body);
+    } else {
+      const valorOcr = numeroPositivoOuNull(String(req.get('x-lifeos-ocr-valor') || '').replace(',', '.'));
+      const confiancaOcr = Number(req.get('x-lifeos-ocr-confidence'));
+      extracao = {
+        status: valorOcr !== null ? 'parcial' : 'falha',
+        valor: valorOcr,
+        pago_em: null,
+        codigo: valorOcr !== null ? 'ocr_imagem_cliente' : 'ocr_sem_valor',
+        erro: valorOcr !== null ? null : 'O OCR nao conseguiu identificar o valor do print.',
+        ocr_confianca: Number.isFinite(confiancaOcr) ? confiancaOcr : null,
+      };
     }
 
     const valorExtraido = numeroPositivoOuNull(extracao.valor);
@@ -587,7 +598,9 @@ export function registrarRotasAcertos(app) {
         diferenca_selecao: diferencaSelecao,
         observacao: tipo === 'application/pdf'
           ? 'PDF lido localmente, sem IA.'
-          : 'Imagem guardada para conferencia; o valor informado sera validado pelo recebedor.',
+          : (valorExtraido !== null
+              ? 'Print lido por OCR no dispositivo; o recebedor ainda confere o comprovante original.'
+              : 'Print guardado; o OCR nao conseguiu identificar um valor confiavel.'),
       },
     });
   });
@@ -730,12 +743,23 @@ export function registrarRotasAcertos(app) {
       status: 'manual',
       valor: null,
       pago_em: null,
-      codigo: tipo === 'application/pdf' ? null : 'imagem_sem_ocr',
-      erro: tipo === 'application/pdf' ? null : 'Imagem armazenada para conferencia humana.',
+      codigo: null,
+      erro: null,
     };
 
     if (tipo === 'application/pdf') {
       extracao = await extrairComprovantePdf(req.body);
+    } else {
+      const valorOcr = numeroPositivoOuNull(String(req.get('x-lifeos-ocr-valor') || '').replace(',', '.'));
+      const confiancaOcr = Number(req.get('x-lifeos-ocr-confidence'));
+      extracao = {
+        status: valorOcr !== null ? 'parcial' : 'falha',
+        valor: valorOcr,
+        pago_em: null,
+        codigo: valorOcr !== null ? 'ocr_imagem_cliente' : 'ocr_sem_valor',
+        erro: valorOcr !== null ? null : 'O OCR nao conseguiu identificar o valor do print.',
+        ocr_confianca: Number.isFinite(confiancaOcr) ? confiancaOcr : null,
+      };
     }
 
     const pagamentoId = crypto.randomUUID();
@@ -820,7 +844,9 @@ export function registrarRotasAcertos(app) {
         divergencia_valor: divergenciaValor,
         observacao: tipo === 'application/pdf'
           ? 'PDF lido localmente, sem IA.'
-          : 'Imagem guardada para conferencia; OCR ainda nao e usado.',
+          : (valorExtraido !== null
+              ? 'Print lido por OCR no dispositivo; o recebedor ainda confere o comprovante original.'
+              : 'Print guardado; o OCR nao conseguiu identificar um valor confiavel.'),
       },
     });
   });
