@@ -17,6 +17,7 @@ import './purchase-destination-create.js?v=2';
 import './mobile-shell-v3.js?v=4';
 import './product-polish-v4.js?v=4';
 import './phase3-polish.js?v=1';
+import './phase4-polish.js?v=1';
 
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
 
