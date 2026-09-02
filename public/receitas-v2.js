@@ -35,7 +35,7 @@
     const link = document.createElement('link');
     link.id = 'receitas-v2-css';
     link.rel = 'stylesheet';
-    link.href = '/receitas-v2.css?v=1';
+    link.href = '/receitas-v2.css?v=2';
     document.head.appendChild(link);
   }
 
