@@ -49,7 +49,7 @@ test('tablet exibe marca GhuMat e shell v3 carrega por último', () => {
   const html = read('public/tablet.html');
 
   assert.match(html, /header-brand-parent">by GhuMat/);
-  assert.match(html, /tablet-app-shell-v3\.js\?v=5/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=6/);
   assert.ok(
     html.lastIndexOf('tablet-app-shell-v3.js') > html.lastIndexOf('tablet-product-shell-v2.js'),
     'shell v3 precisa carregar depois do shell v2'
@@ -84,8 +84,8 @@ test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
 
   assert.match(loader, /MutationObserver/);
   assert.match(loader, /HTMLLinkElement/);
-  assert.match(loader, /tablet-app-shell-v3\.css\?v=5/);
-  assert.match(html, /tablet-app-shell-v3\.js\?v=5/);
+  assert.match(loader, /tablet-app-shell-v3\.css\?v=6/);
+  assert.match(html, /tablet-app-shell-v3\.js\?v=6/);
 });
 
 test('alimentação contextual deixa de parecer faixa tracejada', () => {
