@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { extrairComprovantePdf } from '../src/financeiro-extracao.js';
+import { gerarReciboPdf } from '../src/acertos.js';
 
 function pdfEscape(value) {
   return String(value)
@@ -66,7 +67,7 @@ test('le valor e data de comprovante PDF sem IA', async () => {
 
 test('interface carrega acertos e tema', () => {
   const status = fs.readFileSync(new URL('../public/status-estoque.js', import.meta.url), 'utf8');
-  assert.match(status, /acertos\.js\?v=1/);
+  assert.match(status, /acertos\.js\?v=2/);
   assert.match(status, /theme\.js\?v=1/);
 });
 
@@ -134,4 +135,65 @@ test('segredo da ponte reversa fica restrito ao service role', () => {
   assert.match(sql, /lifeos_obter_segredo_servidor/);
   assert.match(sql, /revoke all on function public\.lifeos_obter_segredo_servidor\(text\)/i);
   assert.match(sql, /grant execute on function public\.lifeos_obter_segredo_servidor\(text\)[\s\S]*service_role/i);
+});
+
+
+test('pagamento em lote aceita várias cobranças e mantém diferença como saldo', () => {
+  const sql = fs.readFileSync(new URL('../db/049_pagamentos_multiplos_acertos.sql', import.meta.url), 'utf8');
+  assert.match(sql, /create table if not exists public\.acerto_pagamento_lotes/);
+  assert.match(sql, /create table if not exists public\.acerto_pagamento_itens/);
+  assert.match(sql, /create table if not exists public\.acerto_saldos/);
+  assert.match(sql, /revisar_pagamento_lote/);
+  assert.match(sql, /saldo_credito/);
+  assert.match(sql, /saldo_depois/);
+  assert.match(sql, /least\(v_saldo_atual, greatest\(v_disponivel,0\)\)/);
+});
+
+test('interface permite selecionar dívidas e prevê Pix maior ou menor', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /data-ac-batch-id/);
+  assert.match(source, /Total selecionado/);
+  assert.match(source, /crédito a seu favor/);
+  assert.match(source, /O restante continuará em aberto/);
+  assert.match(source, /\/api\/acertos\/pagamentos\/lote\/comprovante/);
+  assert.match(source, /showReviewLot/);
+  assert.match(source, /revisar_pagamento_lote/);
+});
+
+test('servidor cria lote único, guarda comprovante e emite recibo agrupado', () => {
+  const source = fs.readFileSync(new URL('../src/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /app\.post\('\/api\/acertos\/pagamentos\/lote\/comprovante'/);
+  assert.match(source, /acerto_pagamento_itens/);
+  assert.match(source, /diferenca_selecao/);
+  assert.match(source, /app\.get\('\/api\/acertos\/lotes\/:id\/recibo'/);
+  assert.match(source, /Cobrancas contempladas/);
+});
+
+test('recibo PDF usa identidade LifeOS sem fundo pesado e inclui itens', () => {
+  const pdf = gerarReciboPdf({
+    titulo: 'Recibo de pagamento',
+    subtitulo: 'Acertos da Casa - Pix confirmado',
+    campos: [
+      { label: 'Pagador', valor: 'Ghustavo' },
+      { label: 'Recebedor', valor: 'Mateus' },
+      { label: 'Valor do Pix confirmado', valor: 'R$ 684,00' },
+    ],
+    itens: [
+      { titulo: 'Contribuição da Casa', valorAplicado: 500, saldoDepois: 0 },
+      { titulo: 'El Hub', valorAplicado: 184, saldoDepois: 0 },
+    ],
+    resumo: [
+      { label: 'Saldo a favor gerado', valor: 'R$ 0,00' },
+    ],
+    id: 'teste-lifeos',
+  });
+
+  const raw = pdf.toString('latin1');
+  assert.match(raw, /^%PDF-1\.4/);
+  assert.match(raw, /LifeOS/);
+  assert.match(raw, /by GhuMat/);
+  assert.match(raw, /Recibo de pagamento/);
+  assert.match(raw, /Contribui/);
+  assert.match(raw, /El Hub/);
+  assert.match(raw, /Saldo a favor gerado/);
 });
