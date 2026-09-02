@@ -255,7 +255,7 @@
   if (document.getElementById('alimentacao-contextual-script')) return;
   const script = document.createElement('script');
   script.id = 'alimentacao-contextual-script';
-  script.src = '/alimentacao-contextual.js?v=1';
+  script.src = '/alimentacao-contextual.js?v=2';
   script.defer = true;
   document.head.appendChild(script);
 })();
