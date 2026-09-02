@@ -96,3 +96,13 @@ test('Foto só conclui registro visual com frente, lado e costas', () => {
   assert.match(js, /\['frente','lado','costas'\]\.every/);
   assert.match(js, /registro completo/);
 });
+
+test('Déficit pode ser acompanhado sem obrigar microregistro de ingredientes', () => {
+  const sql = ler('db/044_ritmo_consumo.sql');
+  const js = ler('public/ritmo.js');
+  assert.match(sql, /create table if not exists public\.ritmo_consumos/);
+  assert.match(sql, /enable row level security/);
+  assert.match(js, /Registrar alimentação/);
+  assert.match(js, /ritmo_consumos/);
+  assert.match(js, /meta registrada/);
+});
