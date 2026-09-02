@@ -976,3 +976,36 @@ html[data-theme="dark"] .metrica {
     font-size: 10px !important;
   }
 }
+
+
+/* 0.37 — slots do cardápio com informação nutricional */
+.cardapio-week-grid .dia-slot {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.cardapio-week-grid .dia-slot small {
+  display: block;
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardapio-week-grid .dia-slot.preenchido small {
+  color: color-mix(in srgb, var(--sage) 78%, var(--muted));
+}
+
+@media (max-width: 370px) {
+  .cardapio-week-grid .dia-slot small {
+    font-size: 7px;
+  }
+}
