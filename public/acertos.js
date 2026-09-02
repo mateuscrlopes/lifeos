@@ -70,16 +70,6 @@
     document.head.appendChild(link);
   }
 
-  function brand() {
-    const logo = document.querySelector('.header-logo');
-    if (logo && !logo.querySelector('.header-logo-by')) {
-      const by = document.createElement('span');
-      by.className = 'header-logo-by';
-      by.textContent = 'by GhuMat';
-      logo.appendChild(by);
-    }
-  }
-
   function bell() {
     const header = document.querySelector('.app-header');
     const avatar = document.getElementById('headerAvatar');
@@ -825,7 +815,6 @@
       A.configs = configs.data || [];
       A.notifications = notifications.data || [];
 
-      brand();
       bell();
       renderCentral();
       renderConfig();
@@ -838,7 +827,6 @@
 
   function start() {
     addStyles();
-    brand();
 
     if (context()) load();
 
