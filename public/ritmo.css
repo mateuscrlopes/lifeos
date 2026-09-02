@@ -709,3 +709,167 @@
     padding-inline: 1px;
   }
 }
+
+
+/* 0.36 — acabamento do Ritmo */
+.ritmo-shell {
+  padding-bottom: 38px;
+}
+
+.ritmo-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ritmo-hero .ritmo-kicker,
+.ritmo-hero .ritmo-cycle-label,
+.ritmo-hero .ritmo-cycle-days,
+.ritmo-hero p {
+  color: rgba(255,255,255,.88);
+}
+
+.ritmo-hero .ritmo-cycle-value,
+.ritmo-hero h2 {
+  color: #fff;
+}
+
+.ritmo-hero-edit {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,.26);
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 750;
+  backdrop-filter: blur(10px);
+}
+
+.ritmo-section-head > button {
+  min-height: 30px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: color-mix(in srgb, var(--sage-dark) 86%, var(--texto));
+}
+
+.ritmo-activity-open {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ritmo-activity-open:active {
+  background: color-mix(in srgb, var(--sage-soft) 50%, transparent);
+}
+
+.ritmo-row-chevron {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--muted);
+}
+
+.ritmo-row-chevron svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ritmo-activity-row.is-empty {
+  opacity: .7;
+}
+
+.ritmo-modal {
+  align-items: center;
+  padding:
+    calc(14px + env(safe-area-inset-top, 0px))
+    12px
+    calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
+.ritmo-sheet {
+  width: min(calc(100vw - 24px), 560px);
+  max-height: calc(100dvh - 46px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  padding: 18px;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px;
+}
+
+.ritmo-sheet-head {
+  position: sticky;
+  top: -18px;
+  z-index: 4;
+  margin: -18px -18px 15px;
+  padding: 18px 18px 12px;
+  background: color-mix(in srgb, var(--paper) 97%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ritmo-close {
+  border: 1px solid var(--linha);
+  background: var(--paper-2);
+  color: var(--texto);
+}
+
+.ritmo-actions--cycle {
+  align-items: center;
+}
+
+.ritmo-icon-danger {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+
+.ritmo-icon-danger svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ritmo-field input,
+.ritmo-field select,
+.ritmo-field textarea {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .ritmo-form-grid,
+  .ritmo-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ritmo-exercise-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .ritmo-sheet {
+    padding-inline: 16px;
+  }
+
+  .ritmo-sheet-head {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .ritmo-actions > .ritmo-btn:not(.ghost) {
+    flex: 1 1 auto;
+  }
+
+  .ritmo-hero {
+    padding: 19px;
+  }
+}
