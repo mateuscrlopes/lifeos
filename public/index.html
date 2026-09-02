@@ -21,7 +21,7 @@
   </script>
   <link rel="stylesheet" href="tokens.css"/>
   <link rel="stylesheet" href="/ghumat-refinement.css?v=1"/>
-  <link rel="stylesheet" href="/ritmo.css?v=3"/>
+  <link rel="stylesheet" href="/ritmo.css?v=4"/>
   <style>
     /* ================================================
        LAYOUT MOBILE
@@ -538,13 +538,14 @@
               <div class="campo"><label>Nova refeição</label><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div>
               <div class="lifeos-form-grid-2">
                 <div class="campo"><label>Serve para</label>
-                  <select id="refTipo" class="sel"><option value="cafe">Café da manhã</option><option value="almoco">Almoço</option><option value="lanche">Lanche</option><option value="janta">Janta</option><option value="ambos">Almoço/Janta</option></select>
+                  <select id="refTipo" class="sel"><option value="almoco">Almoço</option><option value="janta">Jantar</option><option value="ambos">Almoço/Jantar</option></select>
                 </div>
                 <div class="campo"><label>Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div>
               </div>
-              <div class="lifeos-form-grid-2">
-                <div class="campo"><label>Calorias por porção</label><input id="refKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
-                <div class="campo"><label>Proteína por porção</label><input id="refProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
+              <div class="lifeos-form-grid-3 lifeos-nutrition-grid">
+                <div class="campo"><label>Calorias</label><input id="refKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
+                <div class="campo"><label>Proteína</label><input id="refProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
+                <div class="campo"><label>Carboidratos</label><input id="refCarbo" type="number" min="0" step="0.1" placeholder="g"/></div>
               </div>
               <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Ingredientes</div>
               <div id="refIngredientes"></div>
@@ -561,13 +562,10 @@
               <div class="cardapio-week-grid cardapio-week-labels">
                 <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
               </div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Café da manhã</div>
-              <div class="cardapio-week-grid" id="slotsCafe"></div>
+              <div class="cardapio-shared-note">O cardápio da Casa organiza só as refeições compartilhadas e já preparadas.</div>
               <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Almoço</div>
               <div class="cardapio-week-grid" id="slotsAlmoco"></div>
-              <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Lanche</div>
-              <div class="cardapio-week-grid" id="slotsLanche"></div>
-              <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Jantar</div>
+              <div style="font-size:11px;color:var(--muted);margin:12px 0 4px">Jantar</div>
               <div class="cardapio-week-grid" id="slotsJanta"></div>
               <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn-acao secundario" id="btnSugerirPlan">Sugerir semana</button>
@@ -1028,9 +1026,10 @@
   <div class="modal-folha">
     <div class="modal-header"><strong id="modalRefTitulo" class="modal-titulo">Escolha a refeição</strong><button class="modal-fechar" id="btnFecharModalRef">&times;</button></div>
     <div class="campo"><input id="modalRefNomeAvulso" type="text" placeholder="Ou digite um nome avulso…"/></div>
-    <div class="lifeos-form-grid-2">
-      <div class="campo"><label>Calorias planejadas</label><input id="modalRefKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
-      <div class="campo"><label>Proteína planejada</label><input id="modalRefProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
+    <div class="lifeos-form-grid-3 lifeos-nutrition-grid">
+      <div class="campo"><label>Calorias</label><input id="modalRefKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
+      <div class="campo"><label>Proteína</label><input id="modalRefProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
+      <div class="campo"><label>Carboidratos</label><input id="modalRefCarbo" type="number" min="0" step="0.1" placeholder="g"/></div>
     </div>
     <div id="modalRefLista"></div>
     <div style="display:flex;gap:8px;margin-top:12px">
@@ -1125,7 +1124,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/ritmo.js?v=3" defer></script>
-<script type="module" src="app.js?v=9"></script>
+<script src="/ritmo.js?v=4" defer></script>
+<script type="module" src="app.js?v=10"></script>
 </body>
 </html>
