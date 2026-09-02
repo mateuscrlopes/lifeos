@@ -67,7 +67,7 @@ test('le valor e data de comprovante PDF sem IA', async () => {
 
 test('interface carrega acertos e tema', () => {
   const status = fs.readFileSync(new URL('../public/status-estoque.js', import.meta.url), 'utf8');
-  assert.match(status, /acertos\.js\?v=4/);
+  assert.match(status, /acertos\.js\?v=5/);
   assert.match(status, /theme\.js\?v=1/);
 });
 
@@ -93,8 +93,37 @@ test('divisão 50% é um modo explícito e automático', () => {
   const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
   assert.match(source, /id="acHalf" checked/);
   assert.match(source, /if \(halfToggle\?\.checked\) fillHalf\(\)/);
-  assert.match(source, /input\.readOnly = automatic/);
+  assert.match(source, /input\.readOnly = half/);
   assert.match(source, /R\$/);
+});
+
+test('sem 50%, o valor total começa com quem não pagou', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  assert.match(source, /function fillFullToNonPayer/);
+  assert.match(source, /payerShare\.value = total \? '0\.00'/);
+  assert.match(source, /começa devendo o valor total/);
+  assert.match(source, /payerInput\?\.addEventListener\('change'/);
+});
+
+test('Central Financeira permite criar e editar várias cobranças recorrentes', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  const sql = fs.readFileSync(new URL('../db/051_regras_recorrentes_cadastraveis.sql', import.meta.url), 'utf8');
+  assert.match(source, /id="acNewRule"/);
+  assert.match(source, /data-ac-edit-rule/);
+  assert.match(source, /criar_regra_acerto_recorrente/);
+  assert.match(source, /Nova cobrança mensal/);
+  assert.match(sql, /create or replace function public\.criar_regra_acerto_recorrente/);
+  assert.match(sql, /'El Hub'/);
+  assert.match(sql, /184\.00/);
+});
+
+test('modal de despesa usa seções responsivas sem campos invadindo espaço', () => {
+  const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
+  const css = fs.readFileSync(new URL('../public/acertos.css', import.meta.url), 'utf8');
+  assert.match(source, /ac-form-section/);
+  assert.match(source, /ac-grid-responsive/);
+  assert.match(css, /\.ac-sheet,[\s\S]*box-sizing: border-box/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*ac-grid-responsive[\s\S]*grid-template-columns: 1fr/);
 });
 
 
