@@ -34,7 +34,7 @@ test('shell mobile v3 é carregado por último sem duplicar a navegação da hom
   const shell = ler('public/mobile-shell-v3.js');
   const css = ler('public/mobile-shell-v3.css');
 
-  assert.match(status, /mobile-shell-v3\\.js\\?v=4/);
+  assert.match(status, /mobile-shell-v3\.js\?v=4/);
   assert.ok(
     status.lastIndexOf('mobile-shell-v3.js') > status.lastIndexOf('acertos.js'),
     'shell v3 precisa carregar depois dos módulos funcionais'
