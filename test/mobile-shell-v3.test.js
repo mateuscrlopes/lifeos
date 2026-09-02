@@ -12,7 +12,10 @@ test('LifeOS possui cinco módulos principais com Financeiro separado', () => {
   assert.match(html, /id="lifeosFinanceiroContas"/);
   assert.match(html, /id="lifeosFinanceiroAcertos"/);
   assert.match(html, /data-tab="financeiro"/);
+  assert.match(html, /data-tab="ritmo"/);
+  assert.doesNotMatch(html, /data-tab="casa"/);
   assert.match(html, />\s*Hoje\s*<\/button>/);
+  assert.match(html, />\s*Ritmo\s*<\/button>/);
   assert.match(app, /'abaFinanceiro'/);
   assert.match(app, /lifeos:financeiro-abrir/);
 });
@@ -31,7 +34,7 @@ test('shell mobile v3 é carregado por último sem duplicar a navegação da hom
   const shell = ler('public/mobile-shell-v3.js');
   const css = ler('public/mobile-shell-v3.css');
 
-  assert.match(status, /mobile-shell-v3\.js\?v=2/);
+  assert.match(status, /mobile-shell-v3\.js\?v=3/);
   assert.ok(
     status.lastIndexOf('mobile-shell-v3.js') > status.lastIndexOf('acertos.js'),
     'shell v3 precisa carregar depois dos módulos funcionais'
@@ -78,4 +81,20 @@ test('shell respeita safe area em navegação e modais', () => {
   assert.match(css, /env\(safe-area-inset-bottom/);
   assert.match(css, /env\(safe-area-inset-top/);
   assert.match(css, /max-height: calc\(100dvh/);
+});
+
+test('Casa é área interna do Hoje e mantém retorno contextual', () => {
+  const html = ler('public/index.html');
+  const app = ler('public/app.js');
+  assert.match(html, /id="casaPageTitle"/);
+  assert.match(html, /voltarCasaContextual\(\)/);
+  assert.match(app, /const CASA_TITULOS/);
+  assert.match(app, /function voltarAbaContextual/);
+  assert.match(app, /origemCasa/);
+});
+
+test('barra inferior sobe acima do Home Indicator', () => {
+  const css = ler('public/mobile-shell-v3.css');
+  assert.match(css, /bottom:\s*calc\(14px \+ env\(safe-area-inset-bottom/);
+  assert.match(css, /padding-bottom:\s*calc\(112px \+ env\(safe-area-inset-bottom/);
 });
