@@ -55,6 +55,7 @@ let purchaseRowsDecorating = false;
 let uiSheetReturnFocus = null;
 let uiSheetKeydownHandler = null;
 let uiSheetViewportCleanup = null;
+const legacyModalReturnFocus = new WeakMap();
 const LAST_SUBTAB_KEY = 'lifeos:last-casa-subtab';
 
 function loadStyles() {
@@ -1678,9 +1679,28 @@ function installModalAccessibility() {
   const observer = new MutationObserver(records => {
     records.forEach(record => {
       const modal = record.target;
-      if (modal instanceof HTMLElement && modal.classList.contains('aberto')) {
+      if (!(modal instanceof HTMLElement)) return;
+
+      if (modal.classList.contains('aberto')) {
+        if (!legacyModalReturnFocus.has(modal)) {
+          const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          legacyModalReturnFocus.set(modal, active);
+        }
         modal.dataset.uiDirty = '0';
+        modal.setAttribute('role', modal.getAttribute('role') || 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.querySelectorAll('.modal-fechar').forEach(button => {
+          button.dataset.uiAction = 'close';
+          button.setAttribute('aria-label', button.getAttribute('aria-label') || 'Fechar');
+        });
         focusModal(modal);
+        return;
+      }
+
+      const returnFocus = legacyModalReturnFocus.get(modal);
+      if (legacyModalReturnFocus.has(modal)) {
+        legacyModalReturnFocus.delete(modal);
+        window.requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
       }
     });
   });
@@ -1694,6 +1714,11 @@ function installModalAccessibility() {
     const modal = event.target.closest?.('.modal-overlay.aberto');
     if (modal && event.target.matches('input,select,textarea')) modal.dataset.uiDirty = '1';
   }, true);
+  document.addEventListener('focusin', event => {
+    const modal = event.target.closest?.('.modal-overlay.aberto');
+    if (!modal || !event.target.matches('input,select,textarea')) return;
+    window.setTimeout(() => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 120);
+  }, true);
 
   document.addEventListener('click', event => {
     const close = event.target.closest?.('.modal-overlay.aberto .modal-fechar');
@@ -1706,14 +1731,36 @@ function installModalAccessibility() {
   }, true);
 
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    if (document.querySelector('.ui-sheet-overlay')) { closeSheet(); return; }
-    if (marketOverlay) { closeMarketMode(); return; }
+    if (document.querySelector('.ui-sheet-overlay')) return;
+    if (marketOverlay && event.key === 'Escape') { closeMarketMode(); return; }
+
     const open = [...document.querySelectorAll('.modal-overlay.aberto')].pop();
     if (!open) return;
-    if (open.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) return;
-    open.dataset.uiDirty = '0';
-    open.classList.remove('aberto');
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (open.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) return;
+      open.dataset.uiDirty = '0';
+      const close = open.querySelector('.modal-fechar');
+      if (close) close.click();
+      else open.classList.remove('aberto');
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+    const focusable = [...open.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )].filter(element => !element.hidden && element.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 }
 
