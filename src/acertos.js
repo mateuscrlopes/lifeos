@@ -408,25 +408,6 @@ async function carregarLote(admin, loteId) {
 }
 
 
-async function carregarLote(admin, loteId) {
-  const { data: lote, error } = await admin
-    .from('acerto_pagamento_lotes')
-    .select('*')
-    .eq('id', loteId)
-    .single();
-
-  if (error || !lote) return null;
-
-  const { data: itens, error: itensError } = await admin
-    .from('acerto_pagamento_itens')
-    .select('id,lote_id,acerto_id,ordem,saldo_antes,valor_alocado,saldo_depois,acertos(id,titulo,devedor_id,credor_id,competencia,parcela_numero,parcelas_total,valor_devido,valor_pago,vencimento,status)')
-    .eq('lote_id', loteId)
-    .order('ordem');
-
-  if (itensError) return null;
-  return { lote, itens: itens || [] };
-}
-
 function valorExtraidoSeguro(valor) {
   return valor !== null && valor !== undefined && valor !== ''
     && Number.isFinite(Number(valor))
