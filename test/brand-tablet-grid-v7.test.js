@@ -35,8 +35,8 @@ test('cache v7 força atualização no mobile e tablet', () => {
   const polish = read('public/product-polish-v4.js');
   const enhancements = read('public/tablet-enhancements.js');
   const tablet = read('public/tablet.html');
-  assert.ok(status.includes('product-polish-v4.js?v=3'));
-  assert.ok(polish.includes('product-polish-v4.css?v=3'));
+  assert.ok(status.includes('product-polish-v4.js?v=4'));
+  assert.ok(polish.includes('product-polish-v4.css?v=4'));
   assert.ok(enhancements.includes('painel-casa.js?v=4'));
   assert.ok(tablet.includes('tablet-app-shell-v3.js?v=6'));
 });
