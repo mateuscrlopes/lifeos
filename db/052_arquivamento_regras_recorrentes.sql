@@ -69,7 +69,7 @@ begin
 
   -- Acertos já gerados permanecem intactos, inclusive os ainda em aberto.
   insert into public.eventos (
-    tipo, entidade, entidade_id, usuario_id, valor_antigo, valor_novo, detalhe
+    tipo, entidade, entidade_id, usuario_id, valor_anterior, valor_novo, detalhe
   )
   values (
     'regra_acerto_arquivada',
@@ -136,7 +136,7 @@ begin
     and casa_id = v_casa;
 
   insert into public.eventos (
-    tipo, entidade, entidade_id, usuario_id, valor_antigo, valor_novo, detalhe
+    tipo, entidade, entidade_id, usuario_id, valor_anterior, valor_novo, detalhe
   )
   values (
     'regra_acerto_restaurada',
