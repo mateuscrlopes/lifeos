@@ -145,7 +145,11 @@ function trocarAba(qual,btn,opcoes={}){
   });
   const id='aba'+qual.charAt(0).toUpperCase()+qual.slice(1);
   const alvo=el(id);if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===qual));
+  const origemCasa=qual==='casa'?_origensAba.get('casa'):null;
+  const tabAtiva=qual==='casa'
+    ? (origemCasa?.tipo==='tab' ? origemCasa.tab : origemCasa?.tipo==='secao' && origemCasa.secao==='ritmo' ? 'ritmo' : origemCasa?.tipo==='secao' ? 'mais' : 'hoje')
+    : qual;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===tabAtiva));
   const body=el('appBody');if(body)body.scrollTop=0;
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
