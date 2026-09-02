@@ -882,3 +882,121 @@
     padding: 19px;
   }
 }
+
+
+/* ================================================================
+   0.37 — cardápio nutricional e check-in planejado
+================================================================ */
+
+.ritmo-cardapio-today .ritmo-section-head > div {
+  min-width: 0;
+}
+
+.ritmo-cardapio-today .ritmo-section-head > div > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ritmo-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ritmo-menu-item {
+  min-width: 0;
+  min-height: 94px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 13px;
+  border: 1px solid var(--linha);
+  border-radius: 15px;
+  background: var(--paper-2);
+}
+
+.ritmo-menu-item strong {
+  color: var(--texto);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ritmo-menu-item > span {
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ritmo-menu-item small {
+  color: var(--sage);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ritmo-menu-item.is-empty {
+  opacity: .72;
+}
+
+.ritmo-planned-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--sage) 18%, var(--linha));
+  border-radius: 15px;
+  background: var(--sage-soft);
+}
+
+.ritmo-planned-summary > div {
+  min-width: 0;
+}
+
+.ritmo-planned-summary span,
+.ritmo-planned-summary strong {
+  display: block;
+}
+
+.ritmo-planned-summary span {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.ritmo-planned-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.ritmo-planned-summary small {
+  color: var(--sage);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: right;
+}
+
+@media (max-width: 370px) {
+  .ritmo-menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ritmo-planned-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ritmo-planned-summary small {
+    text-align: left;
+  }
+}
