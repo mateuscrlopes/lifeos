@@ -737,12 +737,34 @@ async function salvarEditarPlanta(){
 
 // --- CARDAPIO ---
 let _refeicoes=[],_planDias={},_slotAtual=null,_sugestaoCardapioOffset=0;
+let _planRespAtual='ambos';
+let _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
+const CARDAPIO_RESPONSAVEIS=['ambos','mateus','ghustavo'];
+const CARDAPIO_DIAS={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',7:'Dom'};
+
+function selecionarResponsavelCardapio(resp,{render=true}={}){
+  _planRespAtual=CARDAPIO_RESPONSAVEIS.includes(resp)?resp:'ambos';
+  _planDias=_planDiasPorResp[_planRespAtual]||(_planDiasPorResp[_planRespAtual]={});
+  if(el('planResp'))el('planResp').value=_planRespAtual;
+  if(render)renderizarSlotsCardapio();
+}
 async function carregarRefeicoes(){
   const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
   const area=el('listaRefeicoes');area.innerHTML='';
   if(error||!_refeicoes.length){area.innerHTML='<div class="vazio">Nenhuma refeição cadastrada.</div>';return;}
-  for(const r of _refeicoes){const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;const d=document.createElement('div');d.className='desc';const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);const btn=document.createElement('button');btn.textContent='×';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';btn.onclick=(ev)=>{ev.stopPropagation();removerRefeicao(r.id);};linha.appendChild(d);linha.appendChild(btn);area.appendChild(linha);}
+  for(const r of _refeicoes){
+    const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;
+    const d=document.createElement('div');d.className='desc';
+    const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);
+    const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);
+    const acoes=document.createElement('div');acoes.className='receita-row-actions';
+    const abrir=document.createElement('button');abrir.type='button';abrir.className='receita-open-btn';abrir.dataset.rv2Open=r.id;abrir.textContent='Abrir';
+    const apagar=document.createElement('button');apagar.type='button';apagar.className='lifeos-icon-action is-danger receita-delete-btn';apagar.setAttribute('aria-label',`Excluir ${r.nome}`);apagar.title='Excluir';apagar.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/></svg>';
+    apagar.onclick=(ev)=>{ev.stopPropagation();removerRefeicao(r.id,r.nome);};
+    acoes.appendChild(abrir);acoes.appendChild(apagar);
+    linha.appendChild(d);linha.appendChild(acoes);area.appendChild(linha);
+  }
   renderizarSlotsCardapio();
 }
 
@@ -757,7 +779,11 @@ async function salvarRefeicao(){
   aviso('avisoRefeicao','Refeição salva.','ok');setTimeout(()=>aviso('avisoRefeicao',''),1500);el('btnSalvarRefeicao').disabled=false;await carregarRefeicoes();
 }
 
-async function removerRefeicao(id){await supa.from('refeicoes').delete().eq('id',id);await carregarRefeicoes();}
+async function removerRefeicao(id,nome='esta receita'){
+  if(!confirm(`Excluir "${nome}"? Esta ação remove a receita da biblioteca.`))return;
+  await supa.from('refeicoes').delete().eq('id',id);
+  await carregarRefeicoes();
+}
 
 function adicionarLinhaIngrediente(){
   const div=document.createElement('div');div.className='linha-ingrediente';div.style.cssText='display:flex;gap:6px;margin-bottom:8px;align-items:center';
@@ -769,7 +795,22 @@ function adicionarLinhaIngrediente(){
 }
 
 function renderizarSlotsCardapio(){
-  ['almoco','janta'].forEach(tipo=>{const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);if(!grid)return;grid.innerHTML='';for(let d=1;d<=5;d++){const chave=`${d}-${tipo}`;const slot=_planDias[chave];const btn=document.createElement('div');btn.className='dia-slot'+(slot?' preenchido':'');btn.textContent=slot?slot.nome:'+ add';btn.onclick=()=>abrirModalRefeicao(d,tipo);grid.appendChild(btn);}});
+  ['almoco','janta'].forEach(tipo=>{
+    const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);
+    if(!grid)return;
+    grid.innerHTML='';
+    for(let d=1;d<=7;d++){
+      const chave=`${d}-${tipo}`;
+      const slot=_planDias[chave];
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='dia-slot'+(slot?' preenchido':'');
+      btn.innerHTML=slot?`<span>${slot.nome}</span>`:'<span>+</span>';
+      btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${tipo==='almoco'?'Almoço':'Jantar'}${slot?' · '+slot.nome:''}`);
+      btn.onclick=()=>abrirModalRefeicao(d,tipo);
+      grid.appendChild(btn);
+    }
+  });
 }
 
 function normalizarCardapioTexto(valor=''){
@@ -813,7 +854,7 @@ async function sugerirPlanejamentoSemana(){
     const semana=formatarDataISO(inicioSemana());
     const baseHash=[...semana].reduce((a,c)=>a+c.charCodeAt(0),0)+_sugestaoCardapioOffset++;
 
-    for(let d=1;d<=5;d++){
+    for(let d=1;d<=7;d++){
       for(const tipo of ['almoco','janta']){
         const compativeis=candidatas.filter(r=>r.tipo===tipo||r.tipo==='ambos');
         const ranking=compativeis.map((r,idx)=>{
@@ -847,7 +888,7 @@ async function sugerirPlanejamentoSemana(){
 }
 
 function abrirModalRefeicao(dia,tipo){
-  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${['','Seg','Ter','Qua','Qui','Sex'][dia]} — ${tipo==='almoco'?'Almoço':'Janta'}`;
+  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${CARDAPIO_DIAS[dia]||'Dia'} — ${tipo==='almoco'?'Almoço':'Jantar'} · ${_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1)}`;
   const chave=`${dia}-${tipo}`;el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
   const lista=el('modalRefLista');lista.innerHTML='';
   _refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos').forEach(r=>{const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';btn.innerHTML=`<span class="nome">${r.nome}</span>`;btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};lista.appendChild(btn);});
@@ -860,23 +901,83 @@ function fecharModalRefeicao(){fecharModal('modalRefeicao');_slotAtual=null;}
 
 async function carregarPlanejamento(){
   const seg=formatarDataISO(inicioSemana());
-  const{data:plan}=await supa.from('planejamento_semana').select('id,responsavel').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
-  if(!plan){_planDias={};renderizarSlotsCardapio();return;}
-  if(plan.responsavel)el('planResp').value=plan.responsavel;
-  const{data:dias}=await supa.from('planejamento_dias').select('dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome)').eq('planejamento_id',plan.id);
-  _planDias={};for(const d of(dias||[])){_planDias[`${d.dia_semana}-${d.tipo}`]={nome:d.refeicoes?.nome||d.refeicao_nome||'',refeicaoId:d.refeicao_id};}renderizarSlotsCardapio();
+  const{data:planos,error}=await supa.from('planejamento_semana')
+    .select('id,responsavel,planejamento_dias(dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome))')
+    .eq('casa_id',usuario.casa_id)
+    .eq('semana_inicio',seg);
+  _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
+  if(error){
+    console.error('[Cardápio] Falha ao carregar planejamento:',error);
+    selecionarResponsavelCardapio('ambos');
+    return;
+  }
+  for(const plano of(planos||[])){
+    const resp=CARDAPIO_RESPONSAVEIS.includes(plano.responsavel)?plano.responsavel:'ambos';
+    for(const d of(plano.planejamento_dias||[])){
+      _planDiasPorResp[resp][`${d.dia_semana}-${d.tipo}`]={
+        nome:d.refeicoes?.nome||d.refeicao_nome||'',
+        refeicaoId:d.refeicao_id
+      };
+    }
+  }
+  selecionarResponsavelCardapio(el('planResp')?.value||'ambos');
 }
 
 async function salvarPlanejamento(){
-  el('btnSalvarPlan').disabled=true;const seg=formatarDataISO(inicioSemana());const resp=el('planResp').value;
-  let planId;const{data:ex}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
-  if(ex){planId=ex.id;await supa.from('planejamento_semana').update({responsavel:resp}).eq('id',planId);}
-  else{const{data:n}=await supa.from('planejamento_semana').insert({casa_id:usuario.casa_id,semana_inicio:seg,responsavel:resp,criado_por:usuario.id}).select().single();planId=n?.id;}
-  if(!planId){aviso('avisoPlan','Erro.','erro');el('btnSalvarPlan').disabled=false;return;}
-  await supa.from('planejamento_dias').delete().eq('planejamento_id',planId);
-  const inserir=Object.entries(_planDias).map(([chave,val])=>{const[dia,tipo]=chave.split('-');return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};});
-  if(inserir.length)await supa.from('planejamento_dias').insert(inserir);
-  aviso('avisoPlan','Cardápio salvo.','ok');setTimeout(()=>aviso('avisoPlan',''),2000);el('btnSalvarPlan').disabled=false;
+  const botao=el('btnSalvarPlan');
+  if(botao)botao.disabled=true;
+  const seg=formatarDataISO(inicioSemana());
+  try{
+    const{data:existentes,error}=await supa.from('planejamento_semana')
+      .select('id,responsavel')
+      .eq('casa_id',usuario.casa_id)
+      .eq('semana_inicio',seg);
+    if(error)throw error;
+    const porResp=new Map((existentes||[]).map(p=>[p.responsavel||'ambos',p]));
+
+    for(const resp of CARDAPIO_RESPONSAVEIS){
+      const slots=_planDiasPorResp[resp]||{};
+      let plano=porResp.get(resp);
+      let planId=plano?.id||null;
+      if(!planId){
+        const{data:n,error:e}=await supa.from('planejamento_semana')
+          .insert({casa_id:usuario.casa_id,semana_inicio:seg,responsavel:resp,criado_por:usuario.id})
+          .select('id').single();
+        if(e)throw e;
+        planId=n?.id;
+      }else{
+        const{error:e}=await supa.from('planejamento_semana').update({responsavel:resp}).eq('id',planId);
+        if(e)throw e;
+      }
+      if(!planId)continue;
+      const{error:delErr}=await supa.from('planejamento_dias').delete().eq('planejamento_id',planId);
+      if(delErr)throw delErr;
+      const inserir=Object.entries(slots).map(([chave,val])=>{
+        const[dia,tipo]=chave.split('-');
+        return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};
+      });
+      if(inserir.length){
+        const{error:insErr}=await supa.from('planejamento_dias').insert(inserir);
+        if(insErr)throw insErr;
+      }
+    }
+    aviso('avisoPlan','Cardápios salvos para Ambos, Mateus e Ghustavo.','ok');
+    setTimeout(()=>aviso('avisoPlan',''),2500);
+  }catch(erro){
+    console.error('[Cardápio] Falha ao salvar:',erro);
+    aviso('avisoPlan','Não foi possível salvar o cardápio.','erro');
+  }finally{
+    if(botao)botao.disabled=false;
+  }
+}
+
+function limparPlanejamentoAtual(){
+  const rotulo=_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1);
+  if(!Object.keys(_planDias).length)return;
+  if(!confirm(`Limpar todos os slots de ${rotulo} nesta semana?`))return;
+  _planDiasPorResp[_planRespAtual]={};
+  selecionarResponsavelCardapio(_planRespAtual);
+  aviso('avisoPlan',`Slots de ${rotulo} limpos. Clique em Salvar para confirmar.`,'ok');
 }
 
 async function gerarListaCardapio(){
@@ -1932,6 +2033,8 @@ el('btnFecharModalRef').onclick=fecharModalRefeicao;
 el('btnSugerirPlan').onclick=sugerirPlanejamentoSemana;
 el('btnSalvarPlan').onclick=salvarPlanejamento;
 el('btnGerarLista').onclick=gerarListaCardapio;
+el('btnLimparPlan').onclick=limparPlanejamentoAtual;
+el('planResp').onchange=e=>selecionarResponsavelCardapio(e.target.value);
 el('btnSalvarRitual').onclick=salvarRitual;
 el('btnConcluirRitual').onclick=concluirRitual;
 el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
