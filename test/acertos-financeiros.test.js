@@ -99,7 +99,7 @@ test('divisão 50% é um modo explícito e automático', () => {
 
 test('sem 50%, o valor total começa com quem não pagou', () => {
   const source = fs.readFileSync(new URL('../public/acertos.js', import.meta.url), 'utf8');
-  assert.match(source, /function fillFullToNonPayer/);
+  assert.match(source, /const fillFullToNonPayer = \(\) =>/);
   assert.match(source, /payerShare\.value = total \? '0\.00'/);
   assert.match(source, /começa devendo o valor total/);
   assert.match(source, /payerInput\?\.addEventListener\('change'/);
