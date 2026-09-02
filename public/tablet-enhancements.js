@@ -13,12 +13,20 @@
   const html = document.documentElement;
 
   function carregarDesignSystem() {
-    if (document.getElementById('lifeos-design-system')) return;
-    const link = document.createElement('link');
-    link.id = 'lifeos-design-system';
-    link.rel = 'stylesheet';
-    link.href = '/design-system.css?v=1';
-    document.head.appendChild(link);
+    if (!document.getElementById('lifeos-design-system')) {
+      const link = document.createElement('link');
+      link.id = 'lifeos-design-system';
+      link.rel = 'stylesheet';
+      link.href = '/design-system.css?v=1';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('lifeos-phase3-tablet')) {
+      const polish = document.createElement('link');
+      polish.id = 'lifeos-phase3-tablet';
+      polish.rel = 'stylesheet';
+      polish.href = '/phase3-tablet.css?v=1';
+      document.head.appendChild(polish);
+    }
     document.body.classList.add('tablet-mode');
   }
 
