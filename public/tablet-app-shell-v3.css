@@ -1050,3 +1050,204 @@ html[data-theme="light"] #painelCasa .planta-meta,
 html[data-theme="light"] #painelCasa .destaque-sub {
   color: var(--muted) !important;
 }
+
+
+/* ================================================================
+   v9 — dashboard tablet alinhado ao conceito aprovado
+   Sem KPIs: a home é composta diretamente pelos seis módulos.
+================================================================ */
+
+@media (min-width: 901px) {
+  #painelCasa .sidebar {
+    width: 104px !important;
+    padding: 22px 0 24px !important;
+    background: linear-gradient(180deg, #176642 0%, #0f5035 100%) !important;
+  }
+
+  #painelCasa .sidebar-logo {
+    width: 54px !important;
+    height: 54px !important;
+    margin-bottom: 24px !important;
+    border-radius: 18px !important;
+  }
+
+  #painelCasa .sidebar-nav {
+    gap: 12px !important;
+  }
+
+  #painelCasa .sidebar-btn,
+  #painelCasa .sidebar-espera {
+    width: 80px !important;
+    height: 72px !important;
+    gap: 7px !important;
+    border-radius: 20px !important;
+    font-size: 11px !important;
+  }
+
+  #painelCasa .sidebar-btn svg,
+  #painelCasa .sidebar-espera svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  #painelCasa .sidebar-btn.ativo {
+    background: rgba(255,255,255,.16) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12) !important;
+  }
+}
+
+#pag-inicio #metricasGrid {
+  display: none !important;
+}
+
+/* O antigo banner fotográfico vira o cabeçalho calmo do mock aprovado. */
+#pag-inicio .hero-banner {
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 4px 0 22px !important;
+  padding: 2px 4px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#pag-inicio .hero-banner-bg,
+#pag-inicio .hero-banner-overlay,
+#pag-inicio .gumate-badge {
+  display: none !important;
+}
+
+#pag-inicio .hero-banner-content {
+  position: static !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 0 !important;
+  color: var(--texto) !important;
+}
+
+#pag-inicio .hero-kicker {
+  margin: 0 0 7px !important;
+  color: var(--muted) !important;
+  font: 650 12px/1.25 var(--sans) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+#pag-inicio .hero-titulo {
+  max-width: none !important;
+  margin: 0 !important;
+  color: var(--texto) !important;
+  font: 750 clamp(25px, 2.35vw, 31px)/1.08 var(--sans) !important;
+  letter-spacing: -.035em !important;
+  text-shadow: none !important;
+}
+
+#pag-inicio .hero-subtitulo {
+  max-width: none !important;
+  margin: 7px 0 0 !important;
+  color: var(--muted) !important;
+  font: 550 13px/1.4 var(--sans) !important;
+}
+
+/* Desktop/tablet largo: exatamente 3 colunas x 2 linhas. */
+#pag-inicio .conteudo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-areas:
+    "tarefas destaques compras"
+    "plantas contas estoque" !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+}
+
+#pag-inicio .col-esq,
+#pag-inicio .col-mid,
+#pag-inicio .col-dir {
+  display: contents !important;
+}
+
+#pag-inicio .col-esq > .panel:nth-child(1) { grid-area: tarefas !important; }
+#pag-inicio .col-esq > .panel:nth-child(2) { grid-area: compras !important; }
+#pag-inicio .col-mid > .panel:nth-child(1) { grid-area: destaques !important; }
+#pag-inicio .col-mid > .panel:nth-child(2) { grid-area: plantas !important; }
+#pag-inicio .col-dir > .panel:nth-child(1) { grid-area: contas !important; }
+#pag-inicio .col-dir > .panel:nth-child(2) { grid-area: estoque !important; }
+
+#pag-inicio .conteudo-grid .panel {
+  min-width: 0 !important;
+  min-height: 270px !important;
+  height: 100% !important;
+  padding: 18px 20px !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 10%, var(--linha)) !important;
+  border-radius: 22px !important;
+  background: var(--paper) !important;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--texto) 6%, transparent) !important;
+}
+
+#pag-inicio .panel-head {
+  min-height: 46px !important;
+  margin-bottom: 10px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#pag-inicio .panel-titulo {
+  color: var(--texto) !important;
+  font: 760 clamp(18px, 1.55vw, 22px)/1.15 var(--sans) !important;
+  letter-spacing: -.025em !important;
+}
+
+#pag-inicio .panel-link {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--sage) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+#pag-inicio .task-row,
+#pag-inicio .conta-row,
+#pag-inicio .estoque-row,
+#pag-inicio .planta-row {
+  min-height: 48px !important;
+  padding: 8px 0 !important;
+}
+
+#pag-inicio .destaque {
+  min-height: 70px !important;
+  padding: 12px !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 9%, var(--linha)) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, var(--sage-soft) 48%, var(--paper)) !important;
+}
+
+@media (max-width: 1120px) and (min-width: 781px) {
+  #pag-inicio .conteudo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "tarefas destaques"
+      "compras plantas"
+      "contas estoque" !important;
+  }
+}
+
+@media (max-width: 780px) {
+  #pag-inicio .conteudo-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "tarefas"
+      "destaques"
+      "compras"
+      "plantas"
+      "contas"
+      "estoque" !important;
+  }
+}
