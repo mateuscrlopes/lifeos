@@ -37,7 +37,7 @@ export async function montarHoje(supa, usuario) {
     supa.from('contas').select('id, nome, valor, vencimento, paga').eq('casa_id', casaId).eq('paga', false),
     supa.from('tarefas').select('id, titulo, responsavel, data, feita').eq('casa_id', casaId).eq('feita', false),
     supa.from('planejamento_dias')
-      .select('tipo, refeicao_nome, observacao, refeicoes(nome), planejamento_semana!inner(semana_inicio, responsavel)')
+      .select('id, tipo, refeicao_nome, observacao, calorias, proteina_g, refeicoes(nome, calorias_por_porcao, proteina_por_porcao), planejamento_semana!inner(semana_inicio, responsavel)')
       .eq('planejamento_semana.casa_id', casaId)
       .eq('planejamento_semana.semana_inicio', segStr)
       .eq('dia_semana', diaCardapio),
@@ -66,15 +66,22 @@ export async function montarHoje(supa, usuario) {
   // Cardápio de hoje pode ter uma refeição compartilhada ou opções pessoais diferentes.
   const diasCardapio = respCardapio.data || [];
   const itensCardapio = diasCardapio.map((d) => ({
+    id: d.id,
     tipo: d.tipo,
     nome: d.refeicoes?.nome || d.refeicao_nome || null,
+    calorias: d.calorias ?? d.refeicoes?.calorias_por_porcao ?? null,
+    proteina_g: d.proteina_g ?? d.refeicoes?.proteina_por_porcao ?? null,
     responsavel: d.planejamento_semana?.responsavel || 'ambos',
   })).filter((d) => d.nome);
+  const cafe = itensCardapio.find((d) => d.tipo === 'cafe');
   const almoco = itensCardapio.find((d) => d.tipo === 'almoco');
+  const lanche = itensCardapio.find((d) => d.tipo === 'lanche');
   const janta = itensCardapio.find((d) => d.tipo === 'janta');
   const cardapioHoje = itensCardapio.length ? {
     itens: itensCardapio,
+    cafe: cafe?.nome || null,
     almoco: almoco?.nome || null,
+    lanche: lanche?.nome || null,
     janta: janta?.nome || null,
     responsavel: itensCardapio.length === 1 ? itensCardapio[0].responsavel : null,
   } : null;
