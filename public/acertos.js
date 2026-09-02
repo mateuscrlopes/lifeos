@@ -38,7 +38,14 @@
     return Number.isNaN(d.getTime()) ? raw : d.toLocaleDateString('pt-BR');
   };
 
-  const today = () => new Date().toISOString().slice(0, 10);
+  const localDateKey = (value = new Date()) => {
+    const d = value instanceof Date ? value : new Date(value);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const today = () => localDateKey(new Date());
   const userById = (id) => A.users.find((u) => u.id === id) || null;
   const nameById = (id) => userById(id)?.nome || 'Pessoa';
   const configByUser = (id) => A.configs.find((c) => c.usuario_id === id && c.ativo) || null;
@@ -60,6 +67,9 @@
 
   let ocrScriptPromise = null;
   let ocrWorkerPromise = null;
+  let acModalReturnFocus = null;
+  let acModalKeydownHandler = null;
+  let acModalViewportCleanup = null;
 
   function parseMoneyOcr(valor) {
     const limpo = String(valor || '').replace(/[^\d,.\-]/g, '').trim();
@@ -305,6 +315,27 @@
     '</article>';
   }
 
+  function ruleCard(rule, { archived = false } = {}) {
+    const statusText = archived ? 'Arquivada' : (rule.ativo ? 'Ativa' : 'Pausada');
+    const statusClass = archived ? 'archived' : (rule.ativo ? '' : 'muted');
+    const action = archived
+      ? '<button type="button" class="ac-rule-restore" data-ac-restore-rule="' + rule.id + '">Restaurar</button>'
+      : '<button type="button" data-ac-edit-rule="' + rule.id + '">Editar</button>';
+
+    return '<article class="ac-rule ' + (archived ? 'is-archived' : (rule.ativo ? '' : 'is-paused')) + '">' +
+      '<div class="ac-rule-line"><div class="ac-rule-copy"><div class="ac-rule-title">' +
+        '<strong>' + esc(rule.titulo) + '</strong>' +
+        '<span class="ac-chip ' + statusClass + '">' + statusText + '</span>' +
+      '</div><span>' + esc(nameById(rule.devedor_id)) + ' → ' + esc(nameById(rule.credor_id)) +
+        ' · ' + money(rule.valor) + '/mês</span>' +
+      '<small>' + (archived
+        ? 'Arquivada em ' + date(rule.arquivado_em) + ' · cobranças já geradas foram preservadas'
+        : 'Gera dia ' + rule.gerar_dia + ' · vence no ' + rule.vencimento_valor + 'º ' +
+          (rule.vencimento_tipo === 'dia_util' ? 'dia útil' : 'dia do mês')) + '</small></div>' +
+      action + '</div>' +
+    '</article>';
+  }
+
   function renderCentral() {
     const section = document.getElementById('lifeosFinanceiroAcertos')
       || document.querySelector('#subContas .secao');
@@ -332,10 +363,15 @@
 
     const net = receive - owe;
     const credit = creditForCurrentUser();
-    const rules = [...A.rules].sort((a, b) =>
-      Number(Boolean(b.ativo)) - Number(Boolean(a.ativo))
-      || String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR')
-    );
+    const rules = A.rules
+      .filter((rule) => !rule.arquivado_em)
+      .sort((a, b) =>
+        Number(Boolean(b.ativo)) - Number(Boolean(a.ativo))
+        || String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR')
+      );
+    const archivedRules = A.rules
+      .filter((rule) => Boolean(rule.arquivado_em))
+      .sort((a, b) => String(b.arquivado_em || '').localeCompare(String(a.arquivado_em || '')));
     const legacyApprovals = A.payments.filter((p) =>
       p.status === 'aguardando_confirmacao' &&
       A.acertos.some((a) => a.id === p.acerto_id && a.credor_id === A.profile.id)
@@ -369,25 +405,20 @@
         '<div class="ac-recurring-head"><div><strong>Cobranças recorrentes</strong><span>Geradas automaticamente todos os meses.</span></div>' +
           '<button type="button" id="acNewRule">+ Recorrente</button></div>' +
         (rules.length
-          ? '<div class="ac-rule-list">' + rules.map((rule) =>
-              '<article class="ac-rule ' + (rule.ativo ? '' : 'is-paused') + '">' +
-                '<div class="ac-rule-line"><div class="ac-rule-copy"><div class="ac-rule-title">' +
-                  '<strong>' + esc(rule.titulo) + '</strong>' +
-                  '<span class="ac-chip ' + (rule.ativo ? '' : 'muted') + '">' + (rule.ativo ? 'Ativa' : 'Pausada') + '</span>' +
-                '</div><span>' + esc(nameById(rule.devedor_id)) + ' → ' + esc(nameById(rule.credor_id)) +
-                  ' · ' + money(rule.valor) + '/mês</span>' +
-                '<small>Gera dia ' + rule.gerar_dia + ' · vence no ' + rule.vencimento_valor + 'º ' +
-                  (rule.vencimento_tipo === 'dia_util' ? 'dia útil' : 'dia do mês') + '</small></div>' +
-                '<button type="button" data-ac-edit-rule="' + rule.id + '">Editar</button></div>' +
-              '</article>'
-            ).join('') + '</div>'
-          : '<div class="ac-empty ac-empty-compact">Nenhuma cobrança recorrente cadastrada.</div>') +
+          ? '<div class="ac-rule-list">' + rules.map((rule) => ruleCard(rule)).join('') + '</div>'
+          : '<div class="ac-empty ac-empty-compact">Nenhuma cobrança recorrente ativa ou pausada.</div>') +
+        (archivedRules.length
+          ? '<details class="ac-archived-rules"><summary>Arquivadas <span>' + archivedRules.length + '</span></summary>' +
+              '<div class="ac-rule-list">' + archivedRules.map((rule) => ruleCard(rule, { archived: true })).join('') + '</div></details>'
+          : '') +
       '</div>';
 
     root.querySelector('#acNewExpense')?.addEventListener('click', showNewExpense);
     root.querySelector('#acNewRule')?.addEventListener('click', () => showRule(null));
     root.querySelectorAll('[data-ac-edit-rule]').forEach((btn) =>
       btn.addEventListener('click', () => showRule(A.rules.find((rule) => rule.id === btn.dataset.acEditRule) || null)));
+    root.querySelectorAll('[data-ac-restore-rule]').forEach((btn) =>
+      btn.addEventListener('click', () => restoreRule(btn.dataset.acRestoreRule)));
     root.querySelectorAll('[data-ac-pay]').forEach((btn) =>
       btn.addEventListener('click', () => showPayment(btn.dataset.acPay)));
     root.querySelectorAll('[data-ac-review]').forEach((btn) =>
@@ -437,27 +468,102 @@
   }
 
   function modal(body) {
-    closeModal();
+    closeModal(true);
+    acModalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
     const overlay = document.createElement('div');
     overlay.id = 'acModal';
     overlay.className = 'ac-overlay';
-    overlay.innerHTML = '<section class="ac-sheet">' + body + '</section>';
-    document.body.appendChild(overlay);
+    overlay.innerHTML = '<section class="ac-sheet" role="dialog" aria-modal="true">' +
+      '<div class="ac-sheet-scroll">' + body + '</div></section>';
+
+    const markDirty = (event) => {
+      const form = event.target?.closest?.('form[data-ac-confirm-discard="true"]');
+      if (form) form.dataset.acDirty = 'true';
+    };
+
+    overlay.addEventListener('input', markDirty);
+    overlay.addEventListener('change', markDirty);
+    overlay.addEventListener('focusin', (event) => {
+      if (!event.target?.matches?.('input, select, textarea')) return;
+      window.setTimeout(() => event.target.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 120);
+    });
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) closeModal();
     });
     overlay.querySelectorAll('[data-ac-close]').forEach((btn) =>
-      btn.addEventListener('click', closeModal));
+      btn.addEventListener('click', () => closeModal()));
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('ui-modal-open');
+
+    const syncViewport = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      overlay.style.setProperty('--ac-viewport-height', Math.round(height) + 'px');
+    };
+    syncViewport();
+    window.visualViewport?.addEventListener('resize', syncViewport);
+    window.visualViewport?.addEventListener('scroll', syncViewport);
+    acModalViewportCleanup = () => {
+      window.visualViewport?.removeEventListener('resize', syncViewport);
+      window.visualViewport?.removeEventListener('scroll', syncViewport);
+    };
+
+    acModalKeydownHandler = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [...overlay.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      )].filter((el) => !el.hidden && el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', acModalKeydownHandler);
+
+    window.requestAnimationFrame(() => {
+      const first = overlay.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])');
+      first?.focus({ preventScroll: true });
+    });
+
     return overlay;
   }
 
-  function closeModal() {
-    document.getElementById('acModal')?.remove();
+  function closeModal(force = false) {
+    const overlay = document.getElementById('acModal');
+    if (!overlay) return true;
+
+    const dirtyForm = overlay.querySelector('form[data-ac-confirm-discard="true"][data-ac-dirty="true"]');
+    if (!force && dirtyForm && !window.confirm('Descartar as alterações feitas nesta janela?')) return false;
+
+    overlay.remove();
+    acModalViewportCleanup?.();
+    acModalViewportCleanup = null;
+    if (acModalKeydownHandler) document.removeEventListener('keydown', acModalKeydownHandler);
+    acModalKeydownHandler = null;
+    if (!document.querySelector('.modal-overlay.aberto, .ui-sheet-overlay, .ac-overlay')) {
+      document.body.classList.remove('ui-modal-open');
+    }
+    const returnFocus = acModalReturnFocus;
+    acModalReturnFocus = null;
+    window.requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
+    return true;
   }
 
   function sheetHead(kicker, title) {
     return '<div class="ac-sheet-head"><div><p>' + esc(kicker) + '</p><h3>' + esc(title) +
-      '</h3></div><button type="button" class="ac-sheet-close" data-ac-close>&times;</button></div>';
+      '</h3></div><button type="button" class="ac-sheet-close" data-ac-close data-ui-action="close" aria-label="Fechar" title="Fechar">&times;</button></div>';
   }
 
   function showNewExpense() {
@@ -478,7 +584,7 @@
 
     const root = modal(
       sheetHead('Nova despesa', 'Registrar compra ou gasto') +
-      '<form class="ac-form ac-expense-form" id="acExpenseForm">' +
+      '<form class="ac-form ac-expense-form" id="acExpenseForm" data-ac-confirm-discard="true">' +
         '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Dados da compra</strong><span>O básico para identificar a despesa.</span></div>' +
           '<label class="ac-field"><span>Descrição</span><input name="title" required placeholder="Ex.: Hospedagem em Natal"></label>' +
           '<div class="ac-grid-2 ac-grid-responsive">' +
@@ -511,11 +617,15 @@
 
     const fillHalf = () => {
       const total = Math.max(0, Number(totalInput.value || 0));
-      if (shareInputs.length !== 2) return;
-      const first = Math.round((total / 2) * 100) / 100;
-      const second = Math.round((total - first) * 100) / 100;
-      shareInputs[0].value = first ? first.toFixed(2) : '';
-      shareInputs[1].value = second ? second.toFixed(2) : '';
+      if (!shareInputs.length) return;
+      const cents = Math.round(total * 100);
+      const base = Math.floor(cents / shareInputs.length);
+      let used = 0;
+      shareInputs.forEach((input, index) => {
+        const valueCents = index === shareInputs.length - 1 ? cents - used : base;
+        input.value = total ? (valueCents / 100).toFixed(2) : '';
+        used += valueCents;
+      });
     };
 
     const fillFullToNonPayer = () => {
@@ -543,7 +653,9 @@
       root.querySelector('.ac-split')?.classList.toggle('is-manual', !half);
       if (half) {
         fillHalf();
-        if (splitHint) splitHint.textContent = '50% para cada pessoa.';
+        if (splitHint) splitHint.textContent = shareInputs.length === 2
+          ? '50% para cada pessoa.'
+          : 'O valor é dividido igualmente entre todas as pessoas.';
       } else {
         fillFullToNonPayer();
         const payerId = String(payerInput?.value || '');
@@ -610,7 +722,7 @@
         return;
       }
 
-      closeModal();
+      closeModal(true);
       await load();
     });
   }
@@ -1109,6 +1221,38 @@
     }
   }
 
+  async function archiveRule(ruleId) {
+    const rule = A.rules.find((item) => item.id === ruleId);
+    if (!rule || rule.arquivado_em) return;
+    const accepted = window.confirm(
+      'Arquivar “' + rule.titulo + '”?\n\n' +
+      'A regra deixará de gerar novas cobranças. Acertos que já existem, pagos ou em aberto, serão preservados e continuarão no histórico financeiro.'
+    );
+    if (!accepted) return;
+
+    const result = await A.client.rpc('arquivar_regra_acerto', { p_regra_id: ruleId });
+    if (result.error) {
+      window.lifeosToast?.('Não foi possível arquivar a recorrência.', 'erro');
+      return;
+    }
+    closeModal(true);
+    window.lifeosToast?.('Recorrência arquivada. O histórico foi preservado.', 'ok');
+    await load();
+  }
+
+  async function restoreRule(ruleId) {
+    const rule = A.rules.find((item) => item.id === ruleId);
+    if (!rule?.arquivado_em) return;
+
+    const result = await A.client.rpc('restaurar_regra_acerto', { p_regra_id: ruleId });
+    if (result.error) {
+      window.lifeosToast?.('Não foi possível restaurar a recorrência.', 'erro');
+      return;
+    }
+    window.lifeosToast?.('Recorrência restaurada com o status anterior.', 'ok');
+    await load();
+  }
+
   function showRule(rule = null) {
     const editing = Boolean(rule?.id);
     const options = A.users.map((u) => '<option value="' + u.id + '">' + esc(u.nome) + '</option>').join('');
@@ -1127,7 +1271,7 @@
 
     const root = modal(
       sheetHead('Cobrança recorrente', editing ? 'Editar recorrência' : 'Nova cobrança mensal') +
-      '<form class="ac-form ac-recurring-form" id="acRuleForm">' +
+      '<form class="ac-form ac-recurring-form" id="acRuleForm" data-ac-confirm-discard="true">' +
         '<section class="ac-form-section"><div class="ac-form-section-head"><strong>Cobrança</strong><span>O LifeOS cria um acerto novo a cada mês.</span></div>' +
           '<label class="ac-field"><span>Nome</span><input name="title" value="' + esc(defaults.titulo || '') + '" required placeholder="Ex.: El Hub"></label>' +
           '<div class="ac-grid-2 ac-grid-responsive"><label class="ac-field"><span>Valor mensal</span><div class="ac-money-input"><span>R$</span>' +
@@ -1145,9 +1289,10 @@
           (editing ? '<label class="ac-field"><span>Status</span><select name="active"><option value="true">Ativa</option><option value="false">Pausada</option></select></label>' : '') +
         '</section>' +
         '<p class="ac-note">' + (editing
-          ? 'Mudanças ajustam a regra e cobranças do mês atual/futuras ainda sem pagamento. Histórico pago não muda.'
+          ? 'Pausar interrompe novas cobranças sem tirar a regra desta lista. Arquivar também interrompe novas cobranças e move a regra para Arquivadas. Acertos já gerados nunca são apagados.'
           : 'Depois de salvar, o LifeOS gera automaticamente a cobrança de cada mês quando chegar o dia configurado.') + '</p>' +
         '<div id="acRuleError"></div>' +
+        (editing ? '<button type="button" class="ac-rule-archive" data-ac-archive-rule data-ui-action="archive">Arquivar recorrência</button>' : '') +
         '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button type="submit" class="ac-primary">' +
           (editing ? 'Salvar regra' : 'Criar recorrência') + '</button></div>' +
       '</form>'
@@ -1157,6 +1302,7 @@
     root.querySelector('[name="creditor"]').value = defaults.credor_id;
     root.querySelector('[name="dueType"]').value = defaults.vencimento_tipo || 'dia_mes';
     if (editing) root.querySelector('[name="active"]').value = String(Boolean(defaults.ativo));
+    root.querySelector('[data-ac-archive-rule]')?.addEventListener('click', () => archiveRule(rule.id));
 
     root.querySelector('#acRuleForm')?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1208,7 +1354,7 @@
         await A.client.rpc('gerar_acertos_recorrentes', { p_data: today() });
       }
 
-      closeModal();
+      closeModal(true);
       await load();
     });
   }
