@@ -664,12 +664,13 @@
       '<form class="ac-form" id="acPayForm">' +
         '<div class="ac-pay-selection">' + escolhas + '</div>' +
         '<div class="ac-pay-total"><span>Total selecionado</span><strong id="acSelectedTotal">' + money(0) + '</strong></div>' +
-        '<label class="ac-field"><span>Valor do Pix</span><div class="ac-money-input"><span>R$</span>' +
-          '<input name="value" type="number" min="0.01" step="0.01" inputmode="decimal" required></div></label>' +
-        '<div id="acPayVariance"></div>' +
-        '<label class="ac-field"><span>Comprovante</span><input name="file" type="file" accept="application/pdf,image/png,image/jpeg" required></label>' +
+        '<label class="ac-field"><span>Comprovante do Pix</span><input name="file" type="file" accept="application/pdf,image/png,image/jpeg" required></label>' +
         '<div id="acOcrStatus"></div>' +
-        '<p class="ac-note">PDF e print são conferidos automaticamente. Se o leitor não conseguir identificar o valor, você pode confirmar o valor do Pix manualmente.</p>' +
+        '<label class="ac-field"><span>Valor do Pix</span><div class="ac-money-input"><span>R$</span>' +
+          '<input name="value" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>' +
+          '<small>O LifeOS preenche pelo comprovante quando consegue. Você só precisa corrigir se a leitura estiver errada.</small></label>' +
+        '<div id="acPayVariance"></div>' +
+        '<p class="ac-note">PDF e print são conferidos automaticamente. O comprovante original continua disponível para a validação do recebedor.</p>' +
         '<div id="acPayError"></div>' +
         '<div class="ac-form-actions"><button type="button" class="ac-secondary" data-ac-close>Cancelar</button><button class="ac-primary" type="submit">Enviar para confirmação</button></div>' +
       '</form>'
@@ -839,7 +840,7 @@
 
         if (body?.leitura?.divergencia_valor_informado) {
           const lido = body.leitura.valor_extraido != null ? money(body.leitura.valor_extraido) : 'outro valor';
-          alert('Comprovante enviado. O PDF parece indicar ' + lido + ', diferente do valor informado. O recebedor verá essa diferença antes de confirmar.');
+          alert('Comprovante enviado. A leitura automática parece indicar ' + lido + ', diferente do valor informado. O recebedor verá essa diferença antes de confirmar.');
         }
       } catch (e) {
         submit.disabled = false;
@@ -862,7 +863,7 @@
       sheetHead('Confirmação do recebedor', a.titulo) +
       '<div class="ac-payment-summary"><div><span>Valor informado</span><strong>' + money(p.valor_informado) + '</strong></div>' +
       '<div><span>Valor lido</span><strong>' + extracted + '</strong></div></div>' +
-      (mismatch ? '<p class="ac-note warn">O valor identificado no PDF é diferente do valor informado. Confira o documento antes de aprovar.</p>' : '') +
+      (mismatch ? '<p class="ac-note warn">O valor identificado no comprovante é diferente do valor informado. Confira o documento antes de aprovar.</p>' : '') +
       '<div class="ac-actions" style="margin:10px 0 14px"><button type="button" id="acOpenProof">Ver comprovante original</button></div>' +
       '<label class="ac-field"><span>Motivo em caso de recusa</span><textarea id="acRejectReason" placeholder="Ex.: valor não recebido, comprovante incorreto..."></textarea></label>' +
       '<div id="acReviewError"></div>' +
@@ -912,8 +913,8 @@
       sheetHead('Confirmação do recebedor', itens.length === 1 ? '1 cobrança neste Pix' : itens.length + ' cobranças neste Pix') +
       '<div class="ac-payment-summary"><div><span>Total selecionado</span><strong>' + money(lote.valor_selecionado) + '</strong></div>' +
       '<div><span>Valor informado</span><strong>' + money(lote.valor_informado) + '</strong></div>' +
-      '<div><span>Valor lido no PDF</span><strong>' + (valorLido != null ? money(valorLido) : 'Não identificado') + '</strong></div></div>' +
-      (mismatch ? '<p class="ac-note warn">O PDF e o valor informado não batem. Confirme abaixo quanto realmente entrou antes de aprovar.</p>' : '') +
+      '<div><span>Valor lido no comprovante</span><strong>' + (valorLido != null ? money(valorLido) : 'Não identificado') + '</strong></div></div>' +
+      (mismatch ? '<p class="ac-note warn">A leitura do comprovante e o valor informado não batem. Confirme abaixo quanto realmente entrou antes de aprovar.</p>' : '') +
       '<div class="ac-review-items">' + itens.map((item) =>
         '<div class="ac-review-item"><span><strong>' + esc(item.acerto?.titulo || 'Cobrança') + '</strong>' +
         '<small>Saldo selecionado</small></span><b>' + money(item.valor_previsto) + '</b></div>'
