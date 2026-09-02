@@ -223,11 +223,11 @@
       paineis.forEach(panel => {
         const vazio = painelEstaVazio(panel);
         panel.classList.toggle('pc-is-empty', vazio);
-        panel.hidden = vazio;
+        panel.hidden = false;
       });
 
-      const colunaVisivel = paineis.some(panel => !panel.hidden);
-      coluna.hidden = !colunaVisivel;
+      const colunaVisivel = paineis.length > 0;
+      coluna.hidden = false;
       coluna.classList.remove('pc-first-visible', 'pc-visible-col');
       if (colunaVisivel) {
         visiveis += 1;
@@ -273,8 +273,6 @@
   function atualizar() {
     window.clearTimeout(agendamento);
     agendamento = window.setTimeout(() => {
-      criarContexto();
-      ativarContextos();
       tornarMetricasClicaveis();
       tornarContasClicaveis();
       organizarConteudo();
