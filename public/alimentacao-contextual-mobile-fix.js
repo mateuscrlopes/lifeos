@@ -103,10 +103,10 @@
       destaque.type = 'button';
       destaque.className = 'ac-mobile-highlight';
       destaque.addEventListener('click', () => {
-        document.querySelector('.tab-btn[data-tab="casa"]')?.click();
-        window.setTimeout(() => {
-          document.querySelector('.sub-aba[data-sub="cardapio"]')?.click();
-        }, 100);
+        if (typeof window.trocarAba === 'function') {
+          window.trocarAba('casa');
+          window.setTimeout(() => window.trocarSub?.('cardapio', document.querySelector('.sub-aba[data-sub="cardapio"]')), 60);
+        }
       });
     }
 
