@@ -12,7 +12,7 @@ test('receitas usam abertura explícita e modal central seguro',()=>{
   const app=ler('public/app.js');
   const js=ler('public/receitas-v2.js');
   const css=ler('public/receitas-v2.css');
-  assert.match(app,/data\.rv2Open/);
+  assert.match(app,/dataset\.rv2Open/);
   assert.match(app,/receita-row-actions/);
   assert.match(js,/data-rv2-open/);
   assert.match(js,/Deseja sair sem salvar as alterações da receita/);
