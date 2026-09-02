@@ -938,3 +938,218 @@
     animation: none;
   }
 }
+
+
+/* ================================================================
+   0.5 — cadastro de despesas e recorrências
+================================================================ */
+
+.ac-sheet,
+.ac-sheet *,
+.ac-form,
+.ac-form * {
+  box-sizing: border-box;
+}
+
+.ac-sheet {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ac-form-section {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--sage) 8%, var(--linha));
+  border-radius: 18px;
+  padding: 13px;
+  background: color-mix(in srgb, var(--paper) 97%, var(--sage-soft));
+}
+
+.ac-form-section-head {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ac-form-section-head strong {
+  color: var(--texto);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.ac-form-section-head span {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.ac-grid-responsive > *,
+.ac-field,
+.ac-money-input,
+.ac-field input,
+.ac-field select,
+.ac-field textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ac-field select {
+  text-overflow: ellipsis;
+}
+
+.ac-expense-form .ac-split {
+  padding: 13px;
+  background: color-mix(in srgb, var(--sage-soft) 42%, var(--paper));
+}
+
+.ac-expense-form .ac-split-head {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.ac-expense-form .ac-split-head > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ac-expense-form .ac-split-head > div > span {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.ac-expense-form .ac-split.is-manual {
+  background: color-mix(in srgb, var(--paper-2) 70%, var(--paper));
+}
+
+.ac-expense-form .ac-split.is-manual .ac-money-input > input:not([readonly]) {
+  background: var(--paper);
+}
+
+.ac-recurring-head {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.ac-recurring-head > div {
+  min-width: 0;
+}
+
+.ac-recurring-head strong {
+  display: block;
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.ac-recurring-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.ac-recurring-head button {
+  min-height: 34px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  padding: 0 11px;
+  color: var(--sage);
+  background: var(--sage-soft);
+  font-size: 9.5px;
+  font-weight: 760;
+}
+
+.ac-rule-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.ac-rule-list .ac-rule {
+  margin-top: 0;
+  border: 1px solid color-mix(in srgb, var(--sage) 8%, var(--linha));
+  background: color-mix(in srgb, var(--paper) 94%, var(--clay-soft));
+}
+
+.ac-rule-list .ac-rule.is-paused {
+  opacity: .68;
+  background: var(--paper-2);
+}
+
+.ac-rule-copy {
+  min-width: 0;
+}
+
+.ac-rule-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ac-rule-copy > span,
+.ac-rule-copy > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.ac-rule-copy > small {
+  margin-top: 2px;
+  color: color-mix(in srgb, var(--muted) 82%, transparent);
+}
+
+.ac-empty-compact {
+  padding-block: 14px;
+}
+
+@media (max-width: 520px) {
+  .ac-overlay {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      8px
+      max(8px, env(safe-area-inset-bottom));
+  }
+
+  .ac-sheet {
+    width: 100%;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    border-radius: 24px;
+    padding: 15px;
+  }
+
+  .ac-expense-form .ac-grid-responsive,
+  .ac-recurring-form .ac-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ac-expense-form .ac-split-head {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .ac-expense-form .ac-split-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ac-rule-line {
+    align-items: flex-start;
+  }
+
+  .ac-rule-line > button {
+    align-self: center;
+  }
+}
