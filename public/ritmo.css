@@ -1000,3 +1000,232 @@
     text-align: left;
   }
 }
+
+
+/* ================================================================
+   0.38 — plano diário único, macros e check-in compacto
+================================================================ */
+
+.ritmo-register-button {
+  min-height: 38px !important;
+  padding: 8px 15px !important;
+  border-radius: 14px !important;
+  background: var(--sage) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+}
+
+.ritmo-register-button:disabled {
+  color: rgba(255,255,255,.72) !important;
+  opacity: .62 !important;
+}
+
+.ritmo-now-section .ritmo-primary-checkin {
+  padding: 17px !important;
+}
+
+.ritmo-primary-checkin h3 {
+  max-width: 34rem;
+  margin-top: 5px !important;
+  font-size: 18px !important;
+  line-height: 1.28 !important;
+  overflow-wrap: anywhere;
+}
+
+.ritmo-now-macros {
+  margin: 7px 0 0 !important;
+  color: var(--sage) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.ritmo-checkin-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center;
+}
+
+.ritmo-btn.danger-text {
+  color: var(--alert) !important;
+  background: transparent !important;
+}
+
+.ritmo-daily-plan {
+  padding: 4px 15px !important;
+}
+
+.ritmo-plan-row {
+  width: 100%;
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 38px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 0;
+  border: 0;
+  border-bottom: 1px solid var(--linha);
+  background: transparent;
+  color: var(--texto);
+  text-align: left;
+}
+
+.ritmo-plan-row:last-child {
+  border-bottom: 0;
+}
+
+.ritmo-plan-row:disabled {
+  opacity: .58;
+}
+
+.ritmo-plan-row.is-checked .ritmo-row-icon {
+  color: #fff;
+  background: var(--sage);
+}
+
+.ritmo-plan-time {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.ritmo-plan-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ritmo-plan-copy strong {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ritmo-plan-copy > span {
+  min-width: 0;
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ritmo-plan-copy small {
+  color: var(--sage);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ritmo-plan-source {
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.ritmo-nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.ritmo-nutrition-grid .ritmo-stat {
+  min-width: 0;
+  min-height: 104px;
+  padding: 12px 10px !important;
+}
+
+.ritmo-nutrition-grid .ritmo-stat-label {
+  font-size: 9px !important;
+}
+
+.ritmo-nutrition-grid .ritmo-stat-value {
+  margin-top: 7px;
+  font-size: 19px !important;
+  white-space: nowrap;
+}
+
+.ritmo-nutrition-grid .ritmo-stat-value span {
+  font-size: 8px !important;
+  color: var(--muted);
+}
+
+.ritmo-nutrition-grid .ritmo-stat-meta {
+  margin-top: 7px;
+  font-size: 8.5px !important;
+}
+
+.ritmo-nutrition-grid .ritmo-progress {
+  height: 5px !important;
+  margin-top: 9px !important;
+  background: var(--paper-2) !important;
+}
+
+.ritmo-nutrition-grid .ritmo-progress > span {
+  background: var(--sage) !important;
+}
+
+.ritmo-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+.ritmo-form-grid-3 .ritmo-field label {
+  min-height: 27px;
+  font-size: 9px !important;
+  line-height: 1.25;
+}
+
+.ritmo-form-grid-3 .ritmo-field input {
+  padding-inline: 9px !important;
+}
+
+.ritmo-planned-summary em {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.ritmo-planned-summary small {
+  max-width: 145px;
+  line-height: 1.4;
+}
+
+.ritmo-plan-explainer {
+  margin-bottom: 9px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+
+.ritmo-option-macros {
+  display: block;
+  margin-top: 5px;
+  color: var(--sage);
+  font-size: 9.5px;
+  font-weight: 750;
+}
+
+@media (max-width: 390px) {
+  .ritmo-plan-row {
+    grid-template-columns: 34px 32px minmax(0, 1fr);
+  }
+
+  .ritmo-plan-source {
+    display: none;
+  }
+
+  .ritmo-nutrition-grid .ritmo-stat-value {
+    font-size: 17px !important;
+  }
+
+  .ritmo-checkin-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
