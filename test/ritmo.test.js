@@ -60,3 +60,39 @@ test('biblioteca inicial usa a estrutura de refeições já existente', () => {
   assert.match(sql, /insert into public\.refeicao_ingredientes/);
   assert.match(sql, /gov\.br\/saude/);
 });
+
+test('Cardápio sugere a semana usando receitas e estoque sem salvar automaticamente', () => {
+  const app = ler('public/app.js');
+  const html = ler('public/index.html');
+  assert.match(html, /id="btnSugerirPlan"/);
+  assert.match(app, /async function sugerirPlanejamentoSemana/);
+  assert.match(app, /refeicao_ingredientes/);
+  assert.match(app, /from\('estoque'\)/);
+  assert.match(app, /renderizarSlotsCardapio\(\)/);
+});
+
+test('Lista de compras separa ciclo semanal e mensal na mesma estrutura', () => {
+  const sql = ler('db/043_lista_compras_ciclo.sql');
+  const app = ler('public/app.js');
+  const html = ler('public/index.html');
+  assert.match(sql, /ciclo_compra/);
+  assert.match(sql, /'semanal','mensal'/);
+  assert.match(html, /id="novoItemCiclo"/);
+  assert.match(html, /id="elCicloCompra"/);
+  assert.match(app, /Compra semanal/);
+  assert.match(app, /Compra do mês/);
+});
+
+test('Treinos do Ritmo podem editar exercícios sem alterar código', () => {
+  const js = ler('public/ritmo.js');
+  assert.match(js, /Editar exercícios/);
+  assert.match(js, /abrirEditorItensPlano/);
+  assert.match(js, /ritmo_plano_itens/);
+  assert.match(js, /data-remover-item-plano/);
+});
+
+test('Foto só conclui registro visual com frente, lado e costas', () => {
+  const js = ler('public/ritmo.js');
+  assert.match(js, /\['frente','lado','costas'\]\.every/);
+  assert.match(js, /registro completo/);
+});
