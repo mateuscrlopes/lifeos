@@ -70,13 +70,15 @@
       const rankedGroups = groups.map((group, groupIndex) => {
         const cards = [...group.querySelectorAll(':scope > .planta-card')];
         const rankedCards = cards.map((card, index) => ({ card, index, priority: prioridadePlanta(card) })).sort(compararPrioridade);
-        rankedCards.forEach(({ card }) => group.appendChild(card));
+        const cardsChanged = rankedCards.some(({ card }, index) => cards[index] !== card);
+        if (cardsChanged) rankedCards.forEach(({ card }) => group.appendChild(card));
         const best = rankedCards[0]?.priority || { rank: 9, distance: 9999, label: 'sem-itens' };
         group.dataset.phase4Priority = best.label;
         return { group, index: groupIndex, priority: best };
       }).sort(compararPrioridade);
 
-      rankedGroups.forEach(({ group }) => list.appendChild(group));
+      const groupsChanged = rankedGroups.some(({ group }, index) => groups[index] !== group);
+      if (groupsChanged) rankedGroups.forEach(({ group }) => list.appendChild(group));
     } finally {
       sortingPlants = false;
     }
@@ -177,6 +179,7 @@
   }
 
   function enhanceExercises(root = document) {
+    if (root instanceof Element && root.matches('#secaoRitmo .ritmo-exercise')) enrichExercise(root);
     root.querySelectorAll?.('#secaoRitmo .ritmo-exercise').forEach(enrichExercise);
   }
 
