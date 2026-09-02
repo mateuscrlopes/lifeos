@@ -36,7 +36,8 @@
   ];
 
   const LABELS = { cafe:'Café da manhã', lanche_manha:'Lanche da manhã', almoco:'Almoço', lanche_tarde:'Lanche da tarde', jantar:'Jantar' };
-  const state = { ctx:null, tipo:null, planned:null, recipes:[], suggestion:null, items:[], open:false, loading:false };
+  const state = { ctx:null, tipo:null, planned:null, recipes:[], suggestion:null, items:[], consumos:[], loading:false };
+  let started=false;
 
   const norm = (v='') => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   const esc = (v='') => String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
@@ -63,22 +64,28 @@
     return {kcal:acc.kcal/porcoes,p:acc.p/porcoes,c:acc.c/porcoes,estimated:true,hit:acc.hit};
   }
 
+  function dayTotals(){
+    return state.consumos.reduce((a,x)=>{a.kcal+=Number(x.calorias||0);a.p+=Number(x.proteina_g||0);a.c+=Number(x.carboidratos_g||0);return a;},{kcal:0,p:0,c:0});
+  }
+
   async function load(){
     const ctx=window.lifeosContext; if(!ctx?.supa||!ctx?.usuario)return;
-    state.ctx=ctx; state.tipo=currentMeal(); state.loading=true;
+    state.ctx=ctx; state.tipo=currentMeal(); state.loading=true; render();
     const semana=monday(); const dia=weekday(); const responsavel=userKey();
-    const [plans,recipes]=await Promise.all([
+    const [plans,recipes,consumos]=await Promise.all([
       ctx.supa.from('planejamento_semana').select('id,responsavel,planejamento_dias(id,dia_semana,tipo,refeicao_id,refeicao_nome,calorias,proteina_g,carboidratos_g,refeicoes(id,nome,calorias_por_porcao,proteina_por_porcao,carboidratos_por_porcao))').eq('casa_id',ctx.usuario.casa_id).eq('semana_inicio',semana),
-      ctx.supa.from('refeicoes').select('id,nome,tipo,porcoes,calorias_por_porcao,proteina_por_porcao,carboidratos_por_porcao,refeicao_ingredientes(nome,quantidade,unidade)').eq('casa_id',ctx.usuario.casa_id).order('nome')
+      ctx.supa.from('refeicoes').select('id,nome,tipo,porcoes,calorias_por_porcao,proteina_por_porcao,carboidratos_por_porcao,refeicao_ingredientes(nome,quantidade,unidade)').eq('casa_id',ctx.usuario.casa_id).order('nome'),
+      ctx.supa.from('ritmo_consumos').select('id,refeicao,descricao,calorias,proteina_g,carboidratos_g,referencia_chave').eq('usuario_id',ctx.usuario.id).eq('data',isoLocal()).order('criado_em')
     ]);
-    state.recipes=recipes.data||[];
+    state.recipes=recipes.data||[]; state.consumos=consumos.data||[];
     const targetType=state.tipo==='jantar'?'janta':state.tipo;
     const p=(plans.data||[]).sort((a,b)=>{ const score=x=>x.responsavel===responsavel?0:x.responsavel==='ambos'?1:2; return score(a)-score(b); }).find(x=>(x.planejamento_dias||[]).some(d=>d.dia_semana===dia && (d.tipo===targetType || d.tipo===state.tipo)));
     const row=p?.planejamento_dias?.find(d=>d.dia_semana===dia&&(d.tipo===targetType||d.tipo===state.tipo));
     state.planned=row?{...row,planId:p.id,responsavel:p.responsavel}:null;
     const candidates=state.recipes.filter(r=>['almoco','janta','jantar'].includes(targetType)?['almoco','janta','jantar'].includes(r.tipo):r.tipo===targetType);
-    const index=(dia + (state.tipo==='jantar'?3:0)) % Math.max(1,candidates.length);
-    state.suggestion=candidates[index]||state.recipes[index]||null;
+    const usable=candidates.filter(r=>recipeMacros(r).kcal>0);
+    const index=(dia + (state.tipo==='jantar'?3:0)) % Math.max(1,usable.length);
+    state.suggestion=usable[index]||state.recipes.find(r=>recipeMacros(r).kcal>0)||null;
     state.loading=false; render();
   }
 
@@ -88,100 +95,103 @@
   }
 
   function summaryCard(){
-    const planned=state.planned; const suggested=state.suggestion; const recipeMacro=suggested?recipeMacros(suggested):null;
+    const planned=state.planned,suggested=state.suggestion,recipeMacro=suggested?recipeMacros(suggested):null;
     const title=planned?.refeicoes?.nome||planned?.refeicao_nome||suggested?.nome||'Monte sua refeição';
-    const m=planned?plannedMacros():recipeMacro;
+    const m=planned?plannedMacros():recipeMacro; const totals=dayTotals();
     return `<section class="foodv2-card ${planned?'is-planned':'is-suggestion'}">
       <div class="foodv2-kicker">${planned?'Planejado para agora':'Sugestão para agora'}</div>
-      <div class="foodv2-head"><div><h3>${esc(title)}</h3>${m?`<p>${macroText(m)}</p>`:''}</div><span class="foodv2-pill">${esc(LABELS[state.tipo]||'Refeição')}</span></div>
+      <div class="foodv2-head"><div><h3>${esc(title)}</h3>${m&&m.kcal?`<p>${macroText(m)}</p>`:''}</div><span class="foodv2-pill">${esc(LABELS[state.tipo]||'Refeição')}</span></div>
       <div class="foodv2-actions">
-        ${!planned&&suggested?'<button class="foodv2-primary" data-foodv2-accept>Aceitar sugestão</button>':''}
+        ${!planned&&suggested?'<button class="foodv2-primary" data-foodv2-accept>Aceitar e registrar</button>':''}
         <button class="foodv2-secondary" data-foodv2-change>${planned?'Trocar refeição':'Escolher outra'}</button>
-        <button class="foodv2-secondary" data-foodv2-build>Montar refeição</button>
+        <button class="foodv2-secondary" data-foodv2-build>Montar pelos ingredientes</button>
       </div>
-      <p class="foodv2-note">Ao confirmar, o Ritmo registra os macros e atualiza o Cardápio da semana automaticamente.</p>
+      <p class="foodv2-note">Você escolhe o que comeu; o LifeOS calcula os macros e atualiza o Cardápio da semana.</p>
+    </section>
+    <section class="foodv2-day-summary">
+      <div><span>Hoje</span><strong>${Math.round(totals.kcal)} kcal</strong></div>
+      <div><span>Proteína</span><strong>${Math.round(totals.p)} g</strong></div>
+      <div><span>Carboidrato</span><strong>${Math.round(totals.c)} g</strong></div>
     </section>`;
+  }
+
+  function hideLegacyFood(){
+    const view=document.querySelector('#secaoRitmo .ritmo-view'); if(!view)return;
+    view.querySelector('.ritmo-now-section')?.classList.add('foodv2-old-hidden');
+    view.querySelector('.ritmo-plano-hoje-section')?.classList.add('foodv2-old-hidden');
+    [...view.querySelectorAll(':scope > .ritmo-section')].forEach(section=>{
+      const heading=norm(section.querySelector('.ritmo-section-head h3')?.textContent||'');
+      if(heading==='alimentacao de hoje')section.classList.add('foodv2-old-hidden');
+    });
   }
 
   function mount(){
     const view=document.querySelector('#secaoRitmo .ritmo-view'); if(!view)return null;
     const active=document.querySelector('#secaoRitmo .ritmo-tab.is-active')?.dataset?.ritmoTab;
     if(active&&active!=='hoje'){ document.getElementById('foodV2Root')?.remove(); return null; }
-    let root=document.getElementById('foodV2Root');
-    if(!root){ root=document.createElement('div'); root.id='foodV2Root'; view.prepend(root); }
-    return root;
+    let root=document.getElementById('foodV2Root'); if(!root){root=document.createElement('div');root.id='foodV2Root';view.prepend(root);} return root;
   }
 
   function render(){
-    const root=mount(); if(!root)return;
-    root.innerHTML=state.loading?'<div class="foodv2-card"><div class="foodv2-skeleton"></div></div>':summaryCard();
-    const old=document.querySelector('#secaoRitmo .ritmo-now-section'); if(old)old.classList.add('foodv2-old-hidden');
+    const root=mount(); if(!root)return; root.innerHTML=state.loading?'<div class="foodv2-card"><div class="foodv2-skeleton"></div></div>':summaryCard(); hideLegacyFood();
   }
 
   function dialog(){
     let d=document.getElementById('foodV2Dialog'); if(d)return d;
     d=document.createElement('div'); d.id='foodV2Dialog'; d.className='foodv2-overlay'; d.innerHTML='<div class="foodv2-sheet" role="dialog" aria-modal="true"><div class="foodv2-sheet-head"><div><strong id="foodV2Title">Escolher refeição</strong><span id="foodV2Subtitle"></span></div><button type="button" data-foodv2-close aria-label="Fechar">×</button></div><div id="foodV2Body" class="foodv2-body"></div></div>'; document.body.appendChild(d); return d;
   }
-  function close(){ const d=document.getElementById('foodV2Dialog'); if(d)d.classList.remove('is-open'); state.open=false; }
+  function close(){document.getElementById('foodV2Dialog')?.classList.remove('is-open');}
   function openChooser(){
-    const d=dialog(),body=d.querySelector('#foodV2Body'); d.querySelector('#foodV2Title').textContent='Escolher refeição'; d.querySelector('#foodV2Subtitle').textContent='Do que já existe na Casa';
+    const d=dialog(),body=d.querySelector('#foodV2Body'); d.querySelector('#foodV2Title').textContent='Escolher refeição'; d.querySelector('#foodV2Subtitle').textContent='Refeições já salvas na Casa';
     const recipes=state.recipes.map(r=>({r,m:recipeMacros(r)})).filter(x=>x.m.kcal>0).sort((a,b)=>a.r.nome.localeCompare(b.r.nome,'pt-BR'));
-    body.innerHTML=`<div class="foodv2-search"><input id="foodV2Search" type="search" placeholder="Buscar refeição salva"></div><div class="foodv2-recipe-list" id="foodV2RecipeList">${recipes.map(({r,m})=>`<button type="button" class="foodv2-recipe" data-foodv2-recipe="${r.id}"><span><strong>${esc(r.nome)}</strong><small>${macroText(m)}${m.estimated?' · estimado':''}</small></span><span>Escolher</span></button>`).join('')}</div><button type="button" class="foodv2-build-link" data-foodv2-build>Não foi isso? Montar pelos ingredientes</button>`;
-    d.classList.add('is-open'); state.open=true;
+    body.innerHTML=`<div class="foodv2-search"><input id="foodV2Search" type="search" placeholder="Buscar refeição salva"></div><div class="foodv2-recipe-list" id="foodV2RecipeList">${recipes.map(({r,m})=>`<button type="button" class="foodv2-recipe" data-foodv2-recipe="${r.id}"><span><strong>${esc(r.nome)}</strong><small>${macroText(m)}${m.estimated?' · estimado':''}</small></span><span>Escolher</span></button>`).join('')}</div><button type="button" class="foodv2-build-link" data-foodv2-build>Não está na lista? Montar pelos ingredientes</button>`; d.classList.add('is-open');
   }
 
-  function itemRow(row,index){ const f=FOOD.find(x=>x.id===row.id); return `<div class="foodv2-selected" data-foodv2-row="${index}"><span>${esc(f?.nome||row.id)}</span><label><input type="number" min="1" max="1000" step="5" value="${Number(row.g||f?.porcao||100)}" data-foodv2-grams="${index}"> g</label><button type="button" data-foodv2-remove="${index}" aria-label="Remover">×</button></div>`; }
+  function itemRow(row,index){const f=FOOD.find(x=>x.id===row.id);return `<div class="foodv2-selected" data-foodv2-row="${index}"><span>${esc(f?.nome||row.id)}</span><label><input type="number" min="1" max="1000" step="5" value="${Number(row.g||f?.porcao||100)}" data-foodv2-grams="${index}"> g</label><button type="button" data-foodv2-remove="${index}" aria-label="Remover">×</button></div>`;}
   function renderBuilder(){
-    const d=dialog(),body=d.querySelector('#foodV2Body'); d.querySelector('#foodV2Title').textContent='Montar refeição'; d.querySelector('#foodV2Subtitle').textContent='Escolha os alimentos e ajuste a quantidade';
+    const d=dialog(),body=d.querySelector('#foodV2Body'); d.querySelector('#foodV2Title').textContent='Montar refeição'; d.querySelector('#foodV2Subtitle').textContent='Selecione os alimentos e ajuste a porção';
     const group=(id,title)=>`<div class="foodv2-group"><strong>${title}</strong><div class="foodv2-chips">${FOOD.filter(f=>f.grupo===id).map(f=>`<button type="button" data-foodv2-add="${f.id}">${esc(f.nome)}</button>`).join('')}</div></div>`;
-    const m=macros(); body.innerHTML=`<div class="foodv2-macro-live"><strong>${Math.round(m.kcal)} kcal</strong><span>${Math.round(m.p)} g proteína</span><span>${Math.round(m.c)} g carb.</span></div>${group('proteina','1. Proteína')}${group('carbo','2. Carboidrato')}${group('vegetal','3. Legumes e salada')}${group('extra','4. Extras')}<div class="foodv2-selected-list">${state.items.length?state.items.map(itemRow).join(''):'<p>Selecione os alimentos acima. Você pode combinar quantos quiser.</p>'}</div><label class="foodv2-name"><span>Nome da refeição (opcional)</span><input id="foodV2CustomName" placeholder="Ex.: frango cremoso com arroz e salada"></label><button type="button" class="foodv2-primary foodv2-save" data-foodv2-save-builder ${state.items.length?'':'disabled'}>Usar esta refeição</button>`;
-    d.classList.add('is-open'); state.open=true;
+    const m=macros(); body.innerHTML=`<div class="foodv2-macro-live"><strong>${Math.round(m.kcal)} kcal</strong><span>${Math.round(m.p)} g proteína</span><span>${Math.round(m.c)} g carb.</span></div>${group('proteina','1. Proteína')}${group('carbo','2. Carboidrato')}${group('vegetal','3. Legumes e salada')}${group('extra','4. Extras')}<div class="foodv2-selected-list">${state.items.length?state.items.map(itemRow).join(''):'<p>Toque nos alimentos acima. Você pode combinar quantos quiser.</p>'}</div><label class="foodv2-name"><span>Como quer chamar esta refeição? (opcional)</span><input id="foodV2CustomName" placeholder="Ex.: frango cremoso, arroz e salada"></label><button type="button" class="foodv2-primary foodv2-save" data-foodv2-save-builder ${state.items.length?'':'disabled'}>Registrar esta refeição</button>`; d.classList.add('is-open');
   }
 
   async function ensureWeekPlan(){
-    const {supa,usuario}=state.ctx; const resp=userKey(); const semana=monday();
-    const {data}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',semana).eq('responsavel',resp).maybeSingle();
-    if(data?.id)return data.id;
-    const ins=await supa.from('planejamento_semana').insert({casa_id:usuario.casa_id,semana_inicio:semana,responsavel:resp,criado_por:usuario.id}).select('id').single();
-    if(ins.error)throw ins.error; return ins.data.id;
+    const {supa,usuario}=state.ctx,resp=userKey(),semana=monday();
+    const {data,error}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',semana).eq('responsavel',resp).maybeSingle(); if(error)throw error; if(data?.id)return data.id;
+    const ins=await supa.from('planejamento_semana').insert({casa_id:usuario.casa_id,semana_inicio:semana,responsavel:resp,criado_por:usuario.id}).select('id').single(); if(ins.error)throw ins.error; return ins.data.id;
   }
 
-  async function saveMeal({name,recipeId=null,kcal=0,p=0,c=0,source='manual',description=null}){
-    const {supa,usuario}=state.ctx; const planId=await ensureWeekPlan(); const dia=weekday(); const tipo=state.tipo==='jantar'?'janta':state.tipo;
+  async function saveMeal({name,recipeId=null,kcal=0,p=0,c=0,source='manual'}){
+    const {supa,usuario}=state.ctx,planId=await ensureWeekPlan(),dia=weekday(),tipo=state.tipo==='jantar'?'janta':state.tipo;
     const payload={planejamento_id:planId,dia_semana:dia,tipo,refeicao_id:recipeId,refeicao_nome:name,calorias:Math.round(kcal),proteina_g:Number(p.toFixed(1)),carboidratos_g:Number(c.toFixed(1))};
-    const existing=await supa.from('planejamento_dias').select('id').eq('planejamento_id',planId).eq('dia_semana',dia).eq('tipo',tipo).maybeSingle();
-    let dayId=existing.data?.id;
-    if(dayId){ const u=await supa.from('planejamento_dias').update(payload).eq('id',dayId); if(u.error)throw u.error; }
-    else { const i=await supa.from('planejamento_dias').insert(payload).select('id').single(); if(i.error)throw i.error; dayId=i.data.id; }
-    const refeicao=state.tipo; const ref=`foodv2:${isoLocal()}:${refeicao}`;
-    const prior=await supa.from('ritmo_consumos').select('id').eq('usuario_id',usuario.id).eq('data',isoLocal()).eq('referencia_chave',ref).maybeSingle();
-    const consumo={usuario_id:usuario.id,data:isoLocal(),refeicao,descricao:description||name,calorias:Math.round(kcal),proteina_g:Number(p.toFixed(1)),carboidratos_g:Number(c.toFixed(1)),fonte:source==='recipe'?'receita':'manual',planejamento_dia_id:dayId,referencia_chave:ref};
-    if(prior.data?.id){ const u=await supa.from('ritmo_consumos').update(consumo).eq('id',prior.data.id); if(u.error)throw u.error; }
-    else { const i=await supa.from('ritmo_consumos').insert(consumo); if(i.error)throw i.error; }
-    close(); await load(); window.dispatchEvent(new CustomEvent('lifeos:food-updated',{detail:{tipo:refeicao}}));
+    const existing=await supa.from('planejamento_dias').select('id').eq('planejamento_id',planId).eq('dia_semana',dia).eq('tipo',tipo).maybeSingle(); if(existing.error)throw existing.error;
+    let dayId=existing.data?.id; if(dayId){const u=await supa.from('planejamento_dias').update(payload).eq('id',dayId);if(u.error)throw u.error;}else{const i=await supa.from('planejamento_dias').insert(payload).select('id').single();if(i.error)throw i.error;dayId=i.data.id;}
+    const refeicao=state.tipo,ref=`foodv2:${isoLocal()}:${refeicao}`;
+    const prior=await supa.from('ritmo_consumos').select('id').eq('usuario_id',usuario.id).eq('data',isoLocal()).eq('referencia_chave',ref).maybeSingle(); if(prior.error)throw prior.error;
+    const consumo={usuario_id:usuario.id,data:isoLocal(),refeicao,descricao:name,calorias:Math.round(kcal),proteina_g:Number(p.toFixed(1)),carboidratos_g:Number(c.toFixed(1)),fonte:source==='recipe'?'receita':'manual',planejamento_dia_id:dayId,referencia_chave:ref};
+    if(prior.data?.id){const u=await supa.from('ritmo_consumos').update(consumo).eq('id',prior.data.id);if(u.error)throw u.error;}else{const i=await supa.from('ritmo_consumos').insert(consumo);if(i.error)throw i.error;}
+    close(); await load(); window.dispatchEvent(new CustomEvent('lifeos:food-updated',{detail:{tipo:refeicao,planejamentoDiaId:dayId}}));
   }
 
-  async function acceptRecipe(r){ const m=recipeMacros(r); await saveMeal({name:r.nome,recipeId:r.id,kcal:m.kcal,p:m.p,c:m.c,source:'recipe'}); }
+  async function acceptRecipe(r){const m=recipeMacros(r);await saveMeal({name:r.nome,recipeId:r.id,kcal:m.kcal,p:m.p,c:m.c,source:'recipe'});}
 
   document.addEventListener('click',async e=>{
     const t=e.target;
     if(t.closest('[data-foodv2-close]'))return close();
     if(t.closest('[data-foodv2-change]'))return openChooser();
-    if(t.closest('[data-foodv2-build]')){ state.items=[]; return renderBuilder(); }
+    if(t.closest('[data-foodv2-build]')){state.items=[];return renderBuilder();}
     if(t.closest('[data-foodv2-accept]')&&state.suggestion)return acceptRecipe(state.suggestion).catch(console.error);
-    const recipeBtn=t.closest('[data-foodv2-recipe]'); if(recipeBtn){ const r=state.recipes.find(x=>x.id===recipeBtn.dataset.foodv2Recipe); if(r)return acceptRecipe(r).catch(console.error); }
-    const add=t.closest('[data-foodv2-add]'); if(add){ const f=FOOD.find(x=>x.id===add.dataset.foodv2Add); if(f){ const ex=state.items.find(x=>x.id===f.id); ex?ex.g+=f.porcao:state.items.push({id:f.id,g:f.porcao}); renderBuilder(); } return; }
-    const rem=t.closest('[data-foodv2-remove]'); if(rem){ state.items.splice(Number(rem.dataset.foodv2Remove),1); return renderBuilder(); }
-    if(t.closest('[data-foodv2-save-builder]')){ const m=macros(); const names=state.items.map(x=>FOOD.find(f=>f.id===x.id)?.nome).filter(Boolean); const custom=document.getElementById('foodV2CustomName')?.value.trim(); const name=custom||names.join(' + '); return saveMeal({name,kcal:m.kcal,p:m.p,c:m.c,source:'manual',description:name}).catch(console.error); }
+    const recipeBtn=t.closest('[data-foodv2-recipe]');if(recipeBtn){const r=state.recipes.find(x=>x.id===recipeBtn.dataset.foodv2Recipe);if(r)return acceptRecipe(r).catch(console.error);}
+    const add=t.closest('[data-foodv2-add]');if(add){const f=FOOD.find(x=>x.id===add.dataset.foodv2Add);if(f){const ex=state.items.find(x=>x.id===f.id);ex?ex.g+=f.porcao:state.items.push({id:f.id,g:f.porcao});renderBuilder();}return;}
+    const rem=t.closest('[data-foodv2-remove]');if(rem){state.items.splice(Number(rem.dataset.foodv2Remove),1);return renderBuilder();}
+    if(t.closest('[data-foodv2-save-builder]')){const m=macros(),names=state.items.map(x=>FOOD.find(f=>f.id===x.id)?.nome).filter(Boolean),custom=document.getElementById('foodV2CustomName')?.value.trim(),name=custom||names.join(' + ');return saveMeal({name,kcal:m.kcal,p:m.p,c:m.c}).catch(console.error);}
   });
 
   document.addEventListener('input',e=>{
-    if(e.target.id==='foodV2Search'){ const q=norm(e.target.value); document.querySelectorAll('#foodV2RecipeList .foodv2-recipe').forEach(b=>b.hidden=q&&!norm(b.textContent).includes(q)); }
-    if(e.target.matches('[data-foodv2-grams]')){ const idx=Number(e.target.dataset.foodv2Grams); if(state.items[idx])state.items[idx].g=Math.max(0,Number(e.target.value||0)); const m=macros(); const live=document.querySelector('.foodv2-macro-live'); if(live)live.innerHTML=`<strong>${Math.round(m.kcal)} kcal</strong><span>${Math.round(m.p)} g proteína</span><span>${Math.round(m.c)} g carb.</span>`; }
+    if(e.target.id==='foodV2Search'){const q=norm(e.target.value);document.querySelectorAll('#foodV2RecipeList .foodv2-recipe').forEach(b=>b.hidden=q&&!norm(b.textContent).includes(q));}
+    if(e.target.matches('[data-foodv2-grams]')){const idx=Number(e.target.dataset.foodv2Grams);if(state.items[idx])state.items[idx].g=Math.max(0,Number(e.target.value||0));const m=macros(),live=document.querySelector('.foodv2-macro-live');if(live)live.innerHTML=`<strong>${Math.round(m.kcal)} kcal</strong><span>${Math.round(m.p)} g proteína</span><span>${Math.round(m.c)} g carb.</span>`;}
   });
 
-  const observer=new MutationObserver(()=>{ if(document.querySelector('#secaoRitmo .ritmo-view')&&!document.getElementById('foodV2Root')) load(); });
-  function start(){ const link=document.createElement('link'); link.rel='stylesheet'; link.href='/ritmo-food-v2.css?v=1'; link.id='ritmo-food-v2-css'; if(!document.getElementById(link.id))document.head.appendChild(link); observer.observe(document.body,{childList:true,subtree:true}); load(); }
-  window.addEventListener('lifeos:ready',()=>setTimeout(start,120),{once:true});
-  if(window.lifeosContext)setTimeout(start,50);
+  const observer=new MutationObserver(()=>{if(document.querySelector('#secaoRitmo .ritmo-view')){hideLegacyFood();if(!document.getElementById('foodV2Root'))load();}});
+  function start(){if(started)return;started=true;const link=document.createElement('link');link.rel='stylesheet';link.href='/ritmo-food-v2.css?v=1';link.id='ritmo-food-v2-css';if(!document.getElementById(link.id))document.head.appendChild(link);observer.observe(document.body,{childList:true,subtree:true});load();}
+  window.addEventListener('lifeos:ready',()=>setTimeout(start,120),{once:true}); if(window.lifeosContext)setTimeout(start,50);
 })();
