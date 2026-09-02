@@ -636,9 +636,8 @@ const HISTORY_MODULES = [
 
 function historyName(item) {
   const data = item.dados || {};
-  if (data._ui_archive === 'acerto_regra') {
-    result = await client.rpc('restaurar_regra_acerto', { p_regra_id: item.registro_id });
-  } else if (data._ui_bundle === 'planta') {
+  if (data._ui_archive === 'acerto_regra') return data.titulo || 'Recorrência';
+  if (data._ui_bundle === 'planta') {
     const p = data.planta || {};
     return p.nome_personalizado || p.especies?.nome_popular || p.codigo || 'Planta';
   }
@@ -795,6 +794,12 @@ async function restoreHistoryItem(item) {
   const { client, profile } = await getContext();
   const data = item.dados || {};
   let result = { error: null };
+
+  if (data._ui_archive === 'acerto_regra') {
+    result = await client.rpc('restaurar_regra_acerto', { p_regra_id: item.registro_id });
+    if (result?.error) throw new Error(result.error.message);
+    return;
+  }
 
   if (data._ui_bundle === 'planta') {
     const plant = data.planta || {};
