@@ -7,6 +7,7 @@ import { registrarRotasFinanceiroEmail } from './financeiro-email.js';
 import { registrarRotasGumate } from './gumate/index.js';
 import { registrarRotasAcertos } from './acertos.js';
 import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
+import { registrarRotasRitmo } from './ritmo.js';
 import { buscarClima } from './clima.js';
 
 const app = express();
@@ -55,6 +56,9 @@ registrarRotasAcertos(app);
 
 // Ponte financeira com o Nordestrip.
 registrarRotasIntegracaoNordestrip(app);
+
+// Modulo pessoal Ritmo: importacao de planos e recursos privados.
+registrarRotasRitmo(app);
 
 // Rotas do assistente de voz da Casa.
 registrarRotasGumate(app);
