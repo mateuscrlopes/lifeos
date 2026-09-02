@@ -619,6 +619,7 @@ const HISTORY_MODULES = [
   ['estoque', 'Estoque'],
   ['tarefas', 'Tarefas'],
   ['contas', 'Contas'],
+  ['acerto_regras', 'Recorrências'],
   ['refeicoes', 'Cardápio'],
   ['projetos', 'Projetos'],
   ['rituais', 'Rituais'],
@@ -627,7 +628,9 @@ const HISTORY_MODULES = [
 
 function historyName(item) {
   const data = item.dados || {};
-  if (data._ui_bundle === 'planta') {
+  if (data._ui_archive === 'acerto_regra') {
+    result = await client.rpc('restaurar_regra_acerto', { p_regra_id: item.registro_id });
+  } else if (data._ui_bundle === 'planta') {
     const p = data.planta || {};
     return p.nome_personalizado || p.especies?.nome_popular || p.codigo || 'Planta';
   }
@@ -676,14 +679,40 @@ async function loadHistory() {
   list.innerHTML = '<div class="vazio">Carregando histórico...</div>';
   try {
     const { client, profile } = await getContext();
-    const { data, error } = await client
-      .from('historico_excluidos')
-      .select('id,modulo,registro_id,dados,excluido_em,restaurado_em,restaurado_por')
-      .eq('casa_id', profile.casa_id)
-      .order('excluido_em', { ascending: false })
-      .limit(300);
-    if (error) throw error;
-    historyCache = data || [];
+    const [deletedResult, archivedRulesResult] = await Promise.all([
+      client
+        .from('historico_excluidos')
+        .select('id,modulo,registro_id,dados,excluido_em,restaurado_em,restaurado_por')
+        .eq('casa_id', profile.casa_id)
+        .order('excluido_em', { ascending: false })
+        .limit(300),
+      client
+        .from('acerto_regras')
+        .select('id,titulo,arquivado_em,ativo_antes_arquivar')
+        .eq('casa_id', profile.casa_id)
+        .not('arquivado_em', 'is', null)
+        .order('arquivado_em', { ascending: false }),
+    ]);
+    if (deletedResult.error) throw deletedResult.error;
+
+    const archivedRules = archivedRulesResult.error
+      ? []
+      : (archivedRulesResult.data || []).map(rule => ({
+          id: `acerto-regra:${rule.id}`,
+          modulo: 'acerto_regras',
+          registro_id: rule.id,
+          dados: {
+            titulo: rule.titulo,
+            _ui_archive: 'acerto_regra',
+            ativo_antes_arquivar: rule.ativo_antes_arquivar,
+          },
+          excluido_em: rule.arquivado_em,
+          restaurado_em: null,
+          restaurado_por: null,
+        }));
+
+    historyCache = [...(deletedResult.data || []), ...archivedRules]
+      .sort((a, b) => String(b.excluido_em || '').localeCompare(String(a.excluido_em || '')));
     renderHistory();
   } catch (error) {
     list.innerHTML = `<div class="ui-history-error"><strong>O Histórico não pôde ser carregado.</strong><br>${escapeHtml(error.message || 'Verifique se a migração 017 foi aplicada no Supabase.')}</div>`;
@@ -706,13 +735,14 @@ function renderHistory() {
     wrapper.className = 'ui-history-item';
     const date = item.excluido_em ? new Date(item.excluido_em) : null;
     const restoredDate = item.restaurado_em ? new Date(item.restaurado_em) : null;
+    const archived = item.dados?._ui_archive === 'acerto_regra';
     wrapper.innerHTML = `
       <div class="ui-history-top">
         <div>
           <div class="ui-history-name">${escapeHtml(historyName(item))}</div>
           <div class="ui-history-meta">
             ${escapeHtml(moduleLabel(item.modulo))}
-            ${date ? ` · excluído em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+            ${date ? ` · ${archived ? 'arquivada' : 'excluído'} em ${date.toLocaleDateString('pt-BR')} às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
           </div>
         </div>
         ${item.restaurado_em
