@@ -42,7 +42,7 @@ test('check-ins permitem registro contextual e retroativo no mesmo dia', () => {
   const js = ler('public/ritmo.js');
   assert.match(js, /Ver dia completo/);
   assert.match(js, /Feito conforme planejado/);
-  assert.match(js, /Fiz com ajustes/);
+  assert.match(js, /Comi, mas fiz ajustes/);
   assert.match(js, /Não fiz/);
 });
 
@@ -105,6 +105,28 @@ test('Déficit pode ser acompanhado sem obrigar microregistro de ingredientes', 
   assert.match(js, /Registrar alimentação/);
   assert.match(js, /ritmo_consumos/);
   assert.match(js, /meta registrada/);
+});
+
+test('check-in do cardápio herda calorias planejadas sem duplicar consumo', () => {
+  const sql = ler('db/045_cardapio_calorias_checkin.sql');
+  const lanche = ler('db/046_ritmo_checkin_lanche.sql');
+  const js = ler('public/ritmo.js');
+  const app = ler('public/app.js');
+  const html = ler('public/index.html');
+
+  assert.match(sql, /calorias_por_porcao/);
+  assert.match(sql, /planejamento_dia_id/);
+  assert.match(sql, /ritmo_consumos_plano_unico_idx/);
+  assert.match(lanche, /'lanche'/);
+  assert.match(js, /sincronizarConsumoPlanejado/);
+  assert.match(js, /planejamento_dia_id/);
+  assert.match(js, /Comi o que estava planejado/);
+  assert.match(js, /calorias: item\.calorias/);
+  assert.match(app, /calorias_por_porcao/);
+  assert.match(app, /slotsCafe/);
+  assert.match(app, /slotsLanche/);
+  assert.match(html, /id="refKcal"/);
+  assert.match(html, /id="modalRefKcal"/);
 });
 
 test('navegação pessoal volta para a origem real e Hoje é a única home', () => {
