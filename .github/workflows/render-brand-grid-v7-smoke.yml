@@ -1,0 +1,33 @@
+name: Render brand grid v7 smoke
+
+on:
+  push:
+    branches:
+      - "ops/render-brand-grid-v7-smoke"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for LifeOS 0.35.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            health="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/saude || true)"
+            index="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/ || true)"
+            tablet="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet.html || true)"
+            mobile_css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/product-polish-v4.css || true)"
+            tablet_css="$(curl --fail --silent --show-error --max-time 25 https://lifeos-6rib.onrender.com/tablet-app-shell-v3.css || true)"
+
+            if echo "$health" | grep -q '"versao":"0.35.0"'               && echo "$index" | grep -q 'class="header-logo-by">by GhuMat'               && echo "$mobile_css" | grep -q 'content: none !important'               && echo "$tablet" | grep -q 'logo%20life%20os.png'               && echo "$tablet_css" | grep -q '"tarefas destaques"'               && echo "$tablet_css" | grep -q '"compras plantas"'               && echo "$tablet_css" | grep -q '"contas estoque"'; then
+              echo "LifeOS 0.35.0 branding e grid tablet publicados."
+              exit 0
+            fi
+
+            echo "Aguardando rollout... tentativa $attempt"
+            sleep 15
+          done
+
+          echo "A versão esperada não apareceu no Render a tempo."
+          exit 1
