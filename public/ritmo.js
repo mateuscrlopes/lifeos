@@ -925,6 +925,7 @@
 
       <section class="ritmo-section">
         <div class="ritmo-section-head"><h3>Plano alimentar pessoal</h3><span>${R.planosAlimentares.length ? 'ativo' : 'não preenchido'}</span></div>
+        <div class="ritmo-note ritmo-plan-explainer">Aqui ficam suas regras e opções pessoais: café da manhã e lanches vêm daqui. No Hoje, o LifeOS escolhe uma opção para o dia e mostra exatamente o que comer.</div>
         ${R.planosAlimentares.length ? R.planosAlimentares.map(renderPlanoAlimentar).join('') : ''}
         <div class="ritmo-card ritmo-import-box">
           <div class="ritmo-eyebrow">Importar plano</div>
@@ -936,11 +937,11 @@
       </section>
 
       <section class="ritmo-section">
-        <div class="ritmo-section-head"><h3>Alimentação da Casa</h3><span>compartilhado</span></div>
+        <div class="ritmo-section-head"><h3>Cardápio da Casa</h3><span>almoço e jantar</span></div>
         <div class="ritmo-card">
           ${renderCardapioHoje()}
           <div class="ritmo-actions"><button class="ritmo-btn secondary" id="ritmoAbrirCardapio2">Abrir Cardápio da Casa</button></div>
-          <div class="ritmo-note">Receitas, cardápio semanal, estoque e lista de compras continuam únicos no LifeOS. O Ritmo usa esses dados sem criar uma cópia.</div>
+          <div class="ritmo-note">A Casa cuida só do que vocês preparam e compartilham: almoço e jantar. Essas refeições substituem a sugestão genérica do plano pessoal no Hoje.</div>
         </div>
       </section>
     `;
@@ -968,6 +969,7 @@
                 <div class="ritmo-option">
                   <strong>${escapar(op.titulo || 'Opção')}</strong>
                   <p>${escapar((op.itens || []).join(' · '))}</p>
+                  ${renderNutriOpcaoPlano(op, ref.nome)}
                 </div>
               `).join('')}
             </div>
@@ -975,6 +977,12 @@
         `).join('') : '<div class="ritmo-empty">O plano foi salvo, mas precisa de revisão manual.</div>'}
       </div>
     `;
+  }
+
+  function renderNutriOpcaoPlano(op, nomeRefeicao) {
+    const n = nutricaoOpcaoPlano(op, tipoPlanoPessoal(nomeRefeicao));
+    if (n.calorias == null) return '';
+    return `<small class="ritmo-option-macros">${numero(n.calorias,0)} kcal · ${numero(n.proteina || 0,0)} g prot. · ${numero(n.carboidratos || 0,0)} g carb.</small>`;
   }
 
   let ritmoModalDirty = false;
