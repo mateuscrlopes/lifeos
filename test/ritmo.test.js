@@ -104,30 +104,35 @@ test('Déficit pode ser acompanhado sem obrigar microregistro de ingredientes', 
   assert.match(sql, /enable row level security/);
   assert.match(js, /Registrar alimentação/);
   assert.match(js, /ritmo_consumos/);
-  assert.match(js, /meta registrada/);
+  assert.match(js, /Alimentação de hoje/);
 });
 
-test('check-in do cardápio herda calorias planejadas sem duplicar consumo', () => {
-  const sql = ler('db/045_cardapio_calorias_checkin.sql');
-  const lanche = ler('db/046_ritmo_checkin_lanche.sql');
+test('Ritmo compõe plano diário único e soma macros sem duplicar consumo', () => {
+  const base = ler('db/045_cardapio_calorias_checkin.sql');
+  const unificado = ler('db/048_plano_alimentar_unificado.sql');
   const js = ler('public/ritmo.js');
   const app = ler('public/app.js');
   const html = ler('public/index.html');
 
-  assert.match(sql, /calorias_por_porcao/);
-  assert.match(sql, /planejamento_dia_id/);
-  assert.match(sql, /ritmo_consumos_plano_unico_idx/);
-  assert.match(lanche, /'lanche'/);
+  assert.match(base, /planejamento_dia_id/);
+  assert.match(unificado, /carboidratos_g/);
+  assert.match(unificado, /referencia_chave/);
+  assert.match(unificado, /ritmo_consumos_referencia_unica_idx/);
+  assert.match(js, /function planoDoDia/);
+  assert.match(js, /function planoPessoalParaTipo/);
   assert.match(js, /sincronizarConsumoPlanejado/);
-  assert.match(js, /planejamento_dia_id/);
+  assert.match(js, /reconciliarCheckinsHoje/);
   assert.match(js, /Comi o que estava planejado/);
-  assert.match(js, /calorias: item\.calorias/);
-  assert.match(app, /calorias_por_porcao/);
-  assert.match(html, /id="slotsCafe"/);
-  assert.match(html, /id="slotsLanche"/);
-  assert.match(app, /\['cafe','almoco','lanche','janta'\]/);
-  assert.match(html, /id="refKcal"/);
-  assert.match(html, /id="modalRefKcal"/);
+  assert.match(js, /Excluir este check-in/);
+  assert.match(js, /carboidratos_g/);
+  assert.match(app, /carboidratos_por_porcao/);
+  assert.doesNotMatch(html, /id="slotsCafe"/);
+  assert.doesNotMatch(html, /id="slotsLanche"/);
+  assert.match(html, /id="slotsAlmoco"/);
+  assert.match(html, /id="slotsJanta"/);
+  assert.match(app, /\['almoco','janta'\]\.forEach/);
+  assert.match(html, /id="refCarbo"/);
+  assert.match(html, /id="modalRefCarbo"/);
 });
 
 test('navegação pessoal volta para a origem real e Hoje é a única home', () => {
