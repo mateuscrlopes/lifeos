@@ -123,8 +123,9 @@ test('check-in do cardápio herda calorias planejadas sem duplicar consumo', () 
   assert.match(js, /Comi o que estava planejado/);
   assert.match(js, /calorias: item\.calorias/);
   assert.match(app, /calorias_por_porcao/);
-  assert.match(app, /slotsCafe/);
-  assert.match(app, /slotsLanche/);
+  assert.match(html, /id="slotsCafe"/);
+  assert.match(html, /id="slotsLanche"/);
+  assert.match(app, /\['cafe','almoco','lanche','janta'\]/);
   assert.match(html, /id="refKcal"/);
   assert.match(html, /id="modalRefKcal"/);
 });
