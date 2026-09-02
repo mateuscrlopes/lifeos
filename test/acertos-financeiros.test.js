@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { extrairComprovantePdf } from '../src/financeiro-extracao.js';
-import { gerarReciboPdf } from '../src/acertos.js';
+import { gerarPdfReciboLifeOS } from '../src/recibo-pdf.js';
 
 function pdfEscape(value) {
   return String(value)
@@ -166,34 +166,34 @@ test('servidor cria lote único, guarda comprovante e emite recibo agrupado', ()
   assert.match(source, /acerto_pagamento_itens/);
   assert.match(source, /diferenca_selecao/);
   assert.match(source, /app\.get\('\/api\/acertos\/lotes\/:id\/recibo'/);
-  assert.match(source, /Cobrancas contempladas/);
+  assert.match(source, /gerarPdfReciboLifeOS/);
 });
 
 test('recibo PDF usa identidade LifeOS sem fundo pesado e inclui itens', () => {
-  const pdf = gerarReciboPdf({
-    titulo: 'Recibo de pagamento',
-    subtitulo: 'Acertos da Casa - Pix confirmado',
-    campos: [
-      { label: 'Pagador', valor: 'Ghustavo' },
-      { label: 'Recebedor', valor: 'Mateus' },
-      { label: 'Valor do Pix confirmado', valor: 'R$ 684,00' },
-    ],
-    itens: [
-      { titulo: 'Contribuição da Casa', valorAplicado: 500, saldoDepois: 0 },
-      { titulo: 'El Hub', valorAplicado: 184, saldoDepois: 0 },
-    ],
-    resumo: [
-      { label: 'Saldo a favor gerado', valor: 'R$ 0,00' },
-    ],
+  const pdf = gerarPdfReciboLifeOS({
+    titulo: 'Pagamento de 2 cobrancas',
+    pagador: 'Ghustavo',
+    recebedor: 'Mateus',
+    valor_transferencia: 684,
+    valor_utilizado: 684,
+    valor_excedente: 0,
+    valor_faltante: 0,
+    valor_extraido: 684,
+    enviado_em: '02/09/2026',
+    revisado_em: '02/09/2026',
     id: 'teste-lifeos',
+    itens: [
+      { titulo: 'Contribuição da Casa', saldo_antes: 500, valor_alocado: 500, saldo_depois: 0 },
+      { titulo: 'El Hub', saldo_antes: 184, valor_alocado: 184, saldo_depois: 0 },
+    ],
   });
 
   const raw = pdf.toString('latin1');
   assert.match(raw, /^%PDF-1\.4/);
   assert.match(raw, /LifeOS/);
   assert.match(raw, /by GhuMat/);
-  assert.match(raw, /Recibo de pagamento/);
+  assert.match(raw, /RECIBO DE PAGAMENTO/);
   assert.match(raw, /Contribui/);
   assert.match(raw, /El Hub/);
-  assert.match(raw, /Saldo a favor gerado/);
+  assert.match(raw, /Saldo a favor/i);
 });
