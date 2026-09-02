@@ -161,3 +161,17 @@ test('Histórico global inclui recorrências arquivadas e restaura pela RPC', ()
   assert.match(ui, /archived \? 'arquivada' : 'excluído'/);
   assert.match(ui, /client\.rpc\('restaurar_regra_acerto'/);
 });
+
+
+test('interceptador destrutivo não usa X como regra de negócio', () => {
+  const ui = read('../public/ui-refinements.js');
+  const app = read('../public/app.js');
+
+  assert.match(ui, /Exclusão exige intenção semântica/);
+  assert.doesNotMatch(ui, /return[^;]*label === '×'/);
+  assert.match(ui, /explicitAction === 'delete'/);
+
+  const xButtonLines = app.split('\n').filter(line => line.includes("textContent='×'") && line.includes("createElement('button')"));
+  assert.ok(xButtonLines.length > 0);
+  xButtonLines.forEach(line => assert.match(line, /dataset\.uiAction='delete'/));
+});
