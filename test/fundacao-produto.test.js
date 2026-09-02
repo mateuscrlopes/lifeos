@@ -74,3 +74,40 @@ test('Acertos usa data civil local em vez de UTC para hoje', () => {
   assert.match(front, /getMonth\(\) \+ 1/);
   assert.doesNotMatch(front, /const today = \(\) => new Date\(\)\.toISOString\(\)\.slice\(0, 10\)/);
 });
+
+
+test('RLS legado deixa de aceitar acesso global e passa a isolar por Casa', () => {
+  const sql = read('../db/053_hardening_rls_legado.sql');
+
+  assert.match(sql, /lifeos_usuario_na_casa\(casa_id\)/);
+  assert.match(sql, /usuario_id = public\.lifeos_usuario_atual_id\(\)/);
+  assert.match(sql, /public\.refeicao_ingredientes[\s\S]*public\.refeicoes/);
+  assert.match(sql, /public\.planta_rotinas[\s\S]*public\.plantas/);
+  assert.match(sql, /public\.locais_compra_enderecos[\s\S]*public\.locais_compra/);
+  assert.doesNotMatch(sql, /using\s*\(true\)/i);
+  assert.doesNotMatch(sql, /with check\s*\(true\)/i);
+});
+
+test('sheets compartilhados respeitam foco, Escape e visual viewport', () => {
+  const ui = read('../public/ui-refinements.js');
+  const css = read('../public/ui-refinements.css');
+
+  assert.match(ui, /uiSheetReturnFocus/);
+  assert.match(ui, /event\.key === 'Escape'/);
+  assert.match(ui, /window\.visualViewport/);
+  assert.match(ui, /data-ui-action="close"/);
+  assert.match(css, /--ui-viewport-height/);
+  assert.match(css, /button\.ui-primary\[disabled\]/);
+});
+
+test('viewport permite zoom e usa viewport dinâmica', () => {
+  const mobile = read('../public/index.html');
+  const tablet = read('../public/tablet.html');
+
+  assert.doesNotMatch(mobile, /maximum-scale=1\.0/);
+  assert.doesNotMatch(tablet, /maximum-scale=1\.0/);
+  assert.match(mobile, /viewport-fit=cover/);
+  assert.match(tablet, /viewport-fit=cover/);
+  assert.match(mobile, /height:100dvh/);
+  assert.match(tablet, /height: 100dvh/);
+});
