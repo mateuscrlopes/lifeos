@@ -79,7 +79,7 @@ test('tablet v6 abandona contexto legado e preserva hero nativo', () => {
   assert.match(painel, /painelContextoCasa/);
   assert.match(css, /#painelContextoCasa[\s\S]*display:\s*none\s*!important/);
   assert.match(css, /\.hero-banner[\s\S]*display:\s*block\s*!important/);
-  assert.match(enhancements, /painel-casa\.js\?v=2/);
+  assert.match(enhancements, /painel-casa\.js\?v=3/);
 });
 
 test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
@@ -88,7 +88,7 @@ test('tablet v6 mantém shell final mesmo após folhas dinâmicas', () => {
 
   assert.match(loader, /MutationObserver/);
   assert.match(loader, /HTMLLinkElement/);
-  assert.match(loader, /tablet-app-shell-v3\.css\?v=2/);
+  assert.match(loader, /tablet-app-shell-v3\.css\?v=3/);
   assert.match(html, /tablet-app-shell-v3\.js\?v=3/);
 });
 
