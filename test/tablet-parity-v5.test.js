@@ -60,7 +60,7 @@ test('polish mobile usa cache bust novo e versão é 0.36.0', () => {
   const loader = read('public/product-polish-v4.js');
   const server = read('src/server.js');
 
-  assert.match(loader, /product-polish-v4\.css\?v=3/);
+  assert.match(loader, /product-polish-v4\.css\?v=4/);
   assert.match(server, /0\.36\.0/);
 });
 
