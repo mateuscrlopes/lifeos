@@ -100,6 +100,15 @@ async function sair(){
 // Mapeamento das abas principais
 const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
 const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
+const _origensAba = new Map();
+
+const CASA_TITULOS = {
+  compras: ['Compras', 'Lista e compras da Casa.'],
+  estoque: ['Estoque', 'O que tem em casa, níveis e reposição.'],
+  tarefas: ['Tarefas', 'Tarefas e responsabilidades da Casa.'],
+  contas: ['Contas', 'Contas recorrentes e próximos vencimentos.'],
+  cardapio: ['Cardápio', 'Receitas e planejamento das refeições.'],
+};
 
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
@@ -122,22 +131,55 @@ async function carregarClimaHoje(){
   }catch(e){}
 }
 
-function trocarAba(qual,btn){
+function trocarAba(qual,btn,opcoes={}){
+  const { registrarOrigem = true } = opcoes;
+  if(registrarOrigem){
+    const atual=localizacaoAtual?.() || null;
+    const destinoAtual=atual?.tipo==='tab' && atual.tab===qual;
+    const destinoCasa=qual==='casa' && atual?.tipo==='casa';
+    if(atual && !destinoAtual && !destinoCasa) _origensAba.set(qual,atual);
+  }
   // Esconde todas as abas e seções
   [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
     const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
   });
-  // Mostra a aba alvo
   const id='aba'+qual.charAt(0).toUpperCase()+qual.slice(1);
   const alvo=el(id);if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
-  // Atualiza tab bar
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===qual));
-  // Scroll ao topo
   const body=el('appBody');if(body)body.scrollTop=0;
-  // Ações por aba
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
   if(qual==='plantas'&&usuario)renderizarPlantas();
+}
+
+function abrirRitmoContextual(){
+  abrirSecao('ritmo');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab==='ritmo'));
+}
+
+function voltarParaLocalizacao(origem){
+  if(origem?.tipo==='casa'){
+    trocarAba('casa',null,{registrarOrigem:false});
+    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
+    return;
+  }
+  if(origem?.tipo==='tab'){
+    trocarAba(origem.tab,null,{registrarOrigem:false});
+    return;
+  }
+  if(origem?.tipo==='secao'){
+    abrirSecao(origem.secao,{preservarOrigem:true});
+    return;
+  }
+  trocarAba('hoje',null,{registrarOrigem:false});
+}
+
+function voltarAbaContextual(qual){
+  voltarParaLocalizacao(_origensAba.get(qual));
+}
+
+function voltarCasaContextual(){
+  voltarAbaContextual('casa');
 }
 
 function trocarSub(qual,btn){
@@ -145,6 +187,9 @@ function trocarSub(qual,btn){
   const alvo=el('sub'+qual.charAt(0).toUpperCase()+qual.slice(1));
   if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
   document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
+  const [titulo,descricao]=CASA_TITULOS[qual]||['Casa','Organização da Casa'];
+  if(el('casaPageTitle'))el('casaPageTitle').textContent=titulo;
+  if(el('casaPageDescription'))el('casaPageDescription').textContent=descricao;
 }
 
 const _origensSecao = new Map();
@@ -195,21 +240,7 @@ function voltarContexto(){
   const atual=localizacaoAtual();
   const qual=atual.tipo==='secao' ? atual.secao : null;
   const origem=qual ? _origensSecao.get(qual) : null;
-
-  if(origem?.tipo==='casa'){
-    trocarAba('casa');
-    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
-    return;
-  }
-  if(origem?.tipo==='tab'){
-    trocarAba(origem.tab);
-    return;
-  }
-  if(origem?.tipo==='secao'){
-    abrirSecao(origem.secao,{preservarOrigem:true});
-    return;
-  }
-  trocarAba('mais');
+  voltarParaLocalizacao(origem || (qual==='ritmo' ? {tipo:'tab',tab:'hoje'} : {tipo:'tab',tab:'mais'}));
 }
 
 function voltarMais(){
@@ -1484,10 +1515,10 @@ async function carregarHoje(){
     const comprasN=dados.compras?.total||0;
     const estN=dados.estoqueAtencao?.length||0;
     mg.innerHTML=`
-      <div class="metrica mi-sage"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas pendentes</div></div>
-      <div class="metrica mi-clay"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas próximas</div></div>
-      <div class="metrica mi-sky"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Itens na lista</div></div>
-      <div class="metrica mi-sun"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque em atenção</div></div>
+      <div class="metrica mi-sage clicavel" role="button" tabindex="0" data-ui-destination="tarefas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas pendentes</div></div>
+      <div class="metrica mi-clay clicavel" role="button" tabindex="0" data-ui-destination="contas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas próximas</div></div>
+      <div class="metrica mi-sky clicavel" role="button" tabindex="0" data-ui-destination="compras"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Itens na lista</div></div>
+      <div class="metrica mi-sun clicavel" role="button" tabindex="0" data-ui-destination="estoque"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque em atenção</div></div>
     `;
   }
   const area=el('cardsHoje');area.innerHTML='';
@@ -1500,15 +1531,19 @@ async function carregarHoje(){
     area.appendChild(card.cartao);
   }
 
-  if(dados.cardapioHoje){
+  {
     const card=criarCartaoHoje('Cardápio de hoje','cardapio');const ch=dados.cardapioHoje;
-    if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
-    if(ch.janta)card.corpo.appendChild(miniItem('Janta',ch.janta,''));
-    if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+    if(ch){
+      if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
+      if(ch.janta)card.corpo.appendChild(miniItem('Janta',ch.janta,''));
+      if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+    }else{
+      card.corpo.appendChild(miniItem('Sem refeições planejadas','Toque para montar a semana',''));
+    }
     area.appendChild(card.cartao);
   }
 
-  if(dados.tudoEmDia&&!dados.cardapioHoje&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);return;}
+  if(dados.tudoEmDia&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);}
 if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
   if(dados.estoqueAtencao.length){const card=criarCartaoHoje('Estoque em atenção','estoque');for(const i of dados.estoqueAtencao)card.corpo.appendChild(miniItem(i.nome,`${i.quantidade} · ${i.status==='acabou'?'acabou':'baixo'}`,''));area.appendChild(card.cartao);}
   if(dados.compras.total){const card=criarCartaoHoje('Compras','compras');for(const n of dados.compras.primeiros)card.corpo.appendChild(miniItem(n,'',''));if(dados.compras.total>dados.compras.primeiros.length){const r=document.createElement('div');r.className='mini-item';r.style.color='var(--suave)';r.textContent=`+ mais ${dados.compras.total-dados.compras.primeiros.length} na lista`;card.corpo.appendChild(r);}area.appendChild(card.cartao);}
@@ -2021,6 +2056,9 @@ window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
 window.voltarContexto = voltarContexto;
+window.abrirRitmoContextual = abrirRitmoContextual;
+window.voltarAbaContextual = voltarAbaContextual;
+window.voltarCasaContextual = voltarCasaContextual;
 if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
 
 
