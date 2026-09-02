@@ -106,3 +106,15 @@ test('Déficit pode ser acompanhado sem obrigar microregistro de ingredientes', 
   assert.match(js, /ritmo_consumos/);
   assert.match(js, /meta registrada/);
 });
+
+test('navegação pessoal volta para a origem real e Hoje é a única home', () => {
+  const app = ler('public/app.js');
+  const html = ler('public/index.html');
+  const shell = ler('public/mobile-shell-v3.js');
+  assert.match(app, /function voltarContexto\(\)/);
+  assert.match(app, /_origensSecao/);
+  assert.match(html, /onclick="voltarContexto\(\)"/);
+  assert.match(html, />\s*Hoje\s*<\/button>/);
+  assert.match(shell, /removeLegacyHomeShortcuts/);
+  assert.doesNotMatch(shell, /installHomeShortcuts\(\);\s*normalizeActions/);
+});
