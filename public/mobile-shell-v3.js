@@ -28,7 +28,7 @@
     const link = document.createElement('link');
     link.id = STYLE_ID;
     link.rel = 'stylesheet';
-    link.href = '/mobile-shell-v3.css?v=3';
+    link.href = '/mobile-shell-v3.css?v=4';
     document.head.appendChild(link);
   }
 
