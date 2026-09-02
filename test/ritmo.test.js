@@ -9,7 +9,7 @@ test('Ritmo entra no shell sem virar aplicativo separado', () => {
   const app = ler('public/app.js');
   assert.match(html, /id="secaoRitmo"/);
   assert.match(html, /LifeOS.*Ritmo/s);
-  assert.match(html, /onclick="voltarMais\(\)"/);
+  assert.match(html, /onclick="voltarContexto\(\)"/);
   assert.match(app, /secaoRitmo/);
   assert.match(app, /lifeos:ritmo-abrir/);
 });
