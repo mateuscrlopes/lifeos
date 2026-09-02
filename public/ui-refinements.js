@@ -1492,7 +1492,12 @@ function goToToday() {
 }
 
 function syncBottomNavigationState() {
-  const moreSections = ['secaoRitmo', 'secaoProjetos', 'secaoRituais', 'secaoConfig', 'abaPainelProjeto'];
+  const ritmoVisible = isVisible(document.getElementById('secaoRitmo'));
+  if (ritmoVisible) {
+    document.querySelectorAll('.tab-btn').forEach(button => button.classList.toggle('ativa', button.dataset.tab === 'ritmo'));
+    return;
+  }
+  const moreSections = ['secaoProjetos', 'secaoRituais', 'secaoConfig', 'abaPainelProjeto'];
   const moreVisible = moreSections.some(id => isVisible(document.getElementById(id)));
   if (!moreVisible) return;
   document.querySelectorAll('.tab-btn').forEach(button => button.classList.toggle('ativa', button.dataset.tab === 'mais'));
@@ -1553,11 +1558,6 @@ function installStableNavigation() {
     const subtab = event.target.closest('.sub-aba[data-sub]');
     if (subtab) localStorage.setItem(LAST_SUBTAB_KEY, subtab.dataset.sub);
 
-    const casaTab = event.target.closest('.tab-btn[data-tab="casa"]');
-    if (casaTab) {
-      const last = localStorage.getItem(LAST_SUBTAB_KEY) || 'compras';
-      window.setTimeout(() => openCasaSubtab(last, { remember: false }), 0);
-    }
   }, true);
 
   document.addEventListener('keydown', event => {
@@ -1588,17 +1588,42 @@ function installModalAccessibility() {
   const observer = new MutationObserver(records => {
     records.forEach(record => {
       const modal = record.target;
-      if (modal instanceof HTMLElement && modal.classList.contains('aberto')) focusModal(modal);
+      if (modal instanceof HTMLElement && modal.classList.contains('aberto')) {
+        modal.dataset.uiDirty = '0';
+        focusModal(modal);
+      }
     });
   });
   document.querySelectorAll('.modal-overlay').forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
+
+  document.addEventListener('input', event => {
+    const modal = event.target.closest?.('.modal-overlay.aberto');
+    if (modal && event.target.matches('input,select,textarea')) modal.dataset.uiDirty = '1';
+  }, true);
+  document.addEventListener('change', event => {
+    const modal = event.target.closest?.('.modal-overlay.aberto');
+    if (modal && event.target.matches('input,select,textarea')) modal.dataset.uiDirty = '1';
+  }, true);
+
+  document.addEventListener('click', event => {
+    const close = event.target.closest?.('.modal-overlay.aberto .modal-fechar');
+    if (!close) return;
+    const modal = close.closest('.modal-overlay');
+    if (modal?.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     if (document.querySelector('.ui-sheet-overlay')) { closeSheet(); return; }
     if (marketOverlay) { closeMarketMode(); return; }
     const open = [...document.querySelectorAll('.modal-overlay.aberto')].pop();
-    open?.classList.remove('aberto');
+    if (!open) return;
+    if (open.dataset.uiDirty === '1' && !confirm('Deseja sair sem salvar as alterações?')) return;
+    open.dataset.uiDirty = '0';
+    open.classList.remove('aberto');
   });
 }
 

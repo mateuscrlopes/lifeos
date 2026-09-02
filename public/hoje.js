@@ -27,20 +27,20 @@ export async function montarHoje(supa, usuario) {
   const hojeStr = formatarDataISO(hojeDate);
   const segStr = formatarDataISO(inicioSemana(hojeDate));
 
-  // dia da semana: 1=seg...5=sex (0=dom/6=sab nao tem marmita)
+  // Cardápio usa 1=seg...7=dom.
   const diaSemana = hojeDate.getDay(); // 0=dom,1=seg...6=sab
-  const diaCardapio = diaSemana >= 1 && diaSemana <= 5 ? diaSemana : null;
+  const diaCardapio = diaSemana === 0 ? 7 : diaSemana;
 
   const [respLista, respEstoque, respContas, respTarefas, respCardapio] = await Promise.all([
     supa.from('lista_compras').select('id, nome, origem').eq('casa_id', casaId).eq('status', 'pendente'),
     supa.from('estoque').select('id, nome, quantidade, minimo, tipo, nivel, minimo_nivel').eq('casa_id', casaId),
     supa.from('contas').select('id, nome, valor, vencimento, paga').eq('casa_id', casaId).eq('paga', false),
     supa.from('tarefas').select('id, titulo, responsavel, data, feita').eq('casa_id', casaId).eq('feita', false),
-    diaCardapio ? supa.from('planejamento_dias')
+    supa.from('planejamento_dias')
       .select('tipo, refeicao_nome, observacao, refeicoes(nome), planejamento_semana!inner(semana_inicio, responsavel)')
       .eq('planejamento_semana.casa_id', casaId)
       .eq('planejamento_semana.semana_inicio', segStr)
-      .eq('dia_semana', diaCardapio) : Promise.resolve({ data: [] }),
+      .eq('dia_semana', diaCardapio),
   ]);
 
   const itensLista = respLista.data || [];
@@ -63,14 +63,20 @@ export async function montarHoje(supa, usuario) {
   const tarefasAtencao = (respTarefas.data || [])
     .filter((t) => !t.data || t.data <= hojeStr).slice(0, 5);
 
-  // Cardapio de hoje
+  // Cardápio de hoje pode ter uma refeição compartilhada ou opções pessoais diferentes.
   const diasCardapio = respCardapio.data || [];
-  const almoco = diasCardapio.find((d) => d.tipo === 'almoco');
-  const janta = diasCardapio.find((d) => d.tipo === 'janta');
-  const cardapioHoje = (almoco || janta) ? {
-    almoco: almoco ? (almoco.refeicoes?.nome || almoco.refeicao_nome || null) : null,
-    janta: janta ? (janta.refeicoes?.nome || janta.refeicao_nome || null) : null,
-    responsavel: almoco?.planejamento_semana?.responsavel || janta?.planejamento_semana?.responsavel || null,
+  const itensCardapio = diasCardapio.map((d) => ({
+    tipo: d.tipo,
+    nome: d.refeicoes?.nome || d.refeicao_nome || null,
+    responsavel: d.planejamento_semana?.responsavel || 'ambos',
+  })).filter((d) => d.nome);
+  const almoco = itensCardapio.find((d) => d.tipo === 'almoco');
+  const janta = itensCardapio.find((d) => d.tipo === 'janta');
+  const cardapioHoje = itensCardapio.length ? {
+    itens: itensCardapio,
+    almoco: almoco?.nome || null,
+    janta: janta?.nome || null,
+    responsavel: itensCardapio.length === 1 ? itensCardapio[0].responsavel : null,
   } : null;
 
   const tudoEmDia = compras.total === 0 && estoqueAtencao.length === 0 &&

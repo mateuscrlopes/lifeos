@@ -38,7 +38,7 @@ test('instalação usa módulo completo no tablet e correção compacta no celul
   const tablet = ler('public/tablet-enhancements.js');
   const mobile = ler('public/app.js');
   const status = ler('public/status-estoque.js');
-  assert.match(tablet, /alimentacao-contextual\.js\?v=1/);
-  assert.match(mobile, /alimentacao-contextual-mobile-fix\.js\?v=1/);
-  assert.doesNotMatch(status, /alimentacao-contextual\.js\?v=1/);
+  assert.match(tablet, /alimentacao-contextual\.js\?v=2/);
+  assert.match(mobile, /alimentacao-contextual-mobile-fix\.js\?v=2/);
+  assert.doesNotMatch(status, /alimentacao-contextual\.js\?v=2/);
 });

@@ -305,10 +305,10 @@
   }
 
   function abrirCardapioMobile() {
-    document.querySelector('.tab-btn[data-tab="casa"]')?.click();
-    window.setTimeout(() => {
-      document.querySelector('.sub-aba[data-sub="cardapio"]')?.click();
-    }, 90);
+    if (typeof window.trocarAba === 'function') {
+      window.trocarAba('casa');
+      window.setTimeout(() => window.trocarSub?.('cardapio', document.querySelector('.sub-aba[data-sub="cardapio"]')), 60);
+    }
   }
 
   function renderizarMobile() {

@@ -89,6 +89,7 @@
       seta: '<path d="m9 18 6-6-6-6"/>',
       grafico: '<path d="M4 19V9M10 19V5M16 19v-8M22 19H2"/>',
       calendario: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+      lixeira: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/>',
     };
     return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icones[nome] || icones.plano}</svg>`;
   }
@@ -177,7 +178,7 @@
 
       R.perfil = perfil.data || null;
       R.ciclo = ciclos.data?.[0] || null;
-      R.metas = metas.data || [];
+      R.metas = (metas.data || []).filter(m => R.ciclo ? m.ciclo_id === R.ciclo.id : !m.ciclo_id);
       R.medidas = medidas.data || [];
       R.checkins = checkins.data || [];
       R.planos = (planos.data || []).map(p => ({
@@ -203,8 +204,7 @@
 
   function montarCardapioHoje(planejamentos, data) {
     const jsDia = data.getDay();
-    if (jsDia === 0 || jsDia === 6) return [];
-    const dia = jsDia;
+    const dia = jsDia === 0 ? 7 : jsDia;
     const linhas = [];
     for (const plano of planejamentos) {
       for (const item of (plano.planejamento_dias || [])) {
@@ -330,13 +330,12 @@
     const ciclo = cicloProgresso();
     mount.innerHTML = `
       <div class="ritmo-shell">
-        <div class="ritmo-context-bar">
-          <span>LifeOS</span><span>›</span><strong>Ritmo</strong>
-        </div>
-
         <section class="ritmo-hero">
-          <div class="ritmo-kicker">Seu ritmo pessoal</div>
-          <h2>${escapar(R.ciclo?.nome || 'Ritmo')}</h2>
+          <div class="ritmo-hero-top">
+            <div class="ritmo-kicker">Seu ritmo pessoal</div>
+            <button type="button" class="ritmo-hero-edit" id="ritmoEditarCiclo">${R.ciclo ? 'Editar ciclo' : '+ Criar ciclo'}</button>
+          </div>
+          <h2>${escapar(R.ciclo?.nome || 'Crie seu primeiro ciclo')}</h2>
           <p>${escapar(R.ciclo?.objetivo || 'Alimentação, movimento e evolução no seu contexto.')}</p>
           <div class="ritmo-cycle-row">
             <div>
@@ -552,14 +551,20 @@
         <div class="ritmo-card">
           ${ordem.map(dia => {
             const g = grupos.find(x => x.dia === dia);
-            return `
-              <div class="ritmo-activity-row">
+            if (!g.itens.length) return `
+              <div class="ritmo-activity-row is-empty">
+                <div class="ritmo-row-icon">${svg('calendario')}</div>
+                <div class="ritmo-row-main"><strong>${DIAS[dia]}</strong><small>Sem atividade planejada</small></div>
+              </div>`;
+            return g.itens.map(item => `
+              <button type="button" class="ritmo-activity-row ritmo-activity-open" data-abrir-atividade="${item.id}">
                 <div class="ritmo-row-icon">${svg('calendario')}</div>
                 <div class="ritmo-row-main">
-                  <strong>${DIAS[dia]}</strong>
-                  <small>${g.itens.length ? g.itens.map(i => i.titulo).join(' · ') : 'Sem atividade planejada'}</small>
+                  <strong>${DIAS[dia]} · ${escapar(item.titulo)}</strong>
+                  <small>${escapar(item.ritmo_planos_atividade?.local || item.ritmo_planos_atividade?.tipo || 'Abrir plano')}</small>
                 </div>
-              </div>`;
+                <span class="ritmo-row-chevron">${svg('seta')}</span>
+              </button>`).join('');
           }).join('')}
         </div>
       </section>
@@ -643,6 +648,7 @@
                   m.abdomen_cm ? 'abdômen ' + numero(m.abdomen_cm,1) + ' cm' : '',
                 ].filter(Boolean).join(' · ') || 'Medidas corporais'}</small>
               </div>
+              <button type="button" class="ritmo-btn secondary" data-editar-medida="${m.id}">Abrir</button>
             </div>
           `).join('') : '<div class="ritmo-empty">Registre sua primeira medida para iniciar a evolução.</div>'}
         </div>
@@ -810,31 +816,54 @@
     `;
   }
 
+  let ritmoModalDirty = false;
+
   function renderModalBase() {
-    return `<div class="ritmo-modal" id="ritmoModal" hidden><div class="ritmo-sheet"><div id="ritmoModalConteudo"></div></div></div>`;
+    return `<div class="ritmo-modal" id="ritmoModal" hidden><div class="ritmo-sheet" role="dialog" aria-modal="true"><div id="ritmoModalConteudo"></div></div></div>`;
   }
 
   function abrirModal(html) {
     const modal = el('ritmoModal');
     const conteudo = el('ritmoModalConteudo');
     if (!modal || !conteudo) return;
+    ritmoModalDirty = false;
     conteudo.innerHTML = html;
     modal.hidden = false;
-    conteudo.querySelectorAll('[data-fechar-ritmo]').forEach(b => b.addEventListener('click', fecharModal));
-    modal.addEventListener('click', eventoFundoModal, { once: true });
+    conteudo.querySelectorAll('[data-fechar-ritmo]').forEach(b => b.addEventListener('click', solicitarFecharModal));
+    conteudo.addEventListener('input', marcarModalSujo);
+    conteudo.addEventListener('change', marcarModalSujo);
+    modal.onclick = eventoFundoModal;
+  }
+
+  function marcarModalSujo(e) {
+    if (e.target.matches('input,select,textarea')) ritmoModalDirty = true;
+  }
+
+  function solicitarFecharModal() {
+    if (ritmoModalDirty && !confirm('Deseja sair sem salvar as alterações?')) return;
+    fecharModal();
   }
 
   function eventoFundoModal(e) {
-    if (e.target?.id === 'ritmoModal') fecharModal();
+    if (e.target?.id === 'ritmoModal') solicitarFecharModal();
   }
 
   function fecharModal() {
     const modal = el('ritmoModal');
-    if (modal) modal.hidden = true;
+    const conteudo = el('ritmoModalConteudo');
+    ritmoModalDirty = false;
+    if (conteudo) {
+      conteudo.removeEventListener('input', marcarModalSujo);
+      conteudo.removeEventListener('change', marcarModalSujo);
+    }
+    if (modal) {
+      modal.hidden = true;
+      modal.onclick = null;
+    }
   }
 
   function modalHead(titulo, subtitulo = '') {
-    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button class="ritmo-close" data-fechar-ritmo>×</button></div>`;
+    return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button type="button" class="ritmo-close" data-fechar-ritmo aria-label="Fechar" title="Fechar">×</button></div>`;
   }
 
   function ligarEventos() {
@@ -850,8 +879,10 @@
     document.querySelectorAll('[data-abrir-atividade]').forEach(b => b.addEventListener('click', () => abrirAtividadeAgenda(b.dataset.abrirAtividade)));
     document.querySelectorAll('[data-plano-detalhe]').forEach(b => b.addEventListener('click', () => abrirPlanoDetalhe(b.dataset.planoDetalhe)));
     document.querySelectorAll('[data-editar-plano-alimentar]').forEach(b => b.addEventListener('click', () => abrirEditorPlanoAlimentar(b.dataset.editarPlanoAlimentar)));
+    document.querySelectorAll('[data-editar-medida]').forEach(b => b.addEventListener('click', () => abrirNovaMedida(R.medidas.find(m => m.id === b.dataset.editarMedida) || null)));
     document.querySelectorAll('[data-foto-posicao]').forEach(b => b.addEventListener('click', () => iniciarFoto(b.dataset.fotoPosicao)));
 
+    el('ritmoEditarCiclo')?.addEventListener('click', abrirEditarCiclo);
     el('ritmoDiaCompleto')?.addEventListener('click', abrirDiaCompleto);
     el('ritmoAdicionarConsumo')?.addEventListener('click', abrirRegistroConsumo);
     document.querySelectorAll('[data-remover-consumo]').forEach(b => b.addEventListener('click', () => removerConsumo(b.dataset.removerConsumo)));
@@ -1120,6 +1151,99 @@
     });
   }
 
+  const METAS_PADRAO_CICLO = [
+    ['peso','reduzir','kg'],
+    ['cintura','reduzir','cm'],
+    ['abdomen','reduzir','cm'],
+    ['quadril_alto','acompanhar','cm'],
+    ['quadril_max','acompanhar','cm'],
+    ['peito','acompanhar','cm'],
+    ['coxa_d','acompanhar','cm'],
+    ['braco_d','acompanhar','cm'],
+    ['panturrilha_d','acompanhar','cm'],
+  ];
+
+  function abrirEditarCiclo() {
+    const ciclo = R.ciclo;
+    abrirModal(`
+      ${modalHead(ciclo ? 'Editar ciclo' : 'Novo ciclo', 'Nome, objetivo e duração ficam totalmente editáveis.')}
+      <div class="ritmo-field"><label>Nome do ciclo</label><input id="ritmoCicloNome" value="${escapar(ciclo?.nome || '')}" placeholder="Ex.: Ciclo verão, Manutenção, Corrida 10 km"></div>
+      <div class="ritmo-field" style="margin-top:9px"><label>Objetivo</label><textarea id="ritmoCicloObjetivo" rows="3" placeholder="O que você quer acompanhar neste período?">${escapar(ciclo?.objetivo || '')}</textarea></div>
+      <div class="ritmo-field" style="margin-top:9px"><label>Fase</label><input id="ritmoCicloFase" value="${escapar(ciclo?.fase || '')}" placeholder="Ex.: ataque, consolidação, manutenção"></div>
+      <div class="ritmo-form-grid" style="margin-top:9px">
+        <div class="ritmo-field"><label>Início</label><input id="ritmoCicloInicio" type="date" value="${escapar(ciclo?.inicio || isoLocal())}"></div>
+        <div class="ritmo-field"><label>Fim</label><input id="ritmoCicloFim" type="date" value="${escapar(ciclo?.fim || '')}"></div>
+      </div>
+      <div class="ritmo-note">A quantidade de dias não fica presa no código: ela é recalculada automaticamente a partir das datas.</div>
+      <div class="ritmo-actions ritmo-actions--cycle">
+        <button class="ritmo-btn" id="ritmoSalvarCiclo">Salvar ciclo</button>
+        ${ciclo ? '<button class="ritmo-btn secondary" type="button" id="ritmoEncerrarCiclo">Encerrar</button><button class="ritmo-icon-danger" type="button" id="ritmoExcluirCiclo" aria-label="Excluir ciclo" title="Excluir ciclo">' + svg('lixeira') + '</button>' : ''}
+      </div>
+    `);
+
+    el('ritmoSalvarCiclo')?.addEventListener('click', async () => {
+      const nome = el('ritmoCicloNome').value.trim();
+      const inicio = el('ritmoCicloInicio').value;
+      const fim = el('ritmoCicloFim').value || null;
+      if (!nome || !inicio) return;
+      if (fim && fim < inicio) {
+        alert('A data final não pode ser anterior ao início.');
+        return;
+      }
+      const payload = {
+        usuario_id: R.usuario.id,
+        nome,
+        objetivo: el('ritmoCicloObjetivo').value.trim() || null,
+        fase: el('ritmoCicloFase').value.trim() || null,
+        inicio,
+        fim,
+        ativo: true,
+        atualizado_em: new Date().toISOString(),
+      };
+      if (ciclo) {
+        const { error } = await R.client.from('ritmo_ciclos').update(payload).eq('id', ciclo.id);
+        if (error) throw error;
+      } else {
+        const { error: desativarErro } = await R.client.from('ritmo_ciclos').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('usuario_id', R.usuario.id).eq('ativo', true);
+        if (desativarErro) throw desativarErro;
+        const { data: novo, error } = await R.client.from('ritmo_ciclos').insert(payload).select('id').single();
+        if (error) throw error;
+        const metas = METAS_PADRAO_CICLO.map(([indicador,estrategia,unidade]) => ({
+          usuario_id: R.usuario.id,
+          ciclo_id: novo.id,
+          indicador,
+          estrategia,
+          valor_meta: null,
+          unidade,
+        }));
+        const { error: metaErro } = await R.client.from('ritmo_metas').insert(metas);
+        if (metaErro) throw metaErro;
+      }
+      fecharModal();
+      await carregarTudo();
+    });
+
+    el('ritmoEncerrarCiclo')?.addEventListener('click', async () => {
+      if (!ciclo || !confirm(`Encerrar "${ciclo.nome}"? O histórico e as metas permanecem salvos.`)) return;
+      const { error } = await R.client.from('ritmo_ciclos').update({
+        ativo: false,
+        fim: ciclo.fim || isoLocal(),
+        atualizado_em: new Date().toISOString(),
+      }).eq('id', ciclo.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
+
+    el('ritmoExcluirCiclo')?.addEventListener('click', async () => {
+      if (!ciclo || !confirm(`Excluir definitivamente "${ciclo.nome}"? As metas deste ciclo também serão removidas.`)) return;
+      const { error } = await R.client.from('ritmo_ciclos').delete().eq('id', ciclo.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
+  }
+
   function abrirNovaAtividade(plano = null) {
     const agenda = plano ? R.agenda.find(a => a.plano_id === plano.id) : null;
     abrirModal(`
@@ -1139,8 +1263,21 @@
         </select></div>
         <div class="ritmo-field"><label>Horário (opcional)</label><input id="ritmoAtivHora" type="time" value="${agenda?.horario?.slice(0,5) || ''}"></div>
       </div>
-      <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarAtividade">Salvar</button></div>
+      <div class="ritmo-actions">
+        <button class="ritmo-btn" id="ritmoSalvarAtividade">Salvar</button>
+        ${plano ? '<button class="ritmo-btn danger" type="button" id="ritmoExcluirAtividade">Excluir atividade</button>' : ''}
+      </div>
     `);
+
+    el('ritmoExcluirAtividade')?.addEventListener('click', async () => {
+      if (!plano || !confirm(`Excluir "${plano.nome}" e sua agenda? O histórico de sessões será preservado quando possível.`)) return;
+      const { error: agendaErro } = await R.client.from('ritmo_agenda').delete().eq('plano_id', plano.id);
+      if (agendaErro) throw agendaErro;
+      const { error } = await R.client.from('ritmo_planos_atividade').delete().eq('id', plano.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
 
     el('ritmoSalvarAtividade')?.addEventListener('click', async () => {
       const nome = el('ritmoAtivNome').value.trim();
@@ -1268,25 +1405,36 @@
     </div>`;
   }
 
-  function abrirNovaMedida() {
+  function abrirNovaMedida(medida = null) {
     const ultima = R.medidas[0] || {};
+    const atual = medida || {};
     abrirModal(`
-      ${modalHead('Registrar medidas', 'Use condições parecidas entre os registros.')}
+      ${modalHead(medida ? 'Editar medidas' : 'Registrar medidas', 'Use condições parecidas entre os registros.')}
       <div class="ritmo-form-grid">
-        ${campoModal('ritmoMedData','Data','date',isoLocal())}
-        ${campoModal('ritmoMedPeso','Peso (kg)','number','',ultima.peso_kg)}
-        ${campoModal('ritmoMedCintura','Cintura (cm)','number','',ultima.cintura_cm)}
-        ${campoModal('ritmoMedAbdomen','Abdômen (cm)','number','',ultima.abdomen_cm)}
-        ${campoModal('ritmoMedQuadrilAlto','Quadril alto (cm)','number','',ultima.quadril_alto_cm)}
-        ${campoModal('ritmoMedQuadril','Quadril (cm)','number','',ultima.quadril_max_cm)}
-        ${campoModal('ritmoMedPeito','Peito (cm)','number','',ultima.peito_cm)}
-        ${campoModal('ritmoMedCoxa','Coxa dir. (cm)','number','',ultima.coxa_d_cm)}
-        ${campoModal('ritmoMedBraco','Braço dir. (cm)','number','',ultima.braco_d_cm)}
-        ${campoModal('ritmoMedPanturrilha','Panturrilha dir. (cm)','number','',ultima.panturrilha_d_cm)}
+        ${campoModal('ritmoMedData','Data','date',atual.data || isoLocal())}
+        ${campoModal('ritmoMedPeso','Peso (kg)','number',atual.peso_kg ?? '',ultima.peso_kg)}
+        ${campoModal('ritmoMedCintura','Cintura (cm)','number',atual.cintura_cm ?? '',ultima.cintura_cm)}
+        ${campoModal('ritmoMedAbdomen','Abdômen (cm)','number',atual.abdomen_cm ?? '',ultima.abdomen_cm)}
+        ${campoModal('ritmoMedQuadrilAlto','Quadril alto (cm)','number',atual.quadril_alto_cm ?? '',ultima.quadril_alto_cm)}
+        ${campoModal('ritmoMedQuadril','Quadril (cm)','number',atual.quadril_max_cm ?? '',ultima.quadril_max_cm)}
+        ${campoModal('ritmoMedPeito','Peito (cm)','number',atual.peito_cm ?? '',ultima.peito_cm)}
+        ${campoModal('ritmoMedCoxa','Coxa dir. (cm)','number',atual.coxa_d_cm ?? '',ultima.coxa_d_cm)}
+        ${campoModal('ritmoMedBraco','Braço dir. (cm)','number',atual.braco_d_cm ?? '',ultima.braco_d_cm)}
+        ${campoModal('ritmoMedPanturrilha','Panturrilha dir. (cm)','number',atual.panturrilha_d_cm ?? '',ultima.panturrilha_d_cm)}
       </div>
-      <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarMedida">Salvar registro</button></div>
+      <div class="ritmo-actions">
+        <button class="ritmo-btn" id="ritmoSalvarMedida">Salvar registro</button>
+        ${medida ? '<button class="ritmo-icon-danger" type="button" id="ritmoExcluirMedida" aria-label="Excluir registro" title="Excluir registro">' + svg('lixeira') + '</button>' : ''}
+      </div>
     `);
-    el('ritmoSalvarMedida')?.addEventListener('click', salvarMedida);
+    el('ritmoSalvarMedida')?.addEventListener('click', () => salvarMedida(medida));
+    el('ritmoExcluirMedida')?.addEventListener('click', async () => {
+      if (!medida || !confirm(`Excluir o registro de ${dataBr(medida.data)}?`)) return;
+      const { error } = await R.client.from('ritmo_medidas').delete().eq('id', medida.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
   }
 
   function campoModal(id, label, type, value = '', placeholder = '') {
@@ -1294,7 +1442,7 @@
     return `<div class="ritmo-field"><label>${escapar(label)}</label><input id="${id}" type="${type}" ${step} value="${escapar(value)}" placeholder="${placeholder != null ? escapar(String(placeholder)) : ''}"></div>`;
   }
 
-  async function salvarMedida() {
+  async function salvarMedida(medida = null) {
     const payload = {
       usuario_id: R.usuario.id,
       data: el('ritmoMedData').value || isoLocal(),
@@ -1308,7 +1456,10 @@
       braco_d_cm: numOuNull(el('ritmoMedBraco').value),
       panturrilha_d_cm: numOuNull(el('ritmoMedPanturrilha').value),
     };
-    const { error } = await R.client.from('ritmo_medidas').upsert(payload, { onConflict: 'usuario_id,data' });
+    const operacao = medida
+      ? R.client.from('ritmo_medidas').update(payload).eq('id', medida.id)
+      : R.client.from('ritmo_medidas').upsert(payload, { onConflict: 'usuario_id,data' });
+    const { error } = await operacao;
     if (error) throw error;
     fecharModal();
     await carregarTudo();

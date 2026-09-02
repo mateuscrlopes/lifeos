@@ -118,3 +118,47 @@ test('navegação pessoal volta para a origem real e Hoje é a única home', () 
   assert.match(shell, /removeLegacyHomeShortcuts/);
   assert.doesNotMatch(shell, /installHomeShortcuts\(\);\s*normalizeActions/);
 });
+
+test('Ritmo é item principal e ciclo é gerenciável pela interface', () => {
+  const html = ler('public/index.html');
+  const app = ler('public/app.js');
+  const js = ler('public/ritmo.js');
+  assert.match(html, /data-tab="ritmo"/);
+  assert.doesNotMatch(html, /data-tab="casa"/);
+  assert.match(app, /function abrirRitmoContextual/);
+  assert.match(js, /function abrirEditarCiclo/);
+  assert.match(js, /ritmoSalvarCiclo/);
+  assert.match(js, /ritmoEncerrarCiclo/);
+  assert.match(js, /ritmoExcluirCiclo/);
+  assert.match(js, /METAS_PADRAO_CICLO/);
+});
+
+test('modais do Ritmo têm fechamento separado de exclusão', () => {
+  const js = ler('public/ritmo.js');
+  const css = ler('public/ritmo.css');
+  assert.match(js, /data-fechar-ritmo aria-label="Fechar"/);
+  assert.match(js, /Deseja sair sem salvar as alterações/);
+  assert.match(js, /ritmo-icon-danger/);
+  assert.match(css, /\.ritmo-modal[\s\S]*align-items:\s*center/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*\.ritmo-form-grid[\s\S]*grid-template-columns:\s*1fr/);
+});
+
+test('semana do movimento abre o plano ao tocar no dia', () => {
+  const js = ler('public/ritmo.js');
+  assert.match(js, /ritmo-activity-open/);
+  assert.match(js, /data-abrir-atividade/);
+  assert.match(js, /abrirAtividadeAgenda/);
+});
+
+test('cardápio aceita sete dias e versões por pessoa', () => {
+  const html = ler('public/index.html');
+  const app = ler('public/app.js');
+  const hoje = ler('public/hoje.js');
+  assert.match(html, />Sáb</);
+  assert.match(html, />Dom</);
+  assert.match(html, /id="btnLimparPlan"/);
+  assert.match(app, /CARDAPIO_RESPONSAVEIS=\['ambos','mateus','ghustavo'\]/);
+  assert.match(app, /for\(let d=1;d<=7;d\+\+\)/);
+  assert.match(app, /_planDiasPorResp/);
+  assert.match(hoje, /diaSemana === 0 \? 7 : diaSemana/);
+});

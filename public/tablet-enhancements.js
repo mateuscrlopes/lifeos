@@ -255,7 +255,7 @@
   if (document.getElementById('alimentacao-contextual-script')) return;
   const script = document.createElement('script');
   script.id = 'alimentacao-contextual-script';
-  script.src = '/alimentacao-contextual.js?v=1';
+  script.src = '/alimentacao-contextual.js?v=2';
   script.defer = true;
   document.head.appendChild(script);
 })();
@@ -265,7 +265,7 @@
   if (document.getElementById('receitas-v2-script')) return;
   const script = document.createElement('script');
   script.id = 'receitas-v2-script';
-  script.src = '/receitas-v2.js?v=1';
+  script.src = '/receitas-v2.js?v=2';
   script.defer = true;
   document.head.appendChild(script);
 })();

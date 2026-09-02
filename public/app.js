@@ -7,8 +7,8 @@ import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
-import './alimentacao-contextual-mobile-fix.js?v=1';
-import './receitas-v2.js?v=1';
+import './alimentacao-contextual-mobile-fix.js?v=2';
+import './receitas-v2.js?v=2';
 
 let supa=null,usuario=null,canalTempoReal=null;
 let _plantasCache=[];
@@ -43,8 +43,8 @@ function conteudoComIcone(nome,texto,tamanho=15){
   return `${iconeSvg(nome,tamanho)}<span>${texto}</span>`;
 }
 function aviso(id,t,tipo=''){const a=el(id);if(!a)return;a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
-function abrirModal(id){const m=el(id);if(m){m.classList.add('aberto');}}
-function fecharModal(id){const m=el(id);if(m){m.classList.remove('aberto');}}
+function abrirModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.add('aberto');}}
+function fecharModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.remove('aberto');}}
 
 async function iniciar(){
   try{const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
@@ -100,6 +100,15 @@ async function sair(){
 // Mapeamento das abas principais
 const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
 const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
+const _origensAba = new Map();
+
+const CASA_TITULOS = {
+  compras: ['Compras', 'Lista e compras da Casa.'],
+  estoque: ['Estoque', 'O que tem em casa, níveis e reposição.'],
+  tarefas: ['Tarefas', 'Tarefas e responsabilidades da Casa.'],
+  contas: ['Contas', 'Contas recorrentes e próximos vencimentos.'],
+  cardapio: ['Cardápio', 'Receitas e planejamento das refeições.'],
+};
 
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
@@ -122,22 +131,59 @@ async function carregarClimaHoje(){
   }catch(e){}
 }
 
-function trocarAba(qual,btn){
+function trocarAba(qual,btn,opcoes={}){
+  const { registrarOrigem = true } = opcoes;
+  if(registrarOrigem){
+    const atual=localizacaoAtual?.() || null;
+    const destinoAtual=atual?.tipo==='tab' && atual.tab===qual;
+    const destinoCasa=qual==='casa' && atual?.tipo==='casa';
+    if(atual && !destinoAtual && !destinoCasa) _origensAba.set(qual,atual);
+  }
   // Esconde todas as abas e seções
   [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
     const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
   });
-  // Mostra a aba alvo
   const id='aba'+qual.charAt(0).toUpperCase()+qual.slice(1);
   const alvo=el(id);if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
-  // Atualiza tab bar
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===qual));
-  // Scroll ao topo
+  const origemCasa=qual==='casa'?_origensAba.get('casa'):null;
+  const tabAtiva=qual==='casa'
+    ? (origemCasa?.tipo==='tab' ? origemCasa.tab : origemCasa?.tipo==='secao' && origemCasa.secao==='ritmo' ? 'ritmo' : origemCasa?.tipo==='secao' ? 'mais' : 'hoje')
+    : qual;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===tabAtiva));
   const body=el('appBody');if(body)body.scrollTop=0;
-  // Ações por aba
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
   if(qual==='plantas'&&usuario)renderizarPlantas();
+}
+
+function abrirRitmoContextual(){
+  abrirSecao('ritmo');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab==='ritmo'));
+}
+
+function voltarParaLocalizacao(origem){
+  if(origem?.tipo==='casa'){
+    trocarAba('casa',null,{registrarOrigem:false});
+    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
+    return;
+  }
+  if(origem?.tipo==='tab'){
+    trocarAba(origem.tab,null,{registrarOrigem:false});
+    return;
+  }
+  if(origem?.tipo==='secao'){
+    abrirSecao(origem.secao,{preservarOrigem:true});
+    return;
+  }
+  trocarAba('hoje',null,{registrarOrigem:false});
+}
+
+function voltarAbaContextual(qual){
+  voltarParaLocalizacao(_origensAba.get(qual));
+}
+
+function voltarCasaContextual(){
+  voltarAbaContextual('casa');
 }
 
 function trocarSub(qual,btn){
@@ -145,6 +191,9 @@ function trocarSub(qual,btn){
   const alvo=el('sub'+qual.charAt(0).toUpperCase()+qual.slice(1));
   if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
   document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
+  const [titulo,descricao]=CASA_TITULOS[qual]||['Casa','Organização da Casa'];
+  if(el('casaPageTitle'))el('casaPageTitle').textContent=titulo;
+  if(el('casaPageDescription'))el('casaPageDescription').textContent=descricao;
 }
 
 const _origensSecao = new Map();
@@ -195,21 +244,7 @@ function voltarContexto(){
   const atual=localizacaoAtual();
   const qual=atual.tipo==='secao' ? atual.secao : null;
   const origem=qual ? _origensSecao.get(qual) : null;
-
-  if(origem?.tipo==='casa'){
-    trocarAba('casa');
-    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
-    return;
-  }
-  if(origem?.tipo==='tab'){
-    trocarAba(origem.tab);
-    return;
-  }
-  if(origem?.tipo==='secao'){
-    abrirSecao(origem.secao,{preservarOrigem:true});
-    return;
-  }
-  trocarAba('mais');
+  voltarParaLocalizacao(origem || (qual==='ritmo' ? {tipo:'tab',tab:'hoje'} : {tipo:'tab',tab:'mais'}));
 }
 
 function voltarMais(){
@@ -706,12 +741,34 @@ async function salvarEditarPlanta(){
 
 // --- CARDAPIO ---
 let _refeicoes=[],_planDias={},_slotAtual=null,_sugestaoCardapioOffset=0;
+let _planRespAtual='ambos';
+let _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
+const CARDAPIO_RESPONSAVEIS=['ambos','mateus','ghustavo'];
+const CARDAPIO_DIAS={1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb',7:'Dom'};
+
+function selecionarResponsavelCardapio(resp,{render=true}={}){
+  _planRespAtual=CARDAPIO_RESPONSAVEIS.includes(resp)?resp:'ambos';
+  _planDias=_planDiasPorResp[_planRespAtual]||(_planDiasPorResp[_planRespAtual]={});
+  if(el('planResp'))el('planResp').value=_planRespAtual;
+  if(render)renderizarSlotsCardapio();
+}
 async function carregarRefeicoes(){
   const{data,error}=await supa.from('refeicoes').select('id,nome,tipo,porcoes,tempo_minutos,modo_preparo,observacoes,fonte_url,refeicao_ingredientes(id,nome,quantidade,unidade)').eq('casa_id',usuario.casa_id).order('nome');
   _refeicoes=data||[];
   const area=el('listaRefeicoes');area.innerHTML='';
   if(error||!_refeicoes.length){area.innerHTML='<div class="vazio">Nenhuma refeição cadastrada.</div>';return;}
-  for(const r of _refeicoes){const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;const d=document.createElement('div');d.className='desc';const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);const btn=document.createElement('button');btn.textContent='×';btn.style.cssText='background:none;color:var(--suave);padding:4px 8px';btn.onclick=(ev)=>{ev.stopPropagation();removerRefeicao(r.id);};linha.appendChild(d);linha.appendChild(btn);area.appendChild(linha);}
+  for(const r of _refeicoes){
+    const linha=document.createElement('div');linha.className='card-refeicao';linha.dataset.receitaId=r.id;
+    const d=document.createElement('div');d.className='desc';
+    const n=document.createElement('span');n.className='nome';n.textContent=r.nome;d.appendChild(n);
+    const m=document.createElement('span');m.className='meta';m.textContent=`${({almoco:'Almoço',janta:'Janta',ambos:'Ambos'}[r.tipo]||r.tipo)} · ${r.porcoes} porções · ${(r.refeicao_ingredientes||[]).length} ingredientes${r.tempo_minutos?` · ${r.tempo_minutos} min`:''}`;d.appendChild(m);
+    const acoes=document.createElement('div');acoes.className='receita-row-actions';
+    const abrir=document.createElement('button');abrir.type='button';abrir.className='receita-open-btn';abrir.dataset.rv2Open=r.id;abrir.textContent='Abrir';
+    const apagar=document.createElement('button');apagar.type='button';apagar.className='lifeos-icon-action is-danger receita-delete-btn';apagar.setAttribute('aria-label',`Excluir ${r.nome}`);apagar.title='Excluir';apagar.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 10v6M14 10v6"/></svg>';
+    apagar.onclick=(ev)=>{ev.stopPropagation();removerRefeicao(r.id,r.nome);};
+    acoes.appendChild(abrir);acoes.appendChild(apagar);
+    linha.appendChild(d);linha.appendChild(acoes);area.appendChild(linha);
+  }
   renderizarSlotsCardapio();
 }
 
@@ -726,7 +783,11 @@ async function salvarRefeicao(){
   aviso('avisoRefeicao','Refeição salva.','ok');setTimeout(()=>aviso('avisoRefeicao',''),1500);el('btnSalvarRefeicao').disabled=false;await carregarRefeicoes();
 }
 
-async function removerRefeicao(id){await supa.from('refeicoes').delete().eq('id',id);await carregarRefeicoes();}
+async function removerRefeicao(id,nome='esta receita'){
+  if(!confirm(`Excluir "${nome}"? Esta ação remove a receita da biblioteca.`))return;
+  await supa.from('refeicoes').delete().eq('id',id);
+  await carregarRefeicoes();
+}
 
 function adicionarLinhaIngrediente(){
   const div=document.createElement('div');div.className='linha-ingrediente';div.style.cssText='display:flex;gap:6px;margin-bottom:8px;align-items:center';
@@ -738,7 +799,22 @@ function adicionarLinhaIngrediente(){
 }
 
 function renderizarSlotsCardapio(){
-  ['almoco','janta'].forEach(tipo=>{const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);if(!grid)return;grid.innerHTML='';for(let d=1;d<=5;d++){const chave=`${d}-${tipo}`;const slot=_planDias[chave];const btn=document.createElement('div');btn.className='dia-slot'+(slot?' preenchido':'');btn.textContent=slot?slot.nome:'+ add';btn.onclick=()=>abrirModalRefeicao(d,tipo);grid.appendChild(btn);}});
+  ['almoco','janta'].forEach(tipo=>{
+    const grid=el(`slots${tipo.charAt(0).toUpperCase()+tipo.slice(1)}`);
+    if(!grid)return;
+    grid.innerHTML='';
+    for(let d=1;d<=7;d++){
+      const chave=`${d}-${tipo}`;
+      const slot=_planDias[chave];
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='dia-slot'+(slot?' preenchido':'');
+      btn.innerHTML=slot?`<span>${slot.nome}</span>`:'<span>+</span>';
+      btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${tipo==='almoco'?'Almoço':'Jantar'}${slot?' · '+slot.nome:''}`);
+      btn.onclick=()=>abrirModalRefeicao(d,tipo);
+      grid.appendChild(btn);
+    }
+  });
 }
 
 function normalizarCardapioTexto(valor=''){
@@ -782,7 +858,7 @@ async function sugerirPlanejamentoSemana(){
     const semana=formatarDataISO(inicioSemana());
     const baseHash=[...semana].reduce((a,c)=>a+c.charCodeAt(0),0)+_sugestaoCardapioOffset++;
 
-    for(let d=1;d<=5;d++){
+    for(let d=1;d<=7;d++){
       for(const tipo of ['almoco','janta']){
         const compativeis=candidatas.filter(r=>r.tipo===tipo||r.tipo==='ambos');
         const ranking=compativeis.map((r,idx)=>{
@@ -816,7 +892,7 @@ async function sugerirPlanejamentoSemana(){
 }
 
 function abrirModalRefeicao(dia,tipo){
-  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${['','Seg','Ter','Qua','Qui','Sex'][dia]} — ${tipo==='almoco'?'Almoço':'Janta'}`;
+  _slotAtual={dia,tipo};el('modalRefTitulo').textContent=`${CARDAPIO_DIAS[dia]||'Dia'} — ${tipo==='almoco'?'Almoço':'Jantar'} · ${_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1)}`;
   const chave=`${dia}-${tipo}`;el('modalRefNomeAvulso').value=_planDias[chave]?.nome||'';
   const lista=el('modalRefLista');lista.innerHTML='';
   _refeicoes.filter(r=>r.tipo===tipo||r.tipo==='ambos').forEach(r=>{const btn=document.createElement('div');btn.className='card-refeicao';btn.style.cursor='pointer';btn.innerHTML=`<span class="nome">${r.nome}</span>`;btn.onclick=()=>{el('modalRefNomeAvulso').value=r.nome;_slotAtual.refeicaoId=r.id;};lista.appendChild(btn);});
@@ -829,23 +905,83 @@ function fecharModalRefeicao(){fecharModal('modalRefeicao');_slotAtual=null;}
 
 async function carregarPlanejamento(){
   const seg=formatarDataISO(inicioSemana());
-  const{data:plan}=await supa.from('planejamento_semana').select('id,responsavel').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
-  if(!plan){_planDias={};renderizarSlotsCardapio();return;}
-  if(plan.responsavel)el('planResp').value=plan.responsavel;
-  const{data:dias}=await supa.from('planejamento_dias').select('dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome)').eq('planejamento_id',plan.id);
-  _planDias={};for(const d of(dias||[])){_planDias[`${d.dia_semana}-${d.tipo}`]={nome:d.refeicoes?.nome||d.refeicao_nome||'',refeicaoId:d.refeicao_id};}renderizarSlotsCardapio();
+  const{data:planos,error}=await supa.from('planejamento_semana')
+    .select('id,responsavel,planejamento_dias(dia_semana,tipo,refeicao_id,refeicao_nome,refeicoes(nome))')
+    .eq('casa_id',usuario.casa_id)
+    .eq('semana_inicio',seg);
+  _planDiasPorResp={ambos:{},mateus:{},ghustavo:{}};
+  if(error){
+    console.error('[Cardápio] Falha ao carregar planejamento:',error);
+    selecionarResponsavelCardapio('ambos');
+    return;
+  }
+  for(const plano of(planos||[])){
+    const resp=CARDAPIO_RESPONSAVEIS.includes(plano.responsavel)?plano.responsavel:'ambos';
+    for(const d of(plano.planejamento_dias||[])){
+      _planDiasPorResp[resp][`${d.dia_semana}-${d.tipo}`]={
+        nome:d.refeicoes?.nome||d.refeicao_nome||'',
+        refeicaoId:d.refeicao_id
+      };
+    }
+  }
+  selecionarResponsavelCardapio(el('planResp')?.value||'ambos');
 }
 
 async function salvarPlanejamento(){
-  el('btnSalvarPlan').disabled=true;const seg=formatarDataISO(inicioSemana());const resp=el('planResp').value;
-  let planId;const{data:ex}=await supa.from('planejamento_semana').select('id').eq('casa_id',usuario.casa_id).eq('semana_inicio',seg).single();
-  if(ex){planId=ex.id;await supa.from('planejamento_semana').update({responsavel:resp}).eq('id',planId);}
-  else{const{data:n}=await supa.from('planejamento_semana').insert({casa_id:usuario.casa_id,semana_inicio:seg,responsavel:resp,criado_por:usuario.id}).select().single();planId=n?.id;}
-  if(!planId){aviso('avisoPlan','Erro.','erro');el('btnSalvarPlan').disabled=false;return;}
-  await supa.from('planejamento_dias').delete().eq('planejamento_id',planId);
-  const inserir=Object.entries(_planDias).map(([chave,val])=>{const[dia,tipo]=chave.split('-');return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};});
-  if(inserir.length)await supa.from('planejamento_dias').insert(inserir);
-  aviso('avisoPlan','Cardápio salvo.','ok');setTimeout(()=>aviso('avisoPlan',''),2000);el('btnSalvarPlan').disabled=false;
+  const botao=el('btnSalvarPlan');
+  if(botao)botao.disabled=true;
+  const seg=formatarDataISO(inicioSemana());
+  try{
+    const{data:existentes,error}=await supa.from('planejamento_semana')
+      .select('id,responsavel')
+      .eq('casa_id',usuario.casa_id)
+      .eq('semana_inicio',seg);
+    if(error)throw error;
+    const porResp=new Map((existentes||[]).map(p=>[p.responsavel||'ambos',p]));
+
+    for(const resp of CARDAPIO_RESPONSAVEIS){
+      const slots=_planDiasPorResp[resp]||{};
+      let plano=porResp.get(resp);
+      let planId=plano?.id||null;
+      if(!planId){
+        const{data:n,error:e}=await supa.from('planejamento_semana')
+          .insert({casa_id:usuario.casa_id,semana_inicio:seg,responsavel:resp,criado_por:usuario.id})
+          .select('id').single();
+        if(e)throw e;
+        planId=n?.id;
+      }else{
+        const{error:e}=await supa.from('planejamento_semana').update({responsavel:resp}).eq('id',planId);
+        if(e)throw e;
+      }
+      if(!planId)continue;
+      const{error:delErr}=await supa.from('planejamento_dias').delete().eq('planejamento_id',planId);
+      if(delErr)throw delErr;
+      const inserir=Object.entries(slots).map(([chave,val])=>{
+        const[dia,tipo]=chave.split('-');
+        return{planejamento_id:planId,dia_semana:Number(dia),tipo,refeicao_id:val.refeicaoId||null,refeicao_nome:val.nome};
+      });
+      if(inserir.length){
+        const{error:insErr}=await supa.from('planejamento_dias').insert(inserir);
+        if(insErr)throw insErr;
+      }
+    }
+    aviso('avisoPlan','Cardápios salvos para Ambos, Mateus e Ghustavo.','ok');
+    setTimeout(()=>aviso('avisoPlan',''),2500);
+  }catch(erro){
+    console.error('[Cardápio] Falha ao salvar:',erro);
+    aviso('avisoPlan','Não foi possível salvar o cardápio.','erro');
+  }finally{
+    if(botao)botao.disabled=false;
+  }
+}
+
+function limparPlanejamentoAtual(){
+  const rotulo=_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1);
+  if(!Object.keys(_planDias).length)return;
+  if(!confirm(`Limpar todos os slots de ${rotulo} nesta semana?`))return;
+  _planDiasPorResp[_planRespAtual]={};
+  selecionarResponsavelCardapio(_planRespAtual);
+  aviso('avisoPlan',`Slots de ${rotulo} limpos. Clique em Salvar para confirmar.`,'ok');
 }
 
 async function gerarListaCardapio(){
@@ -1484,10 +1620,10 @@ async function carregarHoje(){
     const comprasN=dados.compras?.total||0;
     const estN=dados.estoqueAtencao?.length||0;
     mg.innerHTML=`
-      <div class="metrica mi-sage"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas pendentes</div></div>
-      <div class="metrica mi-clay"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas próximas</div></div>
-      <div class="metrica mi-sky"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Itens na lista</div></div>
-      <div class="metrica mi-sun"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque em atenção</div></div>
+      <div class="metrica mi-sage clicavel" role="button" tabindex="0" data-ui-destination="tarefas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas pendentes</div></div>
+      <div class="metrica mi-clay clicavel" role="button" tabindex="0" data-ui-destination="contas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas próximas</div></div>
+      <div class="metrica mi-sky clicavel" role="button" tabindex="0" data-ui-destination="compras"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Itens na lista</div></div>
+      <div class="metrica mi-sun clicavel" role="button" tabindex="0" data-ui-destination="estoque"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque em atenção</div></div>
     `;
   }
   const area=el('cardsHoje');area.innerHTML='';
@@ -1500,15 +1636,26 @@ async function carregarHoje(){
     area.appendChild(card.cartao);
   }
 
-  if(dados.cardapioHoje){
+  {
     const card=criarCartaoHoje('Cardápio de hoje','cardapio');const ch=dados.cardapioHoje;
-    if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
-    if(ch.janta)card.corpo.appendChild(miniItem('Janta',ch.janta,''));
-    if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+    if(ch){
+      if(ch.itens?.length){
+        ch.itens.slice(0,4).forEach(item=>{
+          const resp=item.responsavel==='ambos'?'Ambos':item.responsavel.charAt(0).toUpperCase()+item.responsavel.slice(1);
+          card.corpo.appendChild(miniItem(item.tipo==='almoco'?`Almoço · ${resp}`:`Jantar · ${resp}`,item.nome,''));
+        });
+      }else{
+        if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
+        if(ch.janta)card.corpo.appendChild(miniItem('Jantar',ch.janta,''));
+        if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
+      }
+    }else{
+      card.corpo.appendChild(miniItem('Sem refeições planejadas','Toque para montar a semana',''));
+    }
     area.appendChild(card.cartao);
   }
 
-  if(dados.tudoEmDia&&!dados.cardapioHoje&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);return;}
+  if(dados.tudoEmDia&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);}
 if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
   if(dados.estoqueAtencao.length){const card=criarCartaoHoje('Estoque em atenção','estoque');for(const i of dados.estoqueAtencao)card.corpo.appendChild(miniItem(i.nome,`${i.quantidade} · ${i.status==='acabou'?'acabou':'baixo'}`,''));area.appendChild(card.cartao);}
   if(dados.compras.total){const card=criarCartaoHoje('Compras','compras');for(const n of dados.compras.primeiros)card.corpo.appendChild(miniItem(n,'',''));if(dados.compras.total>dados.compras.primeiros.length){const r=document.createElement('div');r.className='mini-item';r.style.color='var(--suave)';r.textContent=`+ mais ${dados.compras.total-dados.compras.primeiros.length} na lista`;card.corpo.appendChild(r);}area.appendChild(card.cartao);}
@@ -1897,6 +2044,8 @@ el('btnFecharModalRef').onclick=fecharModalRefeicao;
 el('btnSugerirPlan').onclick=sugerirPlanejamentoSemana;
 el('btnSalvarPlan').onclick=salvarPlanejamento;
 el('btnGerarLista').onclick=gerarListaCardapio;
+el('btnLimparPlan').onclick=limparPlanejamentoAtual;
+el('planResp').onchange=e=>selecionarResponsavelCardapio(e.target.value);
 el('btnSalvarRitual').onclick=salvarRitual;
 el('btnConcluirRitual').onclick=concluirRitual;
 el('btnCriarTarefaRitual').onclick=criarTarefaDoRitual;
@@ -2021,6 +2170,9 @@ window.trocarSub = trocarSub;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
 window.voltarContexto = voltarContexto;
+window.abrirRitmoContextual = abrirRitmoContextual;
+window.voltarAbaContextual = voltarAbaContextual;
+window.voltarCasaContextual = voltarCasaContextual;
 if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
 
 

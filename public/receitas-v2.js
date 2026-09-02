@@ -35,7 +35,7 @@
     const link = document.createElement('link');
     link.id = 'receitas-v2-css';
     link.rel = 'stylesheet';
-    link.href = '/receitas-v2.css?v=1';
+    link.href = '/receitas-v2.css?v=2';
     document.head.appendChild(link);
   }
 
@@ -113,6 +113,13 @@
       ${editavel ? '<button type="button" class="rv2-secondary" data-rv2-edit>Editar detalhes da receita</button>' : ''}`;
   }
 
+  function podeFecharReceita(modal) {
+    if (modal?.dataset.rv2Dirty === '1') {
+      return confirm('Deseja sair sem salvar as alterações da receita?');
+    }
+    return true;
+  }
+
   async function abrirReceitaMobile(id) {
     try {
       const receita = await buscarReceita(id);
@@ -123,16 +130,19 @@
       modal.className = 'rv2-modal';
       modal.innerHTML = `<section class="rv2-dialog" role="dialog" aria-modal="true" aria-label="Receita"><header class="rv2-dialog-head"><div><span>Receita da Casa</span><h2>${escapar(receita.nome)}</h2></div><button type="button" data-rv2-close aria-label="Fechar">${SVG.close}</button></header><div class="rv2-dialog-body">${detalheHtml(receita, true)}</div></section>`;
       modal.addEventListener('click', ev => {
-        if (ev.target === modal || ev.target.closest('[data-rv2-close]')) modal.remove();
-        else if (ev.target.closest('[data-rv2-edit]')) renderizarEdicao(receita);
+        if (ev.target === modal || ev.target.closest('[data-rv2-close]')) {
+          if (podeFecharReceita(modal)) modal.remove();
+        } else if (ev.target.closest('[data-rv2-edit]')) renderizarEdicao(receita);
       });
       document.body.appendChild(modal);
     } catch (erro) { console.error('[Receitas] Falha ao abrir:', erro); }
   }
 
   function renderizarEdicao(receita) {
-    const corpo = document.querySelector('#rv2RecipeModal .rv2-dialog-body');
-    if (!corpo) return;
+    const modal = document.getElementById('rv2RecipeModal');
+    const corpo = modal?.querySelector('.rv2-dialog-body');
+    if (!corpo || !modal) return;
+    modal.dataset.rv2Dirty = '0';
     corpo.innerHTML = `
       <form class="rv2-edit-form" data-rv2-edit-form>
         <div class="rv2-form-grid">
@@ -144,8 +154,15 @@
         <div class="rv2-edit-actions"><button type="button" class="rv2-secondary" data-rv2-cancel-edit>Cancelar</button><button type="submit" class="rv2-primary">Salvar detalhes</button></div>
         <div class="rv2-feedback" role="status" aria-live="polite"></div>
       </form>`;
-    corpo.querySelector('[data-rv2-cancel-edit]')?.addEventListener('click', () => { corpo.innerHTML = detalheHtml(receita, true); });
-    corpo.querySelector('[data-rv2-edit-form]')?.addEventListener('submit', async ev => {
+    const formEdicao = corpo.querySelector('[data-rv2-edit-form]');
+    formEdicao?.addEventListener('input', () => { modal.dataset.rv2Dirty = '1'; });
+    formEdicao?.addEventListener('change', () => { modal.dataset.rv2Dirty = '1'; });
+    corpo.querySelector('[data-rv2-cancel-edit]')?.addEventListener('click', () => {
+      if (!podeFecharReceita(modal)) return;
+      modal.dataset.rv2Dirty = '0';
+      corpo.innerHTML = detalheHtml(receita, true);
+    });
+    formEdicao?.addEventListener('submit', async ev => {
       ev.preventDefault();
       const form = ev.currentTarget;
       const botao = form.querySelector('[type="submit"]');
@@ -164,6 +181,7 @@
         const { error } = await contexto.supa.from('refeicoes').update(atualizacao).eq('id', receita.id).eq('casa_id', contexto.usuario.casa_id);
         if (error) throw error;
         receita = { ...receita, ...atualizacao };
+        modal.dataset.rv2Dirty = '0';
         corpo.innerHTML = detalheHtml(receita, true);
         window.dispatchEvent(new CustomEvent('lifeos:receitas-atualizar'));
       } catch (erro) {
@@ -228,6 +246,11 @@
   }
 
   function tratarClique(ev) {
+    const abrir = ev.target.closest?.('[data-rv2-open]');
+    if (abrir) {
+      abrirReceitaMobile(abrir.dataset.rv2Open);
+      return;
+    }
     const adicionar = ev.target.closest?.('[data-rv2-add-list]');
     if (adicionar) {
       const container = adicionar.closest('.rv2-shopping');
