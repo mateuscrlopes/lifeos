@@ -43,6 +43,21 @@
   /* Tipografia */
   --serif: system-ui, -apple-system, 'Segoe UI', Inter, sans-serif;
   --sans:  system-ui, -apple-system, 'Segoe UI', Inter, sans-serif;
+  --text-caption: 11px;
+  --text-meta: 12px;
+  --text-body: 14px;
+  --text-card-title: 15px;
+  --text-section-title: 18px;
+  --text-page-title: 24px;
+
+  /* Espaçamento e toque */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --touch-target: 44px;
 
   /* Transições */
   --ease: cubic-bezier(.25,.46,.45,.94);
