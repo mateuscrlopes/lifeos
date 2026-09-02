@@ -31,7 +31,7 @@ test('tablet v3 troca densidade de dashboard por leitura e scroll', () => {
   const css = read('public/tablet-app-shell-v3.css');
 
   assert.match(css, /\.painel-body[\s\S]*overflow-y:\s*auto\s*!important/);
-  assert.match(css, /#pag-inicio \\.conteudo-grid[\\s\\S]*grid-template-columns: repeat\\(3, minmax\\(0, 1fr\\)\\) !important/);
+  assert.match(css, /#pag-inicio \.conteudo-grid[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/);
   assert.match(css, /\.col-dir[\s\S]*grid-column:\s*1\s*\/\s*-1/);
   assert.match(css, /\.hero-banner-bg[\s\S]*display:\s*none\s*!important/);
 });
