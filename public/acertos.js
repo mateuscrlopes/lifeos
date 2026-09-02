@@ -762,10 +762,16 @@
             '</strong> identificado no print' +
             (ocrConfidence != null ? ' · confiança OCR ' + ocrConfidence + '%' : '') + '.</p>';
         } else {
-          ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui identificar o valor com segurança neste print. Confira o campo “Valor do Pix” antes de enviar.</p>';
+          valueInput.value = '';
+          valueTouched = true;
+          renderVariance();
+          ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui identificar o valor com segurança neste print. Digite o valor do Pix para continuar.</p>';
         }
       } catch (error) {
-        ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui ler este print automaticamente. Confira o valor do Pix manualmente.</p>';
+        valueInput.value = '';
+        valueTouched = true;
+        renderVariance();
+        ocrStatus.innerHTML = '<p class="ac-note warn">Não consegui ler este print automaticamente. Digite o valor do Pix para continuar.</p>';
       } finally {
         ocrBusy = false;
         if (submit) submit.disabled = false;
