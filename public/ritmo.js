@@ -1125,6 +1125,12 @@
       <div class="ritmo-note">Séries, repetições e descanso ficam editáveis. Carga é registrada em cada sessão.</div>
     `);
 
+    const editorBox = el('ritmoItensPlanoEditor');
+    editorBox?.addEventListener('click', e => {
+      const botao = e.target.closest('[data-remover-item-plano]');
+      if (botao) botao.closest('[data-item-plano-editor]')?.remove();
+    });
+
     el('ritmoAdicionarItemPlano')?.addEventListener('click', () => {
       const box = el('ritmoItensPlanoEditor');
       const idx = box.querySelectorAll('[data-item-plano-editor]').length;
