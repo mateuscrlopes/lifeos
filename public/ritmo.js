@@ -648,6 +648,7 @@
                   m.abdomen_cm ? 'abdômen ' + numero(m.abdomen_cm,1) + ' cm' : '',
                 ].filter(Boolean).join(' · ') || 'Medidas corporais'}</small>
               </div>
+              <button type="button" class="ritmo-btn secondary" data-editar-medida="${m.id}">Abrir</button>
             </div>
           `).join('') : '<div class="ritmo-empty">Registre sua primeira medida para iniciar a evolução.</div>'}
         </div>
@@ -878,6 +879,7 @@
     document.querySelectorAll('[data-abrir-atividade]').forEach(b => b.addEventListener('click', () => abrirAtividadeAgenda(b.dataset.abrirAtividade)));
     document.querySelectorAll('[data-plano-detalhe]').forEach(b => b.addEventListener('click', () => abrirPlanoDetalhe(b.dataset.planoDetalhe)));
     document.querySelectorAll('[data-editar-plano-alimentar]').forEach(b => b.addEventListener('click', () => abrirEditorPlanoAlimentar(b.dataset.editarPlanoAlimentar)));
+    document.querySelectorAll('[data-editar-medida]').forEach(b => b.addEventListener('click', () => abrirNovaMedida(R.medidas.find(m => m.id === b.dataset.editarMedida) || null)));
     document.querySelectorAll('[data-foto-posicao]').forEach(b => b.addEventListener('click', () => iniciarFoto(b.dataset.fotoPosicao)));
 
     el('ritmoEditarCiclo')?.addEventListener('click', abrirEditarCiclo);
@@ -1403,25 +1405,36 @@
     </div>`;
   }
 
-  function abrirNovaMedida() {
+  function abrirNovaMedida(medida = null) {
     const ultima = R.medidas[0] || {};
+    const atual = medida || {};
     abrirModal(`
-      ${modalHead('Registrar medidas', 'Use condições parecidas entre os registros.')}
+      ${modalHead(medida ? 'Editar medidas' : 'Registrar medidas', 'Use condições parecidas entre os registros.')}
       <div class="ritmo-form-grid">
-        ${campoModal('ritmoMedData','Data','date',isoLocal())}
-        ${campoModal('ritmoMedPeso','Peso (kg)','number','',ultima.peso_kg)}
-        ${campoModal('ritmoMedCintura','Cintura (cm)','number','',ultima.cintura_cm)}
-        ${campoModal('ritmoMedAbdomen','Abdômen (cm)','number','',ultima.abdomen_cm)}
-        ${campoModal('ritmoMedQuadrilAlto','Quadril alto (cm)','number','',ultima.quadril_alto_cm)}
-        ${campoModal('ritmoMedQuadril','Quadril (cm)','number','',ultima.quadril_max_cm)}
-        ${campoModal('ritmoMedPeito','Peito (cm)','number','',ultima.peito_cm)}
-        ${campoModal('ritmoMedCoxa','Coxa dir. (cm)','number','',ultima.coxa_d_cm)}
-        ${campoModal('ritmoMedBraco','Braço dir. (cm)','number','',ultima.braco_d_cm)}
-        ${campoModal('ritmoMedPanturrilha','Panturrilha dir. (cm)','number','',ultima.panturrilha_d_cm)}
+        ${campoModal('ritmoMedData','Data','date',atual.data || isoLocal())}
+        ${campoModal('ritmoMedPeso','Peso (kg)','number',atual.peso_kg ?? '',ultima.peso_kg)}
+        ${campoModal('ritmoMedCintura','Cintura (cm)','number',atual.cintura_cm ?? '',ultima.cintura_cm)}
+        ${campoModal('ritmoMedAbdomen','Abdômen (cm)','number',atual.abdomen_cm ?? '',ultima.abdomen_cm)}
+        ${campoModal('ritmoMedQuadrilAlto','Quadril alto (cm)','number',atual.quadril_alto_cm ?? '',ultima.quadril_alto_cm)}
+        ${campoModal('ritmoMedQuadril','Quadril (cm)','number',atual.quadril_max_cm ?? '',ultima.quadril_max_cm)}
+        ${campoModal('ritmoMedPeito','Peito (cm)','number',atual.peito_cm ?? '',ultima.peito_cm)}
+        ${campoModal('ritmoMedCoxa','Coxa dir. (cm)','number',atual.coxa_d_cm ?? '',ultima.coxa_d_cm)}
+        ${campoModal('ritmoMedBraco','Braço dir. (cm)','number',atual.braco_d_cm ?? '',ultima.braco_d_cm)}
+        ${campoModal('ritmoMedPanturrilha','Panturrilha dir. (cm)','number',atual.panturrilha_d_cm ?? '',ultima.panturrilha_d_cm)}
       </div>
-      <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarMedida">Salvar registro</button></div>
+      <div class="ritmo-actions">
+        <button class="ritmo-btn" id="ritmoSalvarMedida">Salvar registro</button>
+        ${medida ? '<button class="ritmo-icon-danger" type="button" id="ritmoExcluirMedida" aria-label="Excluir registro" title="Excluir registro">' + svg('lixeira') + '</button>' : ''}
+      </div>
     `);
-    el('ritmoSalvarMedida')?.addEventListener('click', salvarMedida);
+    el('ritmoSalvarMedida')?.addEventListener('click', () => salvarMedida(medida));
+    el('ritmoExcluirMedida')?.addEventListener('click', async () => {
+      if (!medida || !confirm(`Excluir o registro de ${dataBr(medida.data)}?`)) return;
+      const { error } = await R.client.from('ritmo_medidas').delete().eq('id', medida.id);
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
   }
 
   function campoModal(id, label, type, value = '', placeholder = '') {
@@ -1429,7 +1442,7 @@
     return `<div class="ritmo-field"><label>${escapar(label)}</label><input id="${id}" type="${type}" ${step} value="${escapar(value)}" placeholder="${placeholder != null ? escapar(String(placeholder)) : ''}"></div>`;
   }
 
-  async function salvarMedida() {
+  async function salvarMedida(medida = null) {
     const payload = {
       usuario_id: R.usuario.id,
       data: el('ritmoMedData').value || isoLocal(),
@@ -1443,7 +1456,10 @@
       braco_d_cm: numOuNull(el('ritmoMedBraco').value),
       panturrilha_d_cm: numOuNull(el('ritmoMedPanturrilha').value),
     };
-    const { error } = await R.client.from('ritmo_medidas').upsert(payload, { onConflict: 'usuario_id,data' });
+    const operacao = medida
+      ? R.client.from('ritmo_medidas').update(payload).eq('id', medida.id)
+      : R.client.from('ritmo_medidas').upsert(payload, { onConflict: 'usuario_id,data' });
+    const { error } = await operacao;
     if (error) throw error;
     fecharModal();
     await carregarTudo();
