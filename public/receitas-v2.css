@@ -6,3 +6,37 @@
 .rv2-primary,.rv2-secondary{width:100%;min-height:47px;margin-top:12px;border-radius:14px;font-size:13px;font-weight:850}.rv2-primary{border:0;background:var(--sage,var(--pc-accent));color:#fff}.rv2-secondary{border:1px solid var(--linha,var(--pc-line));background:transparent;color:var(--sage,var(--pc-accent))}.rv2-feedback{min-height:20px;margin-top:8px;color:var(--sage,var(--pc-accent));font-size:12px;font-weight:700;text-align:center}.rv2-feedback.erro{color:var(--alert,#d66f68)}.rv2-empty-small{padding:13px 0;color:var(--muted,var(--pc-muted));font-size:13px}.rv2-edit-form>label{display:block;margin-bottom:13px}.rv2-edit-form>label>span,.rv2-edit-form .rv2-form-grid label>span{display:block;margin-bottom:6px;color:var(--muted,var(--pc-muted));font-size:11px;font-weight:750}.rv2-edit-form input,.rv2-edit-form textarea{width:100%;padding:11px 12px;border:1.5px solid var(--linha,var(--pc-line));border-radius:12px;background:var(--bg,var(--pc-surface));color:inherit;font:inherit}.rv2-edit-form textarea{resize:vertical}.rv2-edit-actions{display:grid;grid-template-columns:.8fr 1.2fr;gap:9px}
 .tablet-mode .rv2-tablet-extra>.rv2-recipe-meta{margin-top:4px}.tablet-mode .rv2-tablet-extra .rv2-section h4,.tablet-mode .rv2-tablet-extra .rv2-shopping h4{font-size:18px}.tablet-mode .rv2-tablet-extra .rv2-shopping{margin-top:13px}.tablet-mode .rv2-tablet-extra .rv2-shop-list{display:grid;grid-template-columns:1fr 1fr}.tablet-mode .rv2-tablet-extra .rv2-shop-row:nth-child(even){border-left:1px solid var(--pc-line,var(--linha))}.tablet-mode .rv2-tablet-extra .rv2-primary{max-width:330px}
 @media(min-width:700px){.rv2-modal{place-items:center;padding:22px}.rv2-dialog{max-width:720px;border-radius:26px}}@media(max-width:520px){.rv2-form-grid{grid-template-columns:1fr;gap:0}}
+
+/* 0.36 — modal de receita dentro da safe area */
+.rv2-modal{
+  place-items:center;
+  padding:
+    calc(14px + env(safe-area-inset-top,0px))
+    12px
+    calc(18px + env(safe-area-inset-bottom,0px));
+}
+.rv2-dialog{
+  width:min(calc(100vw - 24px),620px);
+  max-height:calc(100dvh - 46px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  border-radius:24px;
+  box-shadow:0 24px 70px rgba(0,0,0,.28);
+}
+.rv2-dialog-head{
+  position:sticky;
+  top:0;
+  z-index:3;
+  background:var(--paper,var(--pc-surface-strong));
+}
+.rv2-dialog-body{
+  max-height:calc(100dvh - 150px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+}
+.rv2-edit-form input,.rv2-edit-form textarea{box-sizing:border-box;min-width:0}
+@media(max-width:520px){
+  .rv2-modal{padding-inline:12px}
+  .rv2-dialog-head{padding:16px 16px 12px}
+  .rv2-dialog-head h2{font-size:23px}
+  .rv2-dialog-body{padding:15px 16px calc(22px + env(safe-area-inset-bottom,0px))}
+  .rv2-edit-actions{grid-template-columns:1fr}
+  .rv2-edit-actions .rv2-primary,.rv2-edit-actions .rv2-secondary{margin-top:0}
+}
