@@ -111,7 +111,7 @@ test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
   assert.match(css, /#metricasHoje \.metrica-cardapio[\s\S]*grid-column:\s*1 \/ -1/);
   assert.match(css, /#listaRefeicoes \.card-refeicao[\s\S]*max-width:\s*100%\s*!important/);
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.receita-row-actions[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px/);
-  assert.match(shell, /mobile-shell-v3\.css\?v=3/);
+  assert.match(shell, /mobile-shell-v3\.css\?v=4/);
 });
 
 test('cabeçalhos e ações de página usam uma régua consistente', () => {
