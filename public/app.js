@@ -818,7 +818,7 @@ function adicionarLinhaIngrediente(){
   const n=document.createElement('input');n.type='text';n.className='ing-nome';n.placeholder='Ingrediente';n.style.flex='2';
   const q=document.createElement('input');q.type='number';q.className='ing-qtd';q.placeholder='Qtd';q.style.flex='1';q.min='0';
   const u=document.createElement('input');u.type='text';u.className='ing-un';u.placeholder='g/un';u.style.flex='1';
-  const r=document.createElement('button');r.textContent='×';r.style.cssText='background:none;color:var(--suave);padding:4px 8px';r.onclick=()=>div.remove();
+  const r=document.createElement('button');r.textContent='×';r.dataset.uiAction='delete';r.setAttribute('aria-label','Remover ingrediente');r.style.cssText='background:none;color:var(--suave);padding:4px 8px';r.onclick=()=>div.remove();
   div.appendChild(n);div.appendChild(q);div.appendChild(u);div.appendChild(r);el('refIngredientes').appendChild(div);n.focus();
 }
 
@@ -1069,7 +1069,7 @@ async function carregarRituais(){
     const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px;align-items:center';
     const btnAb=document.createElement('button');btnAb.textContent='Iniciar';btnAb.style.cssText='padding:7px 12px;font-size:13px';btnAb.onclick=()=>abrirModalRitual(r);
     const btnEditR=document.createElement('button');btnEditR.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditR.title='Editar';btnEditR.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditR.onclick=()=>abrirEditarRitual(r);
-    const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r);
+    const btnRem=document.createElement('button');btnRem.textContent='×';btnRem.dataset.uiAction='delete';btnRem.setAttribute('aria-label','Excluir ritual');btnRem.style.cssText='background:none;color:var(--suave);padding:4px 8px';btnRem.onclick=()=>removerRitual(r);
     btns.appendChild(btnAb);btns.appendChild(btnEditR);btns.appendChild(btnRem);topo.appendChild(esq);topo.appendChild(btns);div.appendChild(topo);
     if(sessoes.length){const hist=document.createElement('div');hist.style.marginTop='8px';sessoes.slice(0,3).forEach(s=>{const h=document.createElement('div');h.className='historico-item';h.textContent=new Date(s.realizado_em).toLocaleDateString('pt-BR');hist.appendChild(h);});div.appendChild(hist);}
     area.appendChild(div);
@@ -1350,7 +1350,7 @@ async function carregarContas(){
     const badge=document.createElement('span');badge.className='badge';badge.style.background=info.cor;badge.textContent=info.texto;dir.appendChild(badge);
     if(!conta.paga){const btn=document.createElement('button');btn.textContent='Paguei';btn.style.cssText='padding:7px 12px;font-size:13px';btn.onclick=(e)=>{e.stopPropagation();pagarConta(conta,btn);};dir.appendChild(btn);}
     const btnEditC=document.createElement('button');btnEditC.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEditC.title='Editar';btnEditC.style.cssText='background:none;color:var(--suave);padding:4px 6px;font-size:13px';btnEditC.onclick=(e)=>{e.stopPropagation();abrirEditarConta(conta);};
-    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.dataset.recordId=conta.id;btnDelC.dataset.lifeosDeleteFlow='app';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta,btnDelC);};
+    const btnDelC=document.createElement('button');btnDelC.textContent='×';btnDelC.dataset.uiAction='delete';btnDelC.setAttribute('aria-label','Excluir conta');btnDelC.dataset.recordId=conta.id;btnDelC.dataset.lifeosDeleteFlow='app';btnDelC.style.cssText='background:none;color:var(--suave);padding:4px 6px';btnDelC.onclick=(e)=>{e.stopPropagation();removerConta(conta,btnDelC);};
     dir.appendChild(btnEditC);dir.appendChild(btnDelC);
     l.appendChild(d);l.appendChild(dir);
     l.style.cursor='pointer';
@@ -1577,7 +1577,7 @@ async function carregarTarefas(){
     const m=document.createElement('span');m.className='meta';m.textContent=ps.join(' · ');d.appendChild(m);
     const acoesTarefa=document.createElement('div');acoesTarefa.style.cssText='display:flex;gap:2px;align-items:center';
     const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEdit.title='Editar';btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;display:flex;align-items:center;';btnEdit.onclick=()=>abrirEditarTarefa(t);
-    const br=document.createElement('button');br.textContent='×';br.style.cssText='background:none;color:var(--suave);padding:4px 6px';br.onclick=()=>removerTarefa(t);
+    const br=document.createElement('button');br.textContent='×';br.dataset.uiAction='delete';br.setAttribute('aria-label','Excluir tarefa');br.style.cssText='background:none;color:var(--suave);padding:4px 6px';br.onclick=()=>removerTarefa(t);
     acoesTarefa.appendChild(btnEdit);acoesTarefa.appendChild(br);
     const esq=document.createElement('div');esq.style.cssText='display:flex;align-items:center;flex:1';esq.appendChild(ch);esq.appendChild(d);l.appendChild(esq);l.appendChild(acoesTarefa);area.appendChild(l);
   }
@@ -1896,8 +1896,8 @@ async function carregarLocaisEstoque(){
     const dir=document.createElement('div');dir.style.cssText='display:flex;gap:4px';
     const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;display:flex;align-items:center;';
     btnEdit.onclick=()=>{const novo=prompt('Novo nome:',loc.nome);if(novo&&novo.trim()){supa.from('locais_estoque').update({nome:novo.trim()}).eq('id',loc.id).then(()=>{carregarLocaisEstoque();atualizarSelectsLocais();});}};
-    const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
-    btnDel.onclick=async()=>{if(!confirm(`Remover "${loc.nome}"?`))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
+    const btnDel=document.createElement('button');btnDel.textContent='Arquivar';btnDel.setAttribute('aria-label','Arquivar local do estoque');btnDel.style.cssText='font-size:11px;padding:4px 8px;background:var(--paper-2);color:var(--muted)';
+    btnDel.onclick=async()=>{if(!confirm(`Arquivar "${loc.nome}"? O local deixará de aparecer nas opções ativas.`))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
     dir.appendChild(btnEdit);dir.appendChild(btnDel);linha.appendChild(txt);linha.appendChild(dir);area.appendChild(linha);
   }
   atualizarSelectsLocais();
@@ -1973,8 +1973,8 @@ function renderizarEnderecos(){
   for(const e of _localCompraEnderecos){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--linha);font-size:12px';
     linha.innerHTML=`<span>${escapeHtml(e.endereco||'Sem endereço')} ${e.latitude?`(${Number(e.latitude).toFixed(4)}, ${Number(e.longitude).toFixed(4)})`:'sem coords'}</span>`;
-    const btnD=document.createElement('button');btnD.textContent='×';btnD.style.cssText='background:none;color:var(--suave);padding:2px 6px';
-    btnD.onclick=async()=>{if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
+    const btnD=document.createElement('button');btnD.textContent='×';btnD.dataset.uiAction='delete';btnD.setAttribute('aria-label','Excluir endereço');btnD.style.cssText='background:none;color:var(--suave);padding:2px 6px';
+    btnD.onclick=async()=>{if(!confirm(`Excluir o endereço "${e.endereco||'Sem endereço'}"?`))return;if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
     linha.appendChild(btnD);area.appendChild(linha);
   }
   if(!_localCompraEnderecos.length)area.innerHTML='<div style="font-size:12px;color:var(--suave);padding:6px 0">Nenhum endereço.</div>';
@@ -1985,7 +1985,7 @@ function renderizarCategoriasLocalCompra(){
   for(const cat of _localCompraCategorias){
     const chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--acao-clara);color:var(--acao);font-size:11px;padding:3px 8px;border-radius:999px;margin:2px';
     chip.textContent=cat;
-    const x=document.createElement('span');x.textContent='×';x.style.cursor='pointer';x.onclick=()=>{_localCompraCategorias=_localCompraCategorias.filter(c=>c!==cat);renderizarCategoriasLocalCompra();renderizarBotoesCategorias();};
+    const x=document.createElement('button');x.type='button';x.textContent='×';x.dataset.uiAction='delete';x.setAttribute('aria-label',`Remover categoria ${cat}`);x.style.cssText='background:none;color:inherit;padding:2px;min-width:28px;min-height:28px';x.onclick=()=>{_localCompraCategorias=_localCompraCategorias.filter(c=>c!==cat);renderizarCategoriasLocalCompra();renderizarBotoesCategorias();};
     chip.appendChild(x);area.appendChild(chip);
   }
   renderizarBotoesCategorias();
