@@ -820,35 +820,34 @@
       <div class="sidebar-nav">
         <button class="sidebar-btn ativo" data-pag="inicio" onclick="mudarPagina('inicio',this)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          Início
+          Hoje
         </button>
-        <button class="sidebar-btn" data-pag="tarefas" onclick="mudarPagina('tarefas',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          Tarefas
+        <button class="sidebar-btn" type="button" onclick="abrirModuloApp('ritmo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+          Ritmo
         </button>
-        <button class="sidebar-btn" data-pag="compras" onclick="mudarPagina('compras',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg>
-          Compras
+        <button class="sidebar-btn" type="button" onclick="abrirModuloApp('financeiro')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
+          Financeiro
         </button>
-        <button class="sidebar-btn" data-pag="estoque" onclick="mudarPagina('estoque',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-          Estoque
+        <button class="sidebar-btn" type="button" onclick="abrirModuloApp('plantas')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>
+          Plantas
         </button>
-        <button class="sidebar-btn" data-pag="contas" onclick="mudarPagina('contas',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          Contas
-        </button>
-        <button class="sidebar-btn" data-pag="rotinas" onclick="mudarPagina('rotinas',this)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-          Rotinas
+        <button class="sidebar-btn" type="button" onclick="abrirModuloApp('mais')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+          Mais
         </button>
       </div>
-      <div class="sidebar-sep"></div>
+      <div class="sidebar-profile" aria-label="Perfil atual">
+        <img src="https://awuapqiueykslecwxyaz.supabase.co/storage/v1/object/public/fotos/Design%20sem%20nome.png" alt="">
+        <span id="sidebarProfileName">Perfil</span>
+      </div>
       <button class="sidebar-espera" onclick="voltarEspera()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Espera
       </button>
-    </nav>
+      </nav>
 
     <!-- Conteúdo -->
     <div class="painel-main">
@@ -1093,6 +1092,8 @@ async function aoEntrar() {
   const { data: s } = await supa.auth.getSession();
   const { data: p } = await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id', s.session.user.id).single();
   usuario = p;
+  const perfilNome = document.getElementById('sidebarProfileName');
+  if (perfilNome) perfilNome.textContent = String(p.nome || 'Perfil').trim().split(/\s+/)[0];
   document.getElementById('telaLogin').style.display = 'none';
   mostrarEspera();
   await carregarTudo();
@@ -1122,6 +1123,13 @@ function voltarEspera() {
 }
 
 document.getElementById('telaEspera').onclick = abrirPainel;
+
+function abrirModuloApp(modulo) {
+  const url = new URL('/', window.location.origin);
+  url.searchParams.set('modulo', modulo);
+  url.searchParams.set('origem', 'tablet');
+  window.location.assign(url.toString());
+}
 
 // ---- PÁGINAS DO PAINEL ----
 let _paginaAtual = 'inicio';
