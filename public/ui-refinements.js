@@ -213,9 +213,11 @@ function enhanceButton(button) {
   const label = buttonLabel(button);
   const title = (button.title || '').toLowerCase();
   const aria = (button.getAttribute('aria-label') || '').toLowerCase();
-  const closeControl = button.classList.contains('modal-fechar')
+  const explicitAction = String(button.dataset.uiAction || '').toLowerCase();
+  const closeControl = explicitAction === 'close'
+    || button.classList.contains('modal-fechar')
     || button.classList.contains('ritmo-close')
-    || button.matches('[data-fechar-ritmo],[data-rv2-close]')
+    || button.matches('[data-fechar-ritmo],[data-rv2-close],[data-ac-close],[data-cf-fechar],[data-cf-editor-fechar],[data-cfe-fechar]')
     || aria.includes('fechar')
     || title.includes('fechar');
 
@@ -270,11 +272,23 @@ function enhanceButton(button) {
     return;
   }
 
-  if ((label === '×' || label === '✕') && !button.closest('.linha-ingrediente')) {
+  if (explicitAction === 'delete') {
     button.classList.add('ui-icon-button', 'ui-delete');
-    button.setAttribute('aria-label', 'Excluir');
-    button.title = 'Excluir';
+    button.setAttribute('aria-label', button.getAttribute('aria-label') || 'Excluir');
+    button.title = button.title || 'Excluir';
     setButtonContent(button, 'trash');
+    return;
+  }
+
+  if ((label === '×' || label === '✕') && !button.closest('.linha-ingrediente')) {
+    // Um X sem semântica explícita é tratado como fechar, nunca como exclusão.
+    // Ações destrutivas precisam declarar data-ui-action="delete".
+    button.classList.remove('ui-delete', 'ui-danger', 'is-danger');
+    button.classList.add('ui-icon-button');
+    button.dataset.uiAction = 'close';
+    button.setAttribute('aria-label', 'Fechar');
+    button.title = 'Fechar';
+    setButtonContent(button, 'close');
     return;
   }
 
