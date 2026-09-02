@@ -18,6 +18,7 @@
     sessoes: [],
     fotos: [],
     planosAlimentares: [],
+    consumos: [],
     cardapioHoje: [],
     carregando: false,
   };
@@ -154,6 +155,7 @@
         sessoes,
         fotos,
         planosAlimentares,
+        consumos,
         cardapio,
       ] = await Promise.all([
         R.client.from('ritmo_perfis').select('*').eq('usuario_id', R.usuario.id).maybeSingle(),
@@ -166,6 +168,7 @@
         R.client.from('ritmo_sessoes').select('id,plano_id,data,duracao_min,distancia_km,intensidade').eq('usuario_id', R.usuario.id).gte('data', isoLocal(ha90)).order('data', { ascending: false }).limit(50),
         R.client.from('ritmo_fotos').select('*').eq('usuario_id', R.usuario.id).order('data', { ascending: false }).limit(30),
         R.client.from('ritmo_planos_alimentares').select('*').eq('usuario_id', R.usuario.id).eq('ativo', true).order('criado_em', { ascending: false }),
+        R.client.from('ritmo_consumos').select('*').eq('usuario_id', R.usuario.id).gte('data', semana).order('criado_em', { ascending: false }),
         R.client.from('planejamento_semana')
           .select('id,responsavel,planejamento_dias(dia_semana,tipo,refeicao_nome,refeicoes(nome))')
           .eq('casa_id', R.usuario.casa_id)
@@ -185,6 +188,7 @@
       R.sessoes = sessoes.data || [];
       R.fotos = fotos.data || [];
       R.planosAlimentares = planosAlimentares.data || [];
+      R.consumos = consumos.data || [];
       R.cardapioHoje = montarCardapioHoje(cardapio.data || [], hoje);
 
       await anexarUrlsFotos();
@@ -378,6 +382,13 @@
     const cons = consistenciaSemana();
     const agendaHoje = R.agenda.filter(a => a.dia_semana === new Date().getDay());
     const foto = progressoFotos();
+    const consumosHoje = R.consumos.filter(x => x.data === isoLocal());
+    const kcalHoje = consumosHoje.reduce((s, x) => s + Number(x.calorias || 0), 0);
+    const proteinaHoje = consumosHoje.reduce((s, x) => s + Number(x.proteina_g || 0), 0);
+    const metaKcal = Number(R.perfil?.meta_calorias || 0);
+    const metaProteina = Number(R.perfil?.meta_proteina_g || 0);
+    const kcalPct = metaKcal ? Math.min(100, Math.round((kcalHoje / metaKcal) * 100)) : 0;
+    const protPct = metaProteina ? Math.min(100, Math.round((proteinaHoje / metaProteina) * 100)) : 0;
 
     return `
       <section class="ritmo-section">
@@ -397,18 +408,28 @@
       </section>
 
       <section class="ritmo-section">
+        <div class="ritmo-section-head"><h3>Alimentação de hoje</h3><button id="ritmoAdicionarConsumo">+ Registrar</button></div>
         <div class="ritmo-grid-2">
           <div class="ritmo-stat">
             <div class="ritmo-stat-label">Calorias</div>
-            <div class="ritmo-stat-value">${R.perfil?.meta_calorias ? numero(R.perfil.meta_calorias,0) : '—'}</div>
-            <div class="ritmo-stat-meta">meta diária</div>
+            <div class="ritmo-stat-value">${numero(kcalHoje,0)} <span style="font-size:11px;color:var(--muted)">/ ${metaKcal ? numero(metaKcal,0) : '—'}</span></div>
+            <div class="ritmo-progress" style="background:var(--paper-2);margin-top:8px"><span style="width:${kcalPct}%;background:var(--sage)"></span></div>
+            <div class="ritmo-stat-meta">${kcalPct}% da meta registrada</div>
           </div>
           <div class="ritmo-stat">
             <div class="ritmo-stat-label">Proteína</div>
-            <div class="ritmo-stat-value">${R.perfil?.meta_proteina_g ? numero(R.perfil.meta_proteina_g,0) + ' g' : '—'}</div>
-            <div class="ritmo-stat-meta">meta diária</div>
+            <div class="ritmo-stat-value">${numero(proteinaHoje,0)} g <span style="font-size:11px;color:var(--muted)">/ ${metaProteina ? numero(metaProteina,0) + ' g' : '—'}</span></div>
+            <div class="ritmo-progress" style="background:var(--paper-2);margin-top:8px"><span style="width:${protPct}%;background:var(--sky)"></span></div>
+            <div class="ritmo-stat-meta">${protPct}% da meta registrada</div>
           </div>
         </div>
+        ${consumosHoje.length ? `<div class="ritmo-card" style="margin-top:9px">
+          ${consumosHoje.slice(0,4).map(c => `<div class="ritmo-meal-row">
+            <div class="ritmo-row-icon">${svg('refeicao')}</div>
+            <div class="ritmo-row-main"><strong>${escapar(c.descricao || rotuloRefeicaoConsumo(c.refeicao))}</strong><small>${numero(c.calorias || 0,0)} kcal · ${numero(c.proteina_g || 0,0)} g proteína</small></div>
+            <button class="ritmo-btn ghost" data-remover-consumo="${c.id}">Remover</button>
+          </div>`).join('')}
+        </div>` : ''}
       </section>
 
       <section class="ritmo-section">
@@ -832,6 +853,8 @@
     document.querySelectorAll('[data-foto-posicao]').forEach(b => b.addEventListener('click', () => iniciarFoto(b.dataset.fotoPosicao)));
 
     el('ritmoDiaCompleto')?.addEventListener('click', abrirDiaCompleto);
+    el('ritmoAdicionarConsumo')?.addEventListener('click', abrirRegistroConsumo);
+    document.querySelectorAll('[data-remover-consumo]').forEach(b => b.addEventListener('click', () => removerConsumo(b.dataset.removerConsumo)));
     el('ritmoAguaMais')?.addEventListener('click', () => alterarAgua(500));
     el('ritmoAguaMenos')?.addEventListener('click', () => alterarAgua(-500));
     el('ritmoAbrirCardapio')?.addEventListener('click', abrirCardapioCasa);
@@ -842,6 +865,62 @@
     el('ritmoSalvarPerfil')?.addEventListener('click', salvarPerfil);
     el('ritmoPdfPlano')?.addEventListener('change', importarPdf);
     el('ritmoFotoInput')?.addEventListener('change', enviarFoto);
+  }
+
+  function rotuloRefeicaoConsumo(tipo) {
+    return {
+      cafe: 'Café da manhã',
+      lanche_manha: 'Lanche da manhã',
+      almoco: 'Almoço',
+      lanche_tarde: 'Lanche da tarde',
+      jantar: 'Jantar',
+      ceia: 'Ceia',
+      outro: 'Outro',
+    }[tipo] || 'Refeição';
+  }
+
+  function abrirRegistroConsumo() {
+    const atual = refeicaoAtual();
+    abrirModal(`
+      ${modalHead('Registrar alimentação', 'Opcional: use quando quiser acompanhar o déficit com números.')}
+      <div class="ritmo-field"><label>Refeição</label><select id="ritmoConsumoRefeicao">
+        ${[
+          ['cafe','Café da manhã'],['lanche_manha','Lanche da manhã'],['almoco','Almoço'],
+          ['lanche_tarde','Lanche da tarde'],['jantar','Jantar'],['ceia','Ceia'],['outro','Outro']
+        ].map(([v,n]) => `<option value="${v}" ${v === atual.tipo ? 'selected' : ''}>${n}</option>`).join('')}
+      </select></div>
+      <div class="ritmo-field" style="margin-top:9px"><label>O que comeu?</label><input id="ritmoConsumoDesc" placeholder="Ex.: arroz, feijão, frango e brócolis"></div>
+      <div class="ritmo-form-grid" style="margin-top:9px">
+        <div class="ritmo-field"><label>Calorias</label><input id="ritmoConsumoKcal" type="number" min="0" step="1" placeholder="kcal"></div>
+        <div class="ritmo-field"><label>Proteína</label><input id="ritmoConsumoProteina" type="number" min="0" step="0.1" placeholder="g"></div>
+      </div>
+      <div class="ritmo-actions"><button class="ritmo-btn" id="ritmoSalvarConsumo">Salvar registro</button></div>
+      <div class="ritmo-note">Você não precisa registrar cada ingrediente. Um total aproximado da refeição já é suficiente para acompanhar tendência.</div>
+    `);
+    el('ritmoSalvarConsumo')?.addEventListener('click', async () => {
+      const kcal = numOuNull(el('ritmoConsumoKcal').value);
+      const proteina = numOuNull(el('ritmoConsumoProteina').value);
+      const descricao = el('ritmoConsumoDesc').value.trim();
+      if (kcal == null && proteina == null && !descricao) return;
+      const { error } = await R.client.from('ritmo_consumos').insert({
+        usuario_id: R.usuario.id,
+        data: isoLocal(),
+        refeicao: el('ritmoConsumoRefeicao').value,
+        descricao: descricao || null,
+        calorias: kcal,
+        proteina_g: proteina,
+        fonte: 'manual',
+      });
+      if (error) throw error;
+      fecharModal();
+      await carregarTudo();
+    });
+  }
+
+  async function removerConsumo(id) {
+    const { error } = await R.client.from('ritmo_consumos').delete().eq('id', id);
+    if (error) throw error;
+    await carregarTudo();
   }
 
   function abrirCheckin(tipo, referenciaId = null) {
