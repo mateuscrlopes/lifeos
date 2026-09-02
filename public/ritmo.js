@@ -25,9 +25,10 @@
 
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const REFEICOES_PRIORITARIAS = [
-    { tipo: 'cafe', nome: 'Café da manhã', inicio: 5, fim: 11 },
-    { tipo: 'almoco', nome: 'Almoço', inicio: 11, fim: 15 },
-    { tipo: 'lanche', nome: 'Lanche', inicio: 15, fim: 18 },
+    { tipo: 'cafe', nome: 'Café da manhã', inicio: 5, fim: 10 },
+    { tipo: 'lanche_manha', nome: 'Lanche da manhã', inicio: 10, fim: 12 },
+    { tipo: 'almoco', nome: 'Almoço', inicio: 12, fim: 15 },
+    { tipo: 'lanche_tarde', nome: 'Lanche da tarde', inicio: 15, fim: 18 },
     { tipo: 'jantar', nome: 'Jantar', inicio: 18, fim: 24 },
   ];
 
@@ -172,7 +173,7 @@
         R.client.from('ritmo_planos_alimentares').select('*').eq('usuario_id', R.usuario.id).eq('ativo', true).order('criado_em', { ascending: false }),
         R.client.from('ritmo_consumos').select('*').eq('usuario_id', R.usuario.id).gte('data', semana).order('criado_em', { ascending: false }),
         R.client.from('planejamento_semana')
-          .select('id,responsavel,planejamento_dias(id,dia_semana,tipo,refeicao_id,refeicao_nome,calorias,proteina_g,refeicoes(nome,calorias_por_porcao,proteina_por_porcao))')
+          .select('id,responsavel,planejamento_dias(id,dia_semana,tipo,refeicao_id,refeicao_nome,calorias,proteina_g,carboidratos_g,refeicoes(nome,calorias_por_porcao,proteina_por_porcao,carboidratos_por_porcao))')
           .eq('casa_id', R.usuario.casa_id)
           .eq('semana_inicio', semana),
       ]);
@@ -209,15 +210,19 @@
     const linhas = [];
     for (const plano of planejamentos) {
       for (const item of (plano.planejamento_dias || [])) {
-        if (item.dia_semana !== dia) continue;
+        if (item.dia_semana !== dia || !['almoco','janta'].includes(item.tipo)) continue;
         linhas.push({
           id: item.id,
           refeicaoId: item.refeicao_id || null,
           tipo: item.tipo,
           responsavel: plano.responsavel || 'ambos',
           nome: item.refeicoes?.nome || item.refeicao_nome || 'Refeição planejada',
+          itens: [item.refeicoes?.nome || item.refeicao_nome || 'Refeição planejada'],
           calorias: item.calorias ?? item.refeicoes?.calorias_por_porcao ?? null,
           proteina: item.proteina_g ?? item.refeicoes?.proteina_por_porcao ?? null,
+          carboidratos: item.carboidratos_g ?? item.refeicoes?.carboidratos_por_porcao ?? null,
+          origem: 'casa',
+          chave: `casa:${item.id}`,
         });
       }
     }
@@ -225,39 +230,145 @@
   }
 
 
-  function tipoCardapioDoCheckin(tipo) {
-    return tipo === 'jantar' ? 'janta' : tipo;
+  function normalizarPlanoTexto(valor = '') {
+    return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
-  function tipoConsumoDoCheckin(tipo) {
-    return tipo === 'lanche' ? 'lanche_tarde' : tipo;
+  function tipoPlanoPessoal(nome = '') {
+    const n = normalizarPlanoTexto(nome);
+    if (n.includes('cafe da manha') || n.includes('desjejum')) return 'cafe';
+    if (n.includes('lanche da manha') || n.includes('colacao')) return 'lanche_manha';
+    if (n.includes('almoco')) return 'almoco';
+    if (n.includes('lanche da tarde')) return 'lanche_tarde';
+    if (n.includes('jantar')) return 'jantar';
+    return null;
   }
 
-  function rotuloTipoCardapio(tipo) {
+  function somarNutri(base, add) {
     return {
-      cafe: 'Café da manhã',
-      almoco: 'Almoço',
-      lanche: 'Lanche',
-      janta: 'Jantar',
-      jantar: 'Jantar',
-    }[tipo] || 'Refeição';
+      calorias: Number(base.calorias || 0) + Number(add.calorias || 0),
+      proteina: Number(base.proteina || 0) + Number(add.proteina || 0),
+      carboidratos: Number(base.carboidratos || 0) + Number(add.carboidratos || 0),
+    };
+  }
+
+  function nutricaoItemPlano(item = '') {
+    const n = normalizarPlanoTexto(item).replace(/[–—]/g, '-');
+    const tabela = [
+      [/2 fatias.*pao|pao de forma/, { calorias: 130, proteina: 4, carboidratos: 24 }],
+      [/omelete de 3 ovos/, { calorias: 240, proteina: 19, carboidratos: 2 }],
+      [/2 ovos/, { calorias: 140, proteina: 12, carboidratos: 1 }],
+      [/ovo/, { calorias: 70, proteina: 6, carboidratos: 0.5 }],
+      [/requeijao|queijo/, { calorias: 70, proteina: 4, carboidratos: 2 }],
+      [/cafe preto.*acucar|cafe.*acucar/, { calorias: 40, proteina: 0, carboidratos: 10 }],
+      [/banana/, { calorias: 90, proteina: 1, carboidratos: 23 }],
+      [/pera|maca/, { calorias: 85, proteina: 0.5, carboidratos: 22 }],
+      [/tangerina/, { calorias: 60, proteina: 1, carboidratos: 15 }],
+      [/iogurte/, { calorias: 100, proteina: 6, carboidratos: 12 }],
+      [/granola/, { calorias: 120, proteina: 3, carboidratos: 20 }],
+      [/whey/, { calorias: 120, proteina: 24, carboidratos: 4 }],
+      [/leite/, { calorias: 100, proteina: 6, carboidratos: 10 }],
+      [/sanduiche.*frango|sanduiche.*atum|sanduiche.*ovo/, { calorias: 330, proteina: 25, carboidratos: 32 }],
+      [/wrap|sanduiche/, { calorias: 220, proteina: 7, carboidratos: 38 }],
+      [/frango na air fryer|frango/, { calorias: 220, proteina: 35, carboidratos: 3 }],
+      [/peixe/, { calorias: 210, proteina: 34, carboidratos: 2 }],
+      [/batata|batata-doce|aipim|inhame|macarrao|arroz/, { calorias: 160, proteina: 3, carboidratos: 34 }],
+      [/feijao/, { calorias: 100, proteina: 6, carboidratos: 18 }],
+      [/legumes|verduras|salada/, { calorias: 70, proteina: 3, carboidratos: 12 }],
+      [/150-180 g de proteina|porcao de proteina/, { calorias: 260, proteina: 40, carboidratos: 3 }],
+      [/fruta/, { calorias: 80, proteina: 1, carboidratos: 20 }],
+    ];
+    const achou = tabela.find(([re]) => re.test(n));
+    return achou ? achou[1] : { calorias: 0, proteina: 0, carboidratos: 0 };
+  }
+
+  function nutricaoOpcaoPlano(opcao, tipo) {
+    if (opcao && (opcao.calorias != null || opcao.proteina_g != null || opcao.carboidratos_g != null)) {
+      return {
+        calorias: opcao.calorias ?? null,
+        proteina: opcao.proteina_g ?? null,
+        carboidratos: opcao.carboidratos_g ?? null,
+      };
+    }
+    let total = { calorias: 0, proteina: 0, carboidratos: 0 };
+    for (const item of (opcao?.itens || [])) total = somarNutri(total, nutricaoItemPlano(item));
+    if (total.calorias > 0) return total;
+    const fallback = {
+      cafe: { calorias: 360, proteina: 20, carboidratos: 38 },
+      lanche_manha: { calorias: 190, proteina: 7, carboidratos: 35 },
+      almoco: { calorias: 520, proteina: 38, carboidratos: 55 },
+      lanche_tarde: { calorias: 280, proteina: 14, carboidratos: 38 },
+      jantar: { calorias: 400, proteina: 30, carboidratos: 35 },
+    };
+    return fallback[tipo] || { calorias: null, proteina: null, carboidratos: null };
   }
 
   function chaveResponsavelUsuario() {
-    const nome = String(R.usuario?.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const nome = normalizarPlanoTexto(R.usuario?.nome);
     if (nome.startsWith('mateus')) return 'mateus';
     if (nome.startsWith('ghustavo') || nome.startsWith('gustavo')) return 'ghustavo';
     return null;
   }
 
-  function planejadoParaCheckin(tipo) {
-    const tipoPlano = tipoCardapioDoCheckin(tipo);
-    const candidatos = R.cardapioHoje.filter(item => item.tipo === tipoPlano);
+  function itemCasaParaTipo(tipo) {
+    const tipoCasa = tipo === 'jantar' ? 'janta' : tipo;
+    if (!['almoco','janta'].includes(tipoCasa)) return null;
     const resp = chaveResponsavelUsuario();
+    const candidatos = R.cardapioHoje.filter(item => item.tipo === tipoCasa);
     return candidatos.find(item => resp && item.responsavel === resp)
       || candidatos.find(item => item.responsavel === 'ambos')
       || candidatos[0]
       || null;
+  }
+
+  function planoPessoalParaTipo(tipo) {
+    const plano = R.planosAlimentares[0] || null;
+    if (!plano) return null;
+    const ref = (plano.conteudo?.refeicoes || []).find(r => tipoPlanoPessoal(r.nome) === tipo);
+    if (!ref) return null;
+    const opcoes = ref.opcoes || [];
+    if (!opcoes.length) return null;
+    const chaveData = `${isoLocal()}:${tipo}`;
+    const hash = [...chaveData].reduce((a,c) => a + c.charCodeAt(0), 0);
+    const indice = hash % opcoes.length;
+    const opcao = opcoes[indice];
+    const nutricao = nutricaoOpcaoPlano(opcao, tipo);
+    const itens = (opcao.itens || []).filter(Boolean);
+    return {
+      id: null,
+      tipo,
+      responsavel: chaveResponsavelUsuario() || 'pessoal',
+      nome: itens.length ? itens.join(' + ') : (opcao.titulo || ref.nome),
+      tituloOpcao: opcao.titulo || 'Opção',
+      itens,
+      horario: ref.horario || null,
+      calorias: nutricao.calorias,
+      proteina: nutricao.proteina,
+      carboidratos: nutricao.carboidratos,
+      origem: 'pessoal',
+      chave: `pessoal:${plano.id}:${tipo}:${isoLocal()}`,
+    };
+  }
+
+  function planoDoDia() {
+    return REFEICOES_PRIORITARIAS.map(ref => {
+      const compartilhado = itemCasaParaTipo(ref.tipo);
+      const pessoal = planoPessoalParaTipo(ref.tipo);
+      const item = compartilhado || pessoal;
+      return item ? { ...item, tipo: ref.tipo, label: ref.nome } : { tipo: ref.tipo, label: ref.nome, nome: null, itens: [], origem: null, chave: null };
+    });
+  }
+
+  function planejadoParaCheckin(tipo) {
+    return planoDoDia().find(item => item.tipo === tipo) || null;
+  }
+
+  function tipoConsumoDoCheckin(tipo) {
+    return ({ cafe:'cafe', lanche_manha:'lanche_manha', almoco:'almoco', lanche_tarde:'lanche_tarde', jantar:'jantar' })[tipo] || tipo;
+  }
+
+  function rotuloTipoCardapio(tipo) {
+    return ({ cafe:'Café da manhã', lanche_manha:'Lanche da manhã', almoco:'Almoço', lanche_tarde:'Lanche da tarde', janta:'Jantar', jantar:'Jantar' })[tipo] || 'Refeição';
   }
 
   async function anexarUrlsFotos() {
@@ -308,8 +419,9 @@
     const diaSemana = hoje.getDay() === 0 ? 7 : hoje.getDay();
     const hora = hoje.getHours();
 
-    let esperados = Math.max(0, diaSemana - 1) * 4;
+    let esperados = Math.max(0, diaSemana - 1) * 5;
     if (hora >= 8) esperados += 1;
+    if (hora >= 10) esperados += 1;
     if (hora >= 12) esperados += 1;
     if (hora >= 16) esperados += 1;
     if (hora >= 19) esperados += 1;
