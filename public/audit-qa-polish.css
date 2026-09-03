@@ -599,3 +599,423 @@ body.tablet-mode button:not(:disabled):active {
     animation: none !important;
   }
 }
+
+/* =====================================================================
+   Visual QA v2 — refinamento após uso real e renderização 430/1024
+===================================================================== */
+
+/* Cards do Hoje: navegação e expansão são ações separadas e compactas. */
+#cardsHoje .qa-collapsible-card {
+  cursor: default !important;
+}
+
+#cardsHoje .qa-collapsible-card > .card-hoje-head,
+#cardsHoje #cfToday .qa-collapsible-card > .card-hoje-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 58px !important;
+  padding: 11px 13px !important;
+  margin: 0 !important;
+}
+
+#cardsHoje .card-hoje-title-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 9px !important;
+}
+
+#cardsHoje .card-hoje-titulo-txt {
+  min-width: 0;
+  font-size: 15.5px !important;
+  line-height: 1.18 !important;
+  overflow-wrap: normal;
+}
+
+#cardsHoje .qa-card-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-left: auto;
+}
+
+#cardsHoje .qa-card-open,
+#cardsHoje .card-hoje-abrir.qa-card-open {
+  width: auto !important;
+  min-width: 52px !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: var(--sage-soft) !important;
+  color: var(--sage) !important;
+  font-family: var(--sans) !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+#cardsHoje .qa-card-toggle {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  flex: 0 0 36px;
+  border-radius: 11px !important;
+  background: var(--paper-2) !important;
+}
+
+#cardsHoje .qa-card-count {
+  min-width: 20px;
+  height: 20px;
+  margin-left: 5px;
+  padding-inline: 6px;
+  vertical-align: 2px;
+}
+
+#cardsHoje .qa-collapsible-card.qa-collapsed > .qa-card-body,
+#cardsHoje .qa-collapsible-card.qa-collapsed > .cf-hoje-lista {
+  display: none !important;
+}
+
+#cardsHoje .qa-collapsible-card:not(.qa-collapsed) > .qa-card-body {
+  padding: 0 15px 8px;
+}
+
+/* Modais: se existe X, não mostramos uma falsa alça de arraste. */
+.ui-sheet-handle {
+  display: none !important;
+}
+
+.modal-overlay.aberto,
+.ui-sheet-overlay,
+.cf-modal,
+.ac-overlay,
+.qa-confirm-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  min-height: 100dvh !important;
+  background: rgba(14, 25, 19, .56) !important;
+}
+
+.modal-folha,
+.modal-caixa,
+.ui-sheet,
+.cf-modal-conteudo,
+.ac-sheet,
+.qa-confirm-dialog {
+  background: var(--paper) !important;
+}
+
+.modal-header,
+.ui-sheet-head,
+.cf-modal-cabecalho,
+.ac-sheet-head,
+.rv2-dialog-head {
+  background: var(--paper) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.modal-header {
+  top: -20px;
+  margin-inline: -1px;
+  padding: 14px 1px 11px !important;
+  border-bottom: 1px solid var(--linha);
+}
+
+.ui-sheet-head {
+  margin: -2px 0 14px !important;
+  padding: 2px 0 13px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.qa-confirm-overlay {
+  z-index: 14000 !important;
+  place-items: center !important;
+  padding: max(18px, env(safe-area-inset-top, 0px)) 14px max(18px, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.qa-confirm-dialog {
+  border: 1px solid color-mix(in srgb, var(--linha) 94%, transparent);
+}
+
+/* Lista do mercado: ícone e texto formam uma única ação centralizada. */
+.ui-market-launcher {
+  align-items: center !important;
+}
+
+.ui-market-launcher > button {
+  width: auto !important;
+  min-width: 88px !important;
+  min-height: 42px !important;
+  height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  flex: 0 0 auto !important;
+  padding: 0 12px !important;
+  line-height: 1 !important;
+}
+
+.ui-market-launcher > button svg {
+  width: 17px !important;
+  height: 17px !important;
+  display: block;
+  flex: 0 0 17px;
+  margin: 0 !important;
+}
+
+.ui-market-launcher > button span {
+  display: block;
+  line-height: 1 !important;
+}
+
+.ui-market-launcher:active,
+.ui-stock-conference-card:active,
+.ui-purchase-history-launcher:active,
+.ui-purchase-destination:active {
+  transform: none !important;
+}
+
+/* Estoque: stepper com mesma régua, mesma cor e sem botão '+' solto. */
+#itensEstoque .est-controles {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+#itensEstoque .est-controles > button:not(.lifeos-icon-action):not(.ui-icon-button) {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  display: inline-grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 16%, var(--linha)) !important;
+  border-radius: 10px !important;
+  background: var(--sage-soft) !important;
+  color: var(--sage) !important;
+  box-shadow: none !important;
+  line-height: 1 !important;
+}
+
+#itensEstoque .est-qtd {
+  height: 34px !important;
+  min-width: 34px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px !important;
+  margin: 0 !important;
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Plantas: contador, indicadores, filtros e lista usam a mesma régua. */
+#abaPlantas .qa-plant-toolbar {
+  width: 100%;
+  min-width: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px;
+  padding: 10px var(--shell-gutter) 0 !important;
+  box-sizing: border-box;
+}
+
+#abaPlantas .qa-plant-toolbar #btnNovaPlanta {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  height: 40px !important;
+  flex: 0 0 auto !important;
+  padding: 0 12px !important;
+}
+
+#abaPlantas .phase3-plant-overview {
+  width: auto !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin: 14px var(--shell-gutter) 4px !important;
+  overflow: visible;
+}
+
+#abaPlantas .phase3-plant-stat {
+  min-height: 78px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  padding: 10px !important;
+}
+
+#abaPlantas .phase3-plant-stat strong {
+  font-size: 20px !important;
+}
+
+#abaPlantas .phase3-plant-stat span {
+  margin-top: 6px !important;
+  text-align: left;
+}
+
+#abaPlantas .filtros-plantas {
+  width: 100%;
+  margin: 0 !important;
+  padding: 8px var(--shell-gutter) !important;
+}
+
+#abaPlantas #listaPlantas {
+  width: 100% !important;
+  padding: 4px var(--shell-gutter) 0 !important;
+}
+
+/* Cardápio: semana como planner, sem cara de grade de formulário. */
+#subCardapio .qa-cardapio-week-card {
+  padding: 16px !important;
+  border-radius: 22px !important;
+  border: 1px solid var(--module-border) !important;
+  background: var(--paper) !important;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--texto) 3.5%, transparent) !important;
+}
+
+#subCardapio .qa-cardapio-week-card > div:first-child {
+  min-height: 48px;
+  align-items: flex-start !important;
+  margin-bottom: 16px !important;
+}
+
+#subCardapio #planResp {
+  min-height: 38px !important;
+  border-radius: 11px !important;
+  background: var(--paper-2) !important;
+}
+
+#subCardapio .cardapio-week-grid:not(.cardapio-week-labels) {
+  grid-auto-columns: 122px !important;
+  gap: 8px !important;
+  padding: 2px 1px 9px !important;
+  scroll-padding-inline: 1px;
+}
+
+#subCardapio .qa-cardapio-slot {
+  min-width: 0;
+  min-height: 106px;
+}
+
+#subCardapio .qa-cardapio-slot .dia-slot {
+  min-height: 106px !important;
+  height: 106px;
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 5px;
+  padding: 25px 10px 10px !important;
+  border: 1px dashed color-mix(in srgb, var(--muted) 25%, var(--linha)) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, var(--paper-2) 60%, var(--paper)) !important;
+  color: var(--muted) !important;
+  text-align: left !important;
+  box-shadow: none !important;
+}
+
+#subCardapio .qa-cardapio-slot .dia-slot.preenchido {
+  border-style: solid !important;
+  border-color: color-mix(in srgb, var(--sage) 25%, var(--linha)) !important;
+  background: linear-gradient(155deg, var(--paper), color-mix(in srgb, var(--sage-soft) 72%, var(--paper))) !important;
+  color: var(--texto) !important;
+}
+
+#subCardapio .qa-cardapio-slot .dia-slot > span {
+  width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  color: inherit;
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.24;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+#subCardapio .qa-cardapio-slot .dia-slot > small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+#subCardapio .qa-slot-day {
+  top: 9px;
+  left: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+#subCardapio .qa-slot-edit {
+  top: 6px;
+  right: 6px;
+  width: 29px !important;
+  height: 29px !important;
+  min-width: 29px !important;
+  min-height: 29px !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 14%, var(--linha)) !important;
+  background: color-mix(in srgb, var(--paper) 94%, transparent) !important;
+}
+
+#subCardapio .qa-cardapio-week-card > div:has(#btnSugerirPlan) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px !important;
+  margin-top: 14px !important;
+}
+
+#subCardapio .qa-cardapio-week-card > div:has(#btnSugerirPlan) > button {
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 360px) {
+  #cardsHoje .card-hoje-titulo-txt {
+    font-size: 14.5px !important;
+  }
+
+  #cardsHoje .qa-card-open {
+    min-width: 48px !important;
+    padding-inline: 8px !important;
+  }
+
+  #abaPlantas .phase3-plant-overview {
+    grid-template-columns: repeat(3, minmax(92px, 1fr)) !important;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+
+  #abaPlantas .phase3-plant-stat {
+    scroll-snap-align: start;
+  }
+
+  #subCardapio .cardapio-week-grid:not(.cardapio-week-labels) {
+    grid-auto-columns: 116px !important;
+  }
+}
+
