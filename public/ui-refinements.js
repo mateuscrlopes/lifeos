@@ -143,7 +143,6 @@ function openSheet({ title, subtitle = '', content = '', onMount }) {
   overlay.className = `ui-sheet-overlay${overMarket ? ' ui-sheet-over-market ui-sheet-center' : ''}`;
   overlay.innerHTML = `
     <section class="ui-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-      <div class="ui-sheet-handle"></div>
       <div class="ui-sheet-head">
         <div>
           <div class="ui-sheet-title">${escapeHtml(title)}</div>
@@ -1188,6 +1187,8 @@ function makeMetricsInteractive() {
   });
 
   document.querySelectorAll('#cardsHoje .card-hoje, #cardsHoje .cartao.clicavel').forEach(card => {
+    const qaCard = card.classList.contains('qa-collapsible-card') || Boolean(card.querySelector(':scope > .qa-collapsible-card'));
+    if (qaCard) { delete card.dataset.uiDestination; card.removeAttribute('tabindex'); card.removeAttribute('role'); return; }
     // A Central Financeira possui cliques próprios em Pagar e Ver todas.
     // Não transforme o cartão financeiro em um atalho global para Casa > Contas.
     if (card.id === 'cfToday' || card.closest('#cfToday')) {
@@ -1681,6 +1682,8 @@ function installStableNavigation() {
     // Este listener roda em captura e, sem esta exceção, intercepta Pagar
     // antes que o módulo financeiro consiga abrir o modal.
     if (event.target.closest('#cfToday [data-cf-abrir], #cfToday [data-cf-ver-todas]')) return;
+
+    if (event.target.closest('.qa-card-toggle')) return;
 
     const destinationTarget = event.target.closest('[data-ui-destination]');
     if (destinationTarget) {
