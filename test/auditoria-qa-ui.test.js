@@ -56,3 +56,36 @@ test('camada QA é carregada no mobile e tablet', () => {
   assert.match(status, /audit-qa-polish\.js/);
   assert.match(tablet, /audit-qa-polish\.js/);
 });
+
+
+test('ações principais não dependem de confirm nativo do iOS', () => {
+  const app = read('public/app.js');
+  const refinements = read('public/ui-refinements.js');
+  assert.match(app, /confirmarLifeOS/);
+  assert.match(app, /Limpar cardápio da semana/);
+  assert.match(app, /Remover da lista/);
+  assert.match(app, /Excluir do estoque/);
+  assert.match(refinements, /uiConfirm/);
+  assert.doesNotMatch(app, /if\s*\(!confirm\(/);
+  assert.doesNotMatch(refinements, /const accepted = window\.confirm/);
+});
+
+test('degradê inferior fica restrito à área próxima da barra', () => {
+  const css = read('public/audit-qa-polish.css');
+  assert.match(css, /--qa-bottom-fade-height:\s*calc\(24px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.doesNotMatch(css, /--qa-bottom-fade-height:\s*calc\(104px/);
+});
+
+test('cache da correção de confirmação é incrementado', () => {
+  const html = read('public/index.html');
+  const app = read('public/app.js');
+  const status = read('public/status-estoque.js');
+  const qa = read('public/audit-qa-polish.js');
+  const tablet = read('public/tablet.html');
+  assert.match(html, /app\.js\?v=12/);
+  assert.match(app, /status-estoque\.js\?v=3/);
+  assert.match(status, /ui-refinements\.js\?v=7/);
+  assert.match(status, /audit-qa-polish\.js\?v=2/);
+  assert.match(qa, /audit-qa-polish\.css\?v=2/);
+  assert.match(tablet, /tablet-enhancements\.js\?v=3/);
+});

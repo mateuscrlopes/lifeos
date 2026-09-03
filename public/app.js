@@ -1,5 +1,5 @@
 ﻿// app.js — LifeOS v0.18.0
-import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js?v=2';
+import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js?v=3';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { excluirContaPorId } from './contas.js';
@@ -53,6 +53,12 @@ function conteudoComIcone(nome,texto,tamanho=15){
   return `${iconeSvg(nome,tamanho)}<span>${texto}</span>`;
 }
 function aviso(id,t,tipo=''){const a=el(id);if(!a)return;a.textContent=t||'';a.className='aviso'+(tipo?' '+tipo:'');}
+async function confirmarLifeOS({title='Confirmar ação',message='',confirmLabel='Confirmar',danger=false}={}){
+  if(typeof window.lifeosConfirmAction==='function'){
+    return window.lifeosConfirmAction({title,message,confirmLabel,danger});
+  }
+  return window.confirm(message||title);
+}
 function abrirModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.add('aberto');}}
 function fecharModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.remove('aberto');}}
 
@@ -335,7 +341,7 @@ async function salvarEditarLista(){
 }
 
 async function removerItemLista(item){
-  if(!confirm(`Remover "${item.nome}" da lista?`))return;
+  if(!await confirmarLifeOS({title:'Remover da lista',message:`Remover "${item.nome}" da lista?`,confirmLabel:'Remover',danger:true}))return;
   const{error}=await supa.from('lista_compras').delete().eq('id',item.id);
   if(!error){
     supa.from('historico_excluidos').insert({
@@ -484,7 +490,7 @@ async function salvarEditarEstoque(){
 }
 
 async function removerEstoque(item){
-  if(!confirm(`Excluir "${item.nome}" do estoque?`))return;
+  if(!await confirmarLifeOS({title:'Excluir do estoque',message:`Excluir "${item.nome}" do estoque?`,confirmLabel:'Excluir',danger:true}))return;
   const{error}=await supa.from('estoque').delete().eq('id',item.id);
   if(!error){
     supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'estoque',registro_id:item.id,dados:item});
@@ -808,7 +814,7 @@ async function salvarRefeicao(){
 }
 
 async function removerRefeicao(id,nome='esta receita'){
-  if(!confirm(`Excluir "${nome}"? Esta ação remove a receita da biblioteca.`))return;
+  if(!await confirmarLifeOS({title:'Excluir receita',message:`Excluir "${nome}"? Esta ação remove a receita da biblioteca.`,confirmLabel:'Excluir',danger:true}))return;
   await supa.from('refeicoes').delete().eq('id',id);
   await carregarRefeicoes();
 }
@@ -1051,10 +1057,10 @@ async function salvarPlanejamento(){
   }
 }
 
-function limparPlanejamentoAtual(){
+async function limparPlanejamentoAtual(){
   const rotulo=_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1);
   if(!Object.keys(_planDias).length)return;
-  if(!confirm(`Limpar todos os slots de ${rotulo} nesta semana?`))return;
+  if(!await confirmarLifeOS({title:'Limpar cardápio da semana',message:`Limpar todos os slots de ${rotulo} nesta semana?`,confirmLabel:'Limpar tudo',danger:true}))return;
   _planDiasPorResp[_planRespAtual]={};
   selecionarResponsavelCardapio(_planRespAtual);
   aviso('avisoPlan',`Slots de ${rotulo} limpos. Clique em Salvar para confirmar.`,'ok');
@@ -1109,7 +1115,7 @@ async function salvarRitual(){
 }
 
 async function removerRitual(r){
-  if(!confirm(`Excluir o ritual "${r.nome}"?`))return;
+  if(!await confirmarLifeOS({title:'Excluir ritual',message:`Excluir o ritual "${r.nome}"?`,confirmLabel:'Excluir',danger:true}))return;
   const{error}=await supa.from('rituais').delete().eq('id',r.id);
   if(!error){
     supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'rituais',registro_id:r.id,dados:r});
@@ -1195,7 +1201,7 @@ async function salvarEditarConta(){
 }
 
 async function removerConta(conta,botao){
-  if(!confirm(`Excluir a conta "${conta.nome}"?`))return;
+  if(!await confirmarLifeOS({title:'Excluir conta',message:`Excluir a conta "${conta.nome}"?`,confirmLabel:'Excluir',danger:true}))return;
   if(botao)botao.disabled=true;
   try{
     const{error}=await excluirContaPorId(supa,conta.id);
@@ -1397,7 +1403,7 @@ async function pagarConta(conta,botao){
   botao.disabled=true;const{error}=await supa.from('contas').update({paga:true,paga_em:new Date().toISOString()}).eq('id',conta.id);
   if(error){botao.disabled=false;return;}
   supa.from('eventos').insert({tipo:'conta_paga',entidade:'contas',entidade_id:conta.id,usuario_id:usuario.id,detalhe:usuario.nome+' pagou '+conta.nome});
-  if(conta.recorrente&&conta.dia_vencimento){const q=confirm(`"${conta.nome}" repete todo mês.\nCriar a do próximo mês?`);if(q){const base=new Date(conta.vencimento.slice(0,10)+'T00:00:00');const prox=new Date(base.getFullYear(),base.getMonth()+1,conta.dia_vencimento||base.getDate());await supa.from('contas').insert({casa_id:usuario.casa_id,nome:conta.nome,categoria:conta.categoria,valor:conta.valor,vencimento:`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}-${String(prox.getDate()).padStart(2,'0')}`,recorrente:true,dia_vencimento:conta.dia_vencimento,criada_por:usuario.id});}}
+  if(conta.recorrente&&conta.dia_vencimento){const q=await confirmarLifeOS({title:'Conta recorrente',message:`"${conta.nome}" repete todo mês. Criar a do próximo mês?`,confirmLabel:'Criar próxima'});if(q){const base=new Date(conta.vencimento.slice(0,10)+'T00:00:00');const prox=new Date(base.getFullYear(),base.getMonth()+1,conta.dia_vencimento||base.getDate());await supa.from('contas').insert({casa_id:usuario.casa_id,nome:conta.nome,categoria:conta.categoria,valor:conta.valor,vencimento:`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}-${String(prox.getDate()).padStart(2,'0')}`,recorrente:true,dia_vencimento:conta.dia_vencimento,criada_por:usuario.id});}}
   await carregarContas();
 }
 
@@ -1558,8 +1564,7 @@ async function salvarProjeto(){
 
 async function removerProjeto(){
   if(!_projetoAtual)return;
-  if(!confirm(`Remover o projeto "${_projetoAtual.nome}"?
-Todas as tarefas e objetivos vinculados serão removidos.`))return;
+  if(!await confirmarLifeOS({title:'Remover projeto',message:`Remover o projeto "${_projetoAtual.nome}"? Todas as tarefas e objetivos vinculados serão removidos.`,confirmLabel:'Remover',danger:true}))return;
   await supa.from('projetos').delete().eq('id',_projetoAtual.id);
   _projetoAtual=null;
   trocarAba('projetos');
@@ -1659,7 +1664,7 @@ async function alternarTarefa(t){
       if(!escolha)return;
       criarProxima=escolha==='confirm';
     }else{
-      const q=confirm(`"${t.titulo}" é uma rotina.\nCriar a próxima?`);
+      const q=await confirmarLifeOS({title:'Concluir rotina',message:`"${t.titulo}" é uma rotina. Criar a próxima?`,confirmLabel:'Concluir e criar próxima'});
       if(!q)return;
       criarProxima=true;
     }
@@ -1672,9 +1677,7 @@ async function alternarTarefa(t){
 }
 
 async function removerTarefa(t){
-  const confirmado=typeof window.lifeosConfirmAction==='function'
-    ?await window.lifeosConfirmAction({title:'Excluir tarefa',message:`Excluir a tarefa "${t.titulo}"?`,confirmLabel:'Excluir',danger:true})
-    :confirm(`Excluir a tarefa "${t.titulo}"?`);
+  const confirmado=await confirmarLifeOS({title:'Excluir tarefa',message:`Excluir a tarefa "${t.titulo}"?`,confirmLabel:'Excluir',danger:true});
   if(!confirmado)return;
   const{error}=await supa.from('tarefas').delete().eq('id',t.id);
   if(!error){
@@ -1809,7 +1812,7 @@ async function renderizarEventosPlanta(planta){
     }
     const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.dataset.uiAction='delete';btnDel.setAttribute('aria-label','Excluir evento');btnDel.style.cssText='background:none;color:var(--suave);font-size:13px;padding:2px 6px;font-weight:400';
     btnDel.onclick=async()=>{
-      if(!confirm('Remover este evento da linha do tempo?'))return;
+      if(!await confirmarLifeOS({title:'Remover evento',message:'Remover este evento da linha do tempo?',confirmLabel:'Remover',danger:true}))return;
       await supa.from('planta_eventos').delete().eq('id',ev.id);
       await renderizarEventosPlanta(planta);
     };
@@ -1906,7 +1909,7 @@ async function carregarTokens(){
     const btnRev=document.createElement('button');btnRev.textContent=t.ativo?'Revogar':'Reativar';btnRev.style.cssText='font-size:11px;padding:4px 8px;background:var(--acao-clara);color:var(--acao)';
     btnRev.onclick=async()=>{await supa.from('atalho_tokens').update({ativo:!t.ativo}).eq('id',t.id);carregarTokens();};
     const btnDel=document.createElement('button');btnDel.textContent='×';btnDel.dataset.uiAction='delete';btnDel.setAttribute('aria-label','Excluir token');btnDel.style.cssText='background:none;color:var(--suave);padding:4px 6px';
-    btnDel.onclick=async()=>{if(!confirm('Excluir este token? O Atalho vai parar de funcionar.'))return;await supa.from('atalho_tokens').delete().eq('id',t.id);carregarTokens();};
+    btnDel.onclick=async()=>{if(!await confirmarLifeOS({title:'Excluir token',message:'Excluir este token? O Atalho vai parar de funcionar.',confirmLabel:'Excluir',danger:true}))return;await supa.from('atalho_tokens').delete().eq('id',t.id);carregarTokens();};
     dir.appendChild(badge);dir.appendChild(btnRev);dir.appendChild(btnDel);
     linha.appendChild(esq);linha.appendChild(dir);area.appendChild(linha);
   }
@@ -1939,7 +1942,7 @@ async function carregarLocaisEstoque(){
     const btnEdit=document.createElement('button');btnEdit.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;btnEdit.style.cssText='background:none;color:var(--suave);padding:4px 6px;display:flex;align-items:center;';
     btnEdit.onclick=()=>{const novo=prompt('Novo nome:',loc.nome);if(novo&&novo.trim()){supa.from('locais_estoque').update({nome:novo.trim()}).eq('id',loc.id).then(()=>{carregarLocaisEstoque();atualizarSelectsLocais();});}};
     const btnDel=document.createElement('button');btnDel.textContent='Arquivar';btnDel.setAttribute('aria-label','Arquivar local do estoque');btnDel.style.cssText='font-size:11px;padding:4px 8px;background:var(--paper-2);color:var(--muted)';
-    btnDel.onclick=async()=>{if(!confirm(`Arquivar "${loc.nome}"? O local deixará de aparecer nas opções ativas.`))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
+    btnDel.onclick=async()=>{if(!await confirmarLifeOS({title:'Arquivar local',message:`Arquivar "${loc.nome}"? O local deixará de aparecer nas opções ativas.`,confirmLabel:'Arquivar'}))return;await supa.from('locais_estoque').update({ativo:false}).eq('id',loc.id);carregarLocaisEstoque();atualizarSelectsLocais();};
     dir.appendChild(btnEdit);dir.appendChild(btnDel);linha.appendChild(txt);linha.appendChild(dir);area.appendChild(linha);
   }
   atualizarSelectsLocais();
@@ -2016,7 +2019,7 @@ function renderizarEnderecos(){
     const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--linha);font-size:12px';
     linha.innerHTML=`<span>${escapeHtml(e.endereco||'Sem endereço')} ${e.latitude?`(${Number(e.latitude).toFixed(4)}, ${Number(e.longitude).toFixed(4)})`:'sem coords'}</span>`;
     const btnD=document.createElement('button');btnD.textContent='×';btnD.dataset.uiAction='delete';btnD.setAttribute('aria-label','Excluir endereço');btnD.style.cssText='background:none;color:var(--suave);padding:2px 6px';
-    btnD.onclick=async()=>{if(!confirm(`Excluir o endereço "${e.endereco||'Sem endereço'}"?`))return;if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
+    btnD.onclick=async()=>{if(!await confirmarLifeOS({title:'Excluir endereço',message:`Excluir o endereço "${e.endereco||'Sem endereço'}"?`,confirmLabel:'Excluir',danger:true}))return;if(e.id)await supa.from('locais_compra_enderecos').delete().eq('id',e.id);_localCompraEnderecos=_localCompraEnderecos.filter(x=>x!==e);renderizarEnderecos();};
     linha.appendChild(btnD);area.appendChild(linha);
   }
   if(!_localCompraEnderecos.length)area.innerHTML='<div style="font-size:12px;color:var(--suave);padding:6px 0">Nenhum endereço.</div>';
@@ -2060,7 +2063,7 @@ async function salvarEditarLocalCompra(){
 
 async function excluirLocalCompra(){
   if(!_localCompraEditando)return;
-  if(!confirm(`Excluir "${_localCompraEditando.nome}"?`))return;
+  if(!await confirmarLifeOS({title:'Excluir local de compra',message:`Excluir "${_localCompraEditando.nome}"?`,confirmLabel:'Excluir',danger:true}))return;
   await supa.from('locais_compra').delete().eq('id',_localCompraEditando.id);
   fecharModal('modalEditarLocalCompra');
   _localCompraEditando=null;carregarLocaisCompraConfig();
@@ -2157,9 +2160,7 @@ el('btnFecharPlanta').onclick=()=>{fecharModal('modalPlanta');_plantaAberta=null
 el('btnRemoverPlanta').onclick=async()=>{
   if(!_plantaAberta)return;
   const nome=_plantaAberta.especies?.nome_popular||_plantaAberta.codigo;
-  if(!confirm(`Remover "${nome}" da listagem ativa?
-
-O histórico e o cadastro serão preservados.`))return;
+  if(!await confirmarLifeOS({title:'Remover planta',message:`Remover "${nome}" da listagem ativa? O histórico e o cadastro serão preservados.`,confirmLabel:'Remover',danger:true}))return;
   el('btnRemoverPlanta').disabled=true;
   const res=await removerPlanta(supa,usuario,_plantaAberta);
   el('btnRemoverPlanta').disabled=false;

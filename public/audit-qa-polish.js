@@ -35,7 +35,7 @@
     const link = document.createElement('link');
     link.id = CSS_ID;
     link.rel = 'stylesheet';
-    link.href = '/audit-qa-polish.css?v=1';
+    link.href = '/audit-qa-polish.css?v=2';
     document.head.appendChild(link);
   }
 
