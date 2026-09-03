@@ -112,6 +112,13 @@ function toast(message, type = 'ok', duration = 2800) {
   window.setTimeout(() => item.remove(), duration);
 }
 
+async function uiConfirm({ title, message, confirmLabel = 'Confirmar', danger = false }) {
+  if (typeof window.lifeosConfirmAction === 'function') {
+    return window.lifeosConfirmAction({ title, message, confirmLabel, danger });
+  }
+  return window.confirm(message || title);
+}
+
 function closeSheet() {
   const overlay = document.querySelector('.ui-sheet-overlay');
   if (!overlay) return;
@@ -473,7 +480,7 @@ async function deleteSimple(module, row) {
   const { data: records, error } = await query.limit(1);
   if (error || !records?.length) throw new Error(`Não foi possível localizar “${name}”.`);
   const record = records[0];
-  const accepted = window.confirm(`Excluir “${name}”?\n\nO item ficará disponível no Histórico para restauração.`);
+  const accepted = await uiConfirm({title:'Excluir item',message:`Excluir “${name}”? O item ficará disponível no Histórico para restauração.`,confirmLabel:'Excluir',danger:true});
   if (!accepted) return;
 
   const parent = row.parentNode;
@@ -505,7 +512,7 @@ async function deletePlant() {
     .single();
   if (error || !plant) throw new Error('Planta não encontrada.');
   const name = document.getElementById('mpNome')?.textContent || code;
-  const accepted = window.confirm(`Remover “${name}” da lista ativa?\n\nA ficha, as rotinas e a linha do tempo poderão ser restauradas.`);
+  const accepted = await uiConfirm({title:'Remover planta',message:`Remover “${name}” da lista ativa? A ficha, as rotinas e a linha do tempo poderão ser restauradas.`,confirmLabel:'Remover',danger:true});
   if (!accepted) return;
   await recordHistory('plantas', plant.id, { _ui_bundle: 'planta', planta: plant });
   const { error: updateError } = await client.from('plantas').update({ status: 'removida' }).eq('id', plant.id);
@@ -538,7 +545,7 @@ async function deleteProject() {
     client.from('tarefas').select('*').eq('projeto_id', project.id),
     client.from('projeto_itens').select('*').eq('projeto_id', project.id),
   ]);
-  const accepted = window.confirm(`Remover o projeto “${name}”?\n\nObjetivos, tarefas e itens vinculados poderão ser restaurados.`);
+  const accepted = await uiConfirm({title:'Remover projeto',message:`Remover o projeto “${name}”? Objetivos, tarefas e itens vinculados poderão ser restaurados.`,confirmLabel:'Remover',danger:true});
   if (!accepted) return;
   await recordHistory('projetos', project.id, {
     _ui_bundle: 'projeto',
