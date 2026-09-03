@@ -137,14 +137,54 @@ function atualizarDataHoje(){
   const dh=el('dataHoje');if(dh)dh.textContent=data;
 }
 
-async function carregarClimaHoje(){
+const CLIMA_MOBILE_DIRETO_URL='https://api.open-meteo.com/v1/forecast?latitude=-22.8269&longitude=-43.0539&current=temperature_2m,weather_code,wind_speed_10m&forecast_days=1&timezone=America%2FSao_Paulo';
+const CLIMA_MOBILE_CACHE_KEY='lifeos:clima:ultimo';
+const CLIMA_MOBILE_CACHE_MAX_MS=6*60*60*1000;
+const CLIMA_MOBILE_DESCRICOES={0:'Céu limpo',1:'Principalmente limpo',2:'Parcialmente nublado',3:'Nublado',45:'Neblina',48:'Neblina com geada',51:'Garoa leve',53:'Garoa moderada',55:'Garoa intensa',61:'Chuva leve',63:'Chuva moderada',65:'Chuva forte',71:'Neve leve',73:'Neve moderada',75:'Neve forte',80:'Pancadas de chuva leves',81:'Pancadas de chuva moderadas',82:'Pancadas de chuva fortes',95:'Trovoada',96:'Trovoada com granizo',99:'Trovoada com granizo forte'};
+
+function climaMobileValido(clima){return Number.isFinite(Number(clima?.temperatura));}
+function lerClimaMobileLocal(){
   try{
-    const r=await fetch('/clima');const c=await r.json();
-    const cr=el('climaResumido');
-    if(cr&&c.temperatura)cr.textContent=`${c.temperatura}° · ${c.descricao}`;
-  }catch(e){}
+    const registro=JSON.parse(localStorage.getItem(CLIMA_MOBILE_CACHE_KEY)||'null');
+    const idade=Date.now()-Number(registro?.salvo_em||0);
+    return idade>=0&&idade<=CLIMA_MOBILE_CACHE_MAX_MS&&climaMobileValido(registro?.clima)?registro.clima:null;
+  }catch{return null;}
+}
+function salvarClimaMobileLocal(clima){
+  if(!climaMobileValido(clima))return;
+  try{localStorage.setItem(CLIMA_MOBILE_CACHE_KEY,JSON.stringify({salvo_em:Date.now(),clima}));}catch{}
+}
+function converterClimaMobileDireto(dados){
+  const atual=dados?.current||{};
+  const temperatura=Number(atual.temperature_2m);
+  const codigo=Number(atual.weather_code);
+  if(!Number.isFinite(temperatura)||!Number.isFinite(codigo))return null;
+  return{temperatura:Math.round(temperatura),descricao:CLIMA_MOBILE_DESCRICOES[codigo]||'Tempo variável'};
+}
+async function carregarClimaHoje(){
+  const cr=el('climaResumido');if(!cr)return;
+  let clima=null;
+  try{
+    const direto=await fetch(CLIMA_MOBILE_DIRETO_URL,{cache:'no-store',headers:{accept:'application/json'}});
+    if(direto.ok)clima=converterClimaMobileDireto(await direto.json());
+  }catch{}
+  if(!clima){
+    try{
+      const backend=await fetch('/clima',{cache:'no-store'});
+      if(backend.ok){const recebido=await backend.json();if(climaMobileValido(recebido))clima=recebido;}
+    }catch{}
+  }
+  if(!clima)clima=lerClimaMobileLocal();
+  if(climaMobileValido(clima)){
+    salvarClimaMobileLocal(clima);
+    cr.textContent=Math.round(Number(clima.temperatura))+'° · '+(clima.descricao||'Tempo variável');
+  }else cr.textContent='Clima indisponível';
 }
 
+async function confirmarAcao(titulo,mensagem,{confirmLabel='Confirmar',danger=false}={}){
+  if(typeof window.lifeosConfirmAction==='function')return window.lifeosConfirmAction({title,message:mensagem,confirmLabel,danger});
+  return confirm(mensagem);
+}
 function trocarAba(qual,btn,opcoes={}){
   const { registrarOrigem = true } = opcoes;
   if(registrarOrigem){
@@ -1761,19 +1801,18 @@ if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje
 
 function criarCartaoHoje(titulo,dest){
   const wrap=document.createElement('div');wrap.className='card-hoje';
-  const c=document.createElement('div');c.className='cartao clicavel';
+  const c=document.createElement('div');c.className='cartao qa-collapsible-card qa-collapsed';c.dataset.qaDestination=dest;
   const cab=document.createElement('div');cab.className='card-hoje-head';
   const grupo=document.createElement('div');grupo.className='card-hoje-title-row';
   const iconMap={tarefas:'prancheta',plantas:'broto',estoque:'caixa',compras:'carrinho',cardapio:'refeicao',contas:'cartao'};
-  if(iconMap[dest]){
-    const ico=document.createElement('span');ico.className='card-hoje-head-icon';ico.innerHTML=iconeSvg(iconMap[dest],17);grupo.appendChild(ico);
-  }
+  if(iconMap[dest]){const ico=document.createElement('span');ico.className='card-hoje-head-icon';ico.innerHTML=iconeSvg(iconMap[dest],17);grupo.appendChild(ico);}
   const t=document.createElement('div');t.className='card-hoje-titulo-txt';t.textContent=titulo;grupo.appendChild(t);
-  const ab=document.createElement('span');ab.className='card-hoje-abrir';ab.textContent='Abrir';
-  cab.appendChild(grupo);cab.appendChild(ab);
-  const corpo=document.createElement('div');
-  c.appendChild(cab);c.appendChild(corpo);
-  c.onclick=()=>{if(dest==='contas'||dest==='tarefas'||dest==='estoque'||dest==='compras'||dest==='cardapio'){trocarAba('casa');trocarSub(dest,null);}else{trocarAba(dest);}};
+  const acoes=document.createElement('div');acoes.className='qa-card-actions';
+  const abrir=document.createElement('button');abrir.type='button';abrir.className='card-hoje-abrir qa-card-open';abrir.textContent='Abrir';abrir.dataset.uiDestination=dest;
+  const toggle=document.createElement('button');toggle.type='button';toggle.className='qa-card-toggle';toggle.setAttribute('aria-label','Expandir '+titulo);toggle.setAttribute('aria-expanded','false');toggle.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  toggle.onclick=event=>{event.preventDefault();event.stopPropagation();const recolhido=c.classList.toggle('qa-collapsed');toggle.setAttribute('aria-expanded',recolhido?'false':'true');toggle.setAttribute('aria-label',(recolhido?'Expandir ':'Recolher ')+titulo);};
+  acoes.appendChild(abrir);acoes.appendChild(toggle);cab.appendChild(grupo);cab.appendChild(acoes);
+  const corpo=document.createElement('div');corpo.className='qa-card-body';c.appendChild(cab);c.appendChild(corpo);
   wrap.appendChild(c);return{cartao:wrap,corpo};
 }
 function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='mini-meta';d.textContent=[meta,valor].filter(Boolean).join(' · ');l.appendChild(e);l.appendChild(d);return l;}
