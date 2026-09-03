@@ -830,13 +830,34 @@ function renderizarSlotsCardapio(){
     for(let d=1;d<=7;d++){
       const chave=`${d}-${tipo}`;
       const slot=_planDias[chave];
+      const wrap=document.createElement('div');
+      wrap.className='qa-cardapio-slot';
+      const dia=document.createElement('span');
+      dia.className='qa-slot-day';
+      dia.textContent=(CARDAPIO_DIAS[d]||'').slice(0,3);
+      wrap.appendChild(dia);
       const btn=document.createElement('button');
       btn.type='button';
       btn.className='dia-slot'+(slot?' preenchido':'');
+      if(slot?.refeicaoId)btn.dataset.receitaId=slot.refeicaoId;
       btn.innerHTML=slot?`<span>${escapeHtml(slot.nome)}</span>${slot.calorias!=null?`<small>${Number(slot.calorias)} kcal</small>`:''}`:'<span>+</span>';
       btn.setAttribute('aria-label',`${CARDAPIO_DIAS[d]} · ${labelTipoCardapio(tipo)}${slot?' · '+slot.nome:''}${slot?.calorias!=null?' · '+Number(slot.calorias)+' kcal':''}`);
-      btn.onclick=()=>abrirModalRefeicao(d,tipo);
-      grid.appendChild(btn);
+      btn.onclick=()=>{
+        if(slot?.refeicaoId&&typeof window.lifeosAbrirReceita==='function')window.lifeosAbrirReceita(slot.refeicaoId);
+        else abrirModalRefeicao(d,tipo);
+      };
+      wrap.appendChild(btn);
+      if(slot){
+        const edit=document.createElement('button');
+        edit.type='button';
+        edit.className='qa-slot-edit';
+        edit.setAttribute('aria-label',`Editar ${CARDAPIO_DIAS[d]} · ${labelTipoCardapio(tipo)}`);
+        edit.title='Editar planejamento';
+        edit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>';
+        edit.onclick=(event)=>{event.preventDefault();event.stopPropagation();abrirModalRefeicao(d,tipo);};
+        wrap.appendChild(edit);
+      }
+      grid.appendChild(wrap);
     }
   });
 }
@@ -1625,15 +1646,36 @@ async function adicionarTarefa(){
 }
 
 async function alternarTarefa(t){
-  const novo=!t.feita;const{error}=await supa.from('tarefas').update({feita:novo,feita_por:novo?usuario.id:null,feita_em:novo?new Date().toISOString():null}).eq('id',t.id);
+  const novo=!t.feita;
+  let criarProxima=false;
+  if(novo&&t.recorrente){
+    if(typeof window.lifeosConfirmRecurringTask==='function'){
+      const escolha=await window.lifeosConfirmRecurringTask({
+        title:'Concluir rotina',
+        message:`"${t.titulo}" é recorrente. Você quer concluir esta ocorrência e criar a próxima?`,
+        confirmLabel:'Concluir e criar próxima',
+        secondaryLabel:'Só concluir'
+      });
+      if(!escolha)return;
+      criarProxima=escolha==='confirm';
+    }else{
+      const q=confirm(`"${t.titulo}" é uma rotina.\nCriar a próxima?`);
+      if(!q)return;
+      criarProxima=true;
+    }
+  }
+  const{error}=await supa.from('tarefas').update({feita:novo,feita_por:novo?usuario.id:null,feita_em:novo?new Date().toISOString():null}).eq('id',t.id);
   if(error)return;
   supa.from('eventos').insert({tipo:novo?'tarefa_concluida':'tarefa_reaberta',entidade:'tarefas',entidade_id:t.id,usuario_id:usuario.id,detalhe:`${usuario.nome} ${novo?'concluiu':'reabriu'} ${t.titulo}`});
-  if(novo&&t.recorrente){const q=confirm(`"${t.titulo}" é uma rotina.\nCriar a próxima?`);if(q)await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo:t.titulo,responsavel:t.responsavel,prioridade:t.prioridade,recorrente:true,recorrencia:t.recorrencia,criada_por:usuario.id});}
+  if(criarProxima)await supa.from('tarefas').insert({casa_id:usuario.casa_id,titulo:t.titulo,responsavel:t.responsavel,prioridade:t.prioridade,recorrente:true,recorrencia:t.recorrencia,criada_por:usuario.id});
   await carregarTarefas();
 }
 
 async function removerTarefa(t){
-  if(!confirm(`Excluir a tarefa "${t.titulo}"?`))return;
+  const confirmado=typeof window.lifeosConfirmAction==='function'
+    ?await window.lifeosConfirmAction({title:'Excluir tarefa',message:`Excluir a tarefa "${t.titulo}"?`,confirmLabel:'Excluir',danger:true})
+    :confirm(`Excluir a tarefa "${t.titulo}"?`);
+  if(!confirmado)return;
   const{error}=await supa.from('tarefas').delete().eq('id',t.id);
   if(!error){
     // Guarda no histórico de excluídos
@@ -2235,7 +2277,6 @@ window.abrirRitmoContextual = abrirRitmoContextual;
 window.voltarAbaContextual = voltarAbaContextual;
 window.voltarCasaContextual = voltarCasaContextual;
 if (typeof mudarPagina === 'function') window.mudarPagina = mudarPagina;
-
 
 
 
