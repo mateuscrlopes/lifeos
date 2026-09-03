@@ -56,3 +56,60 @@ test('camada QA é carregada no mobile e tablet', () => {
   assert.match(status, /audit-qa-polish\.js/);
   assert.match(tablet, /audit-qa-polish\.js/);
 });
+
+
+test('cards do Hoje separam abrir de expandir sem navegação no cartão inteiro', () => {
+  const app = read('public/app.js');
+  const ui = read('public/ui-refinements.js');
+  const audit = read('public/audit-qa-polish.js');
+  const finance = read('public/central-financeira.js');
+
+  assert.match(app, /qa-card-actions/);
+  assert.match(app, /qa-card-open/);
+  assert.match(app, /qa-collapsible-card qa-collapsed/);
+  assert.match(ui, /event\.target\.closest\('\.qa-card-toggle'\)/);
+  assert.match(ui, /card\.classList\.contains\('qa-collapsible-card'\)/);
+  assert.match(audit, /existingAction\.hidden = false/);
+  assert.match(finance, /cf-hoje-interior qa-collapsible-card qa-collapsed/);
+});
+
+test('modais com X não exibem falsa alça de arraste e usam uma única superfície', () => {
+  const ui = read('public/ui-refinements.js');
+  const css = read('public/audit-qa-polish.css');
+
+  assert.doesNotMatch(ui, /<div class="ui-sheet-handle"><\/div>/);
+  assert.match(css, /\.ui-sheet-handle\s*\{\s*display:\s*none\s*!important/);
+  assert.match(css, /\.modal-header,[\s\S]*\.ui-sheet-head,[\s\S]*background:\s*var\(--paper\)\s*!important/);
+});
+
+test('clima mobile tem consulta direta, backend e cache local', () => {
+  const app = read('public/app.js');
+  assert.match(app, /CLIMA_MOBILE_DIRETO_URL/);
+  assert.match(app, /api\.open-meteo\.com/);
+  assert.match(app, /CLIMA_MOBILE_CACHE_KEY/);
+  assert.match(app, /fetch\('\/clima'/);
+  assert.match(app, /Clima indisponível/);
+});
+
+test('confirmações principais usam diálogo do LifeOS em vez de OK e Cancelar do navegador', () => {
+  const app = read('public/app.js');
+  assert.match(app, /confirmarAcao\('Limpar cardápio'/);
+  assert.match(app, /confirmarAcao\('Excluir receita'/);
+  assert.match(app, /confirmarAcao\('Remover planta'/);
+  assert.match(app, /confirmarAcao\('Excluir local de compra'/);
+  assert.match(app, /confirmarAcao\('Conta recorrente'/);
+});
+
+test('cache da rodada visual é incrementado no mobile e tablet', () => {
+  const status = read('public/status-estoque.js');
+  const app = read('public/app.js');
+  const html = read('public/index.html');
+  const tabletEnhancements = read('public/tablet-enhancements.js');
+  const tabletHtml = read('public/tablet.html');
+
+  assert.match(status, /audit-qa-polish\.js\?v=2/);
+  assert.match(app, /status-estoque\.js\?v=3/);
+  assert.match(html, /app\.js\?v=12/);
+  assert.match(tabletEnhancements, /audit-qa-polish\.js\?v=2/);
+  assert.match(tabletHtml, /tablet-enhancements\.js\?v=3/);
+});
