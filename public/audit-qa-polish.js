@@ -35,7 +35,7 @@
     const link = document.createElement('link');
     link.id = CSS_ID;
     link.rel = 'stylesheet';
-    link.href = '/audit-qa-polish.css?v=1';
+    link.href = '/audit-qa-polish.css?v=2';
     document.head.appendChild(link);
   }
 
@@ -114,39 +114,78 @@
     ];
     candidates.forEach(card => {
       const header = card.querySelector(':scope > .card-hoje-head');
-      if (!header || header.dataset.qaCollapse === '1') return;
+      if (!header) return;
       const title = cardTitle(header);
       if (!title || /cardápio/i.test(title)) return;
 
       const count = countRows(card);
       const titleNode = header.querySelector('.card-hoje-titulo-txt') || header.querySelector('strong');
-      if (titleNode && count > 0 && !titleNode.querySelector('.qa-card-count')) {
-        const badge = document.createElement('span');
-        badge.className = 'qa-card-count';
+      let badge = titleNode?.querySelector('.qa-card-count');
+      if (titleNode && count > 0) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'qa-card-count';
+          titleNode.appendChild(badge);
+        }
         badge.textContent = String(count);
         badge.setAttribute('aria-label', count + ' itens');
-        titleNode.appendChild(badge);
       }
 
-      const existingAction = header.querySelector('.card-hoje-abrir, .secao-link');
-      if (existingAction) existingAction.hidden = true;
+      let actions = header.querySelector(':scope > .qa-card-actions');
+      if (!actions) {
+        actions = document.createElement('div');
+        actions.className = 'qa-card-actions';
+        const oldAction = header.querySelector(':scope > .card-hoje-abrir, :scope > .secao-link');
+        if (oldAction) actions.appendChild(oldAction);
+        header.appendChild(actions);
+      }
 
-      const toggle = document.createElement('button');
-      toggle.type = 'button';
-      toggle.className = 'qa-card-toggle';
-      toggle.innerHTML = svg('chevron', 17);
-      toggle.setAttribute('aria-label', 'Expandir ' + title);
-      toggle.setAttribute('aria-expanded', 'false');
-      toggle.addEventListener('click', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        const collapsed = card.classList.toggle('qa-collapsed');
-        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        toggle.setAttribute('aria-label', (collapsed ? 'Expandir ' : 'Recolher ') + title);
-      });
+      const destination = card.dataset.qaDestination || card.dataset.uiDestination || '';
+      const existingAction = actions.querySelector('.card-hoje-abrir, .secao-link');
+      if (existingAction) {
+        existingAction.hidden = false;
+        existingAction.classList.add('qa-card-open');
+        if (destination && !existingAction.hasAttribute('data-cf-ver-todas')) {
+          existingAction.dataset.uiDestination = destination;
+        }
+      }
 
-      header.appendChild(toggle);
-      card.classList.add('qa-collapsible-card', 'qa-collapsed');
+      if (destination) {
+        delete card.dataset.uiDestination;
+        card.removeAttribute('tabindex');
+        card.removeAttribute('role');
+        card.classList.remove('clicavel');
+        card.onclick = null;
+      }
+
+      let toggle = actions.querySelector('.qa-card-toggle');
+      if (!toggle) {
+        toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'qa-card-toggle';
+        toggle.innerHTML = svg('chevron', 17);
+        actions.appendChild(toggle);
+      }
+
+      if (toggle.dataset.qaBound !== '1') {
+        toggle.dataset.qaBound = '1';
+        toggle.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          const collapsed = card.classList.toggle('qa-collapsed');
+          toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+          toggle.setAttribute('aria-label', (collapsed ? 'Expandir ' : 'Recolher ') + title);
+        });
+      }
+
+      card.classList.add('qa-collapsible-card');
+      if (!card.dataset.qaCollapseInitialized) {
+        card.classList.add('qa-collapsed');
+        card.dataset.qaCollapseInitialized = '1';
+      }
+      const collapsed = card.classList.contains('qa-collapsed');
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      toggle.setAttribute('aria-label', (collapsed ? 'Expandir ' : 'Recolher ') + title);
       header.dataset.qaCollapse = '1';
     });
   }
@@ -210,6 +249,7 @@
     if (!MOBILE()) return;
     const filters = document.querySelector('#abaPlantas .filtros-plantas');
     if (!filters) return;
+    document.getElementById('plantasContador')?.parentElement?.classList.add('qa-plant-toolbar');
     filters.setAttribute('aria-label', 'Filtrar plantas por prazo');
     filters.querySelector('[data-filtro="sala"]')?.setAttribute('aria-hidden', 'true');
     filters.querySelector('[data-filtro="outros"]')?.setAttribute('aria-hidden', 'true');
