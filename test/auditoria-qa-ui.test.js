@@ -82,12 +82,12 @@ test('cache da correção de confirmação é incrementado', () => {
   const status = read('public/status-estoque.js');
   const qa = read('public/audit-qa-polish.js');
   const tablet = read('public/tablet.html');
-  assert.match(html, /app\.js\?v=12/);
-  assert.match(app, /status-estoque\.js\?v=3/);
-  assert.match(status, /ui-refinements\.js\?v=7/);
-  assert.match(status, /audit-qa-polish\.js\?v=2/);
-  assert.match(qa, /audit-qa-polish\.css\?v=2/);
-  assert.match(tablet, /tablet-enhancements\.js\?v=3/);
+  assert.match(html, /app\.js\?v=13/);
+  assert.match(app, /status-estoque\.js\?v=4/);
+  assert.match(status, /ui-refinements\.js\?v=8/);
+  assert.match(status, /audit-qa-polish\.js\?v=3/);
+  assert.match(qa, /audit-qa-polish\.css\?v=3/);
+  assert.match(tablet, /tablet-enhancements\.js\?v=4/);
 });
 
 
