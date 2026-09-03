@@ -136,7 +136,6 @@ function openSheet({ title, subtitle = '', content = '', onMount }) {
   overlay.className = `ui-sheet-overlay${overMarket ? ' ui-sheet-over-market ui-sheet-center' : ''}`;
   overlay.innerHTML = `
     <section class="ui-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-      <div class="ui-sheet-handle"></div>
       <div class="ui-sheet-head">
         <div>
           <div class="ui-sheet-title">${escapeHtml(title)}</div>
@@ -473,7 +472,9 @@ async function deleteSimple(module, row) {
   const { data: records, error } = await query.limit(1);
   if (error || !records?.length) throw new Error(`Não foi possível localizar “${name}”.`);
   const record = records[0];
-  const accepted = window.confirm(`Excluir “${name}”?\n\nO item ficará disponível no Histórico para restauração.`);
+  const accepted = typeof window.lifeosConfirmAction === 'function'
+    ? await window.lifeosConfirmAction({ title: 'Excluir item', message: `Excluir “${name}”? O item ficará disponível no Histórico para restauração.`, confirmLabel: 'Excluir', danger: true })
+    : window.confirm(`Excluir “${name}”?\n\nO item ficará disponível no Histórico para restauração.`);
   if (!accepted) return;
 
   const parent = row.parentNode;
@@ -505,7 +506,9 @@ async function deletePlant() {
     .single();
   if (error || !plant) throw new Error('Planta não encontrada.');
   const name = document.getElementById('mpNome')?.textContent || code;
-  const accepted = window.confirm(`Remover “${name}” da lista ativa?\n\nA ficha, as rotinas e a linha do tempo poderão ser restauradas.`);
+  const accepted = typeof window.lifeosConfirmAction === 'function'
+    ? await window.lifeosConfirmAction({ title: 'Remover planta', message: `Remover “${name}” da lista ativa? A ficha, as rotinas e a linha do tempo poderão ser restauradas.`, confirmLabel: 'Remover', danger: true })
+    : window.confirm(`Remover “${name}” da lista ativa?\n\nA ficha, as rotinas e a linha do tempo poderão ser restauradas.`);
   if (!accepted) return;
   await recordHistory('plantas', plant.id, { _ui_bundle: 'planta', planta: plant });
   const { error: updateError } = await client.from('plantas').update({ status: 'removida' }).eq('id', plant.id);
@@ -538,7 +541,9 @@ async function deleteProject() {
     client.from('tarefas').select('*').eq('projeto_id', project.id),
     client.from('projeto_itens').select('*').eq('projeto_id', project.id),
   ]);
-  const accepted = window.confirm(`Remover o projeto “${name}”?\n\nObjetivos, tarefas e itens vinculados poderão ser restaurados.`);
+  const accepted = typeof window.lifeosConfirmAction === 'function'
+    ? await window.lifeosConfirmAction({ title: 'Remover projeto', message: `Remover o projeto “${name}”? Objetivos, tarefas e itens vinculados poderão ser restaurados.`, confirmLabel: 'Remover', danger: true })
+    : window.confirm(`Remover o projeto “${name}”?\n\nObjetivos, tarefas e itens vinculados poderão ser restaurados.`);
   if (!accepted) return;
   await recordHistory('projetos', project.id, {
     _ui_bundle: 'projeto',
@@ -1181,6 +1186,8 @@ function makeMetricsInteractive() {
   });
 
   document.querySelectorAll('#cardsHoje .card-hoje, #cardsHoje .cartao.clicavel').forEach(card => {
+    const qaCard = card.classList.contains('qa-collapsible-card') || Boolean(card.querySelector(':scope > .qa-collapsible-card'));
+    if (qaCard) { delete card.dataset.uiDestination; card.removeAttribute('tabindex'); card.removeAttribute('role'); return; }
     // A Central Financeira possui cliques próprios em Pagar e Ver todas.
     // Não transforme o cartão financeiro em um atalho global para Casa > Contas.
     if (card.id === 'cfToday' || card.closest('#cfToday')) {
@@ -1674,6 +1681,8 @@ function installStableNavigation() {
     // Este listener roda em captura e, sem esta exceção, intercepta Pagar
     // antes que o módulo financeiro consiga abrir o modal.
     if (event.target.closest('#cfToday [data-cf-abrir], #cfToday [data-cf-ver-todas]')) return;
+
+    if (event.target.closest('.qa-card-toggle')) return;
 
     const destinationTarget = event.target.closest('[data-ui-destination]');
     if (destinationTarget) {
