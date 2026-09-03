@@ -3,7 +3,7 @@
    Mantém as regras de negócio existentes e centraliza os ajustes desta rodada. */
 
 :root {
-  --qa-bottom-fade-height: calc(104px + env(safe-area-inset-bottom, 0px));
+  --qa-bottom-fade-height: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 /* iOS: Safari amplia automaticamente campos abaixo de 16px. */
@@ -53,8 +53,8 @@ button:disabled {
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--bg) 0%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 72%, transparent) 46%,
-    var(--bg) 86%
+    color-mix(in srgb, var(--bg) 30%, transparent) 52%,
+    color-mix(in srgb, var(--bg) 82%, transparent) 100%
   );
 }
 
