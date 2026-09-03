@@ -218,6 +218,16 @@
   else iniciar();
 })();
 
+// Acabamento compartilhado da auditoria QA — mobile/tablet.
+(() => {
+  if (document.getElementById('audit-qa-polish-script')) return;
+  const script = document.createElement('script');
+  script.id = 'audit-qa-polish-script';
+  script.src = '/audit-qa-polish.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();
+
 // Painel da Casa v1 — carregado como camada independente para manter reversibilidade.
 (() => {
   if (document.getElementById('painel-casa-script')) return;
