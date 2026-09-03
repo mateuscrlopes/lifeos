@@ -82,10 +82,56 @@ test('cache da correção de confirmação é incrementado', () => {
   const status = read('public/status-estoque.js');
   const qa = read('public/audit-qa-polish.js');
   const tablet = read('public/tablet.html');
-  assert.match(html, /app\.js\?v=12/);
-  assert.match(app, /status-estoque\.js\?v=3/);
-  assert.match(status, /ui-refinements\.js\?v=7/);
-  assert.match(status, /audit-qa-polish\.js\?v=2/);
-  assert.match(qa, /audit-qa-polish\.css\?v=2/);
-  assert.match(tablet, /tablet-enhancements\.js\?v=3/);
+  assert.match(html, /app\.js\?v=13/);
+  assert.match(app, /status-estoque\.js\?v=4/);
+  assert.match(status, /ui-refinements\.js\?v=8/);
+  assert.match(status, /audit-qa-polish\.js\?v=3/);
+  assert.match(qa, /audit-qa-polish\.css\?v=3/);
+  assert.match(tablet, /tablet-enhancements\.js\?v=4/);
+});
+
+
+test('cards do Hoje separam navegação de expansão', () => {
+  const app = read('public/app.js');
+  const ui = read('public/ui-refinements.js');
+  const audit = read('public/audit-qa-polish.js');
+  const finance = read('public/central-financeira.js');
+
+  assert.match(app, /qa-card-actions/);
+  assert.match(app, /qa-card-open/);
+  assert.match(app, /qa-collapsible-card qa-collapsed/);
+  assert.match(ui, /event\.target\.closest\('\.qa-card-toggle'\)/);
+  assert.match(ui, /card\.classList\.contains\('qa-collapsible-card'\)/);
+  assert.match(audit, /existingAction\.hidden = false/);
+  assert.match(finance, /cf-hoje-interior qa-collapsible-card qa-collapsed/);
+});
+
+test('sheets com X não exibem alça falsa e usam superfície uniforme', () => {
+  const ui = read('public/ui-refinements.js');
+  const css = read('public/audit-qa-polish.css');
+
+  assert.doesNotMatch(ui, /<div class="ui-sheet-handle"><\/div>/);
+  assert.match(css, /\.ui-sheet-handle\s*\{\s*display:\s*none\s*!important/);
+  assert.match(css, /\.modal-header,[\s\S]*\.ui-sheet-head,[\s\S]*background:\s*var\(--paper\)\s*!important/);
+});
+
+test('clima mobile usa consulta direta, backend e cache local', () => {
+  const app = read('public/app.js');
+
+  assert.match(app, /CLIMA_MOBILE_DIRETO_URL/);
+  assert.match(app, /api\.open-meteo\.com/);
+  assert.match(app, /CLIMA_MOBILE_CACHE_KEY/);
+  assert.match(app, /fetch\('\/clima'/);
+  assert.match(app, /Clima indisponível/);
+});
+
+test('visual QA mantém refinamento de planner, plantas e controles do estoque', () => {
+  const css = read('public/audit-qa-polish.css');
+
+  assert.match(css, /\.qa-card-actions/);
+  assert.match(css, /\.ui-market-launcher > button[\s\S]*align-items:\s*center/);
+  assert.match(css, /#itensEstoque \.est-controles/);
+  assert.match(css, /#abaPlantas \.qa-plant-toolbar/);
+  assert.match(css, /#subCardapio \.qa-cardapio-week-card/);
+  assert.match(css, /grid-auto-columns:\s*122px/);
 });

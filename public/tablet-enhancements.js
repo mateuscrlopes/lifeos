@@ -223,7 +223,7 @@
   if (document.getElementById('audit-qa-polish-script')) return;
   const script = document.createElement('script');
   script.id = 'audit-qa-polish-script';
-  script.src = '/audit-qa-polish.js?v=2';
+  script.src = '/audit-qa-polish.js?v=3';
   script.defer = true;
   document.head.appendChild(script);
 })();
