@@ -138,6 +138,8 @@
     } catch (erro) { console.error('[Receitas] Falha ao abrir:', erro); }
   }
 
+  window.lifeosAbrirReceita = abrirReceitaMobile;
+
   function renderizarEdicao(receita) {
     const modal = document.getElementById('rv2RecipeModal');
     const corpo = modal?.querySelector('.rv2-dialog-body');
