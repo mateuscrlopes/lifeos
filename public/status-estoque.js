@@ -9,7 +9,7 @@
 // Design System deve carregar antes das camadas de refinamento.
 import './design-system.js?v=1';
 import './theme.js?v=1';
-import './ui-refinements.js?v=6';
+import './ui-refinements.js?v=7';
 import './central-financeira.js?v=6';
 import './central-financeira-email.js?v=5';
 import './acertos.js?v=5';
@@ -18,7 +18,7 @@ import './mobile-shell-v3.js?v=4';
 import './product-polish-v4.js?v=4';
 import './phase3-polish.js?v=1';
 import './phase4-polish.js?v=1';
-import './audit-qa-polish.js?v=1';
+import './audit-qa-polish.js?v=2';
 import './ritmo-food-v2-loader.js?v=1';
 
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
