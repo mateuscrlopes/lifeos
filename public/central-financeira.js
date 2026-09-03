@@ -736,7 +736,7 @@ function cfRenderizarHoje() {
       .slice(0, 4);
 
     cartao.innerHTML = `
-      <div class="cartao cf-hoje-interior">
+      <div class="cartao cf-hoje-interior qa-collapsible-card qa-collapsed">
         <div class="card-hoje-head">
           <div>
             <div class="card-hoje-title-row"><span class="card-hoje-head-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg></span><div class="card-hoje-titulo-txt">Contas próximas</div></div>
