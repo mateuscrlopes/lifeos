@@ -375,7 +375,7 @@ async function salvarEditarLista(){
 }
 
 async function removerItemLista(item){
-  if(!confirm(`Remover "${item.nome}" da lista?`))return;
+  if(!await confirmarAcao('Remover item',`Remover "${item.nome}" da lista?`,{confirmLabel:'Remover',danger:true}))return;
   const{error}=await supa.from('lista_compras').delete().eq('id',item.id);
   if(!error){
     supa.from('historico_excluidos').insert({
@@ -524,7 +524,7 @@ async function salvarEditarEstoque(){
 }
 
 async function removerEstoque(item){
-  if(!confirm(`Excluir "${item.nome}" do estoque?`))return;
+  if(!await confirmarAcao('Excluir item do estoque',`Excluir "${item.nome}" do estoque?`,{confirmLabel:'Excluir',danger:true}))return;
   const{error}=await supa.from('estoque').delete().eq('id',item.id);
   if(!error){
     supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'estoque',registro_id:item.id,dados:item});
@@ -1091,10 +1091,10 @@ async function salvarPlanejamento(){
   }
 }
 
-function limparPlanejamentoAtual(){
+async function limparPlanejamentoAtual(){
   const rotulo=_planRespAtual==='ambos'?'Ambos':_planRespAtual.charAt(0).toUpperCase()+_planRespAtual.slice(1);
   if(!Object.keys(_planDias).length)return;
-  if(!confirm(`Limpar todos os slots de ${rotulo} nesta semana?`))return;
+  if(!await confirmarAcao('Limpar cardápio',`Limpar todos os slots de ${rotulo} nesta semana?`,{confirmLabel:'Limpar',danger:true}))return;
   _planDiasPorResp[_planRespAtual]={};
   selecionarResponsavelCardapio(_planRespAtual);
   aviso('avisoPlan',`Slots de ${rotulo} limpos. Clique em Salvar para confirmar.`,'ok');
@@ -1149,7 +1149,7 @@ async function salvarRitual(){
 }
 
 async function removerRitual(r){
-  if(!confirm(`Excluir o ritual "${r.nome}"?`))return;
+  if(!await confirmarAcao('Excluir ritual',`Excluir o ritual "${r.nome}"?`,{confirmLabel:'Excluir',danger:true}))return;
   const{error}=await supa.from('rituais').delete().eq('id',r.id);
   if(!error){
     supa.from('historico_excluidos').insert({casa_id:usuario.casa_id,usuario_id:usuario.id,modulo:'rituais',registro_id:r.id,dados:r});
@@ -1235,7 +1235,7 @@ async function salvarEditarConta(){
 }
 
 async function removerConta(conta,botao){
-  if(!confirm(`Excluir a conta "${conta.nome}"?`))return;
+  if(!await confirmarAcao('Excluir conta',`Excluir a conta "${conta.nome}"?`,{confirmLabel:'Excluir',danger:true}))return;
   if(botao)botao.disabled=true;
   try{
     const{error}=await excluirContaPorId(supa,conta.id);
