@@ -1,0 +1,601 @@
+/* LifeOS — Auditoria QA mobile/tablet — 2026-09
+   Correções visuais e de interação levantadas em uso real.
+   Mantém as regras de negócio existentes e centraliza os ajustes desta rodada. */
+
+:root {
+  --qa-bottom-fade-height: calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+/* iOS: Safari amplia automaticamente campos abaixo de 16px. */
+@media (max-width: 820px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  .campo input,
+  .campo select,
+  .campo textarea,
+  .sel,
+  .cf-editor-campo input,
+  .cf-editor-campo textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Feedback tátil sem "piscada" ou salto visual. */
+@media (hover: none), (pointer: coarse) {
+  button,
+  .clicavel,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not(:disabled):active,
+  .lifeos-shortcut:active,
+  .metrica.clicavel:active {
+    transform: none !important;
+  }
+}
+
+button:disabled {
+  opacity: 1 !important;
+  filter: saturate(.78);
+}
+
+/* A faixa abaixo da barra inferior dissolve o conteúdo no fundo da página. */
+.qa-bottom-fade {
+  position: fixed;
+  z-index: 80;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--qa-bottom-fade-height);
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 72%, transparent) 46%,
+    var(--bg) 86%
+  );
+}
+
+.tab-bar {
+  z-index: 90 !important;
+}
+
+/* Hoje — meta de clima/data legível. */
+.qa-meta-separator {
+  color: var(--faint, var(--muted));
+  opacity: .72;
+  font-weight: 700;
+  user-select: none;
+}
+
+/* Hoje — destaque rotativo. */
+#abaHoje .hero-hoje.qa-hero-rotator {
+  min-height: 164px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: default;
+}
+
+#abaHoje .qa-hero-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 10px;
+  border-radius: 13px;
+  color: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.12);
+}
+
+#abaHoje .qa-hero-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+#abaHoje .hero-kicker {
+  text-align: center;
+}
+
+#abaHoje .hero-titulo,
+#abaHoje .hero-sub {
+  width: 100%;
+  text-align: center;
+}
+
+#abaHoje .hero-titulo.qa-slide-enter,
+#abaHoje .hero-sub.qa-slide-enter,
+#abaHoje .qa-hero-icon.qa-slide-enter {
+  animation: qaHeroIn 360ms ease both;
+}
+
+@keyframes qaHeroIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hoje — cards recolhíveis. */
+#cardsHoje .card-hoje-head {
+  position: relative;
+}
+
+.qa-card-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--paper-2);
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.qa-card-toggle {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: inline-grid !important;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: var(--muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.qa-card-toggle svg {
+  width: 17px;
+  height: 17px;
+  transition: transform 180ms ease;
+}
+
+.qa-collapsible-card.qa-collapsed .qa-card-toggle svg {
+  transform: rotate(0deg);
+}
+
+.qa-collapsible-card:not(.qa-collapsed) .qa-card-toggle svg {
+  transform: rotate(180deg);
+}
+
+.qa-collapsible-card.qa-collapsed > .card-hoje-head ~ *,
+.qa-collapsible-card.qa-collapsed .cf-hoje-interior > .card-hoje-head ~ * {
+  display: none !important;
+}
+
+.qa-collapsible-card.qa-collapsed > .card-hoje-head,
+.qa-collapsible-card.qa-collapsed .cf-hoje-interior > .card-hoje-head {
+  margin-bottom: 0 !important;
+  border-bottom-color: transparent !important;
+}
+
+/* Modais: cabeçalho e superfície usam exatamente a mesma base. */
+.modal-header,
+.cf-modal-cabecalho,
+.ui-sheet-head,
+.ac-sheet-head {
+  background: color-mix(in srgb, var(--paper) 96%, transparent) !important;
+}
+
+.modal-overlay,
+.cf-modal,
+.ui-sheet-overlay,
+.ac-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  min-height: 100dvh !important;
+}
+
+.ui-sheet.qa-no-drag-handle > .ui-sheet-handle {
+  display: none !important;
+}
+
+/* Confirmação própria: backdrop sempre cobre o viewport e clique fora cancela. */
+.qa-confirm-overlay {
+  position: fixed;
+  z-index: 12000;
+  inset: 0;
+  width: 100vw;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding:
+    calc(14px + env(safe-area-inset-top, 0px))
+    14px
+    calc(18px + env(safe-area-inset-bottom, 0px));
+  background: rgba(8, 15, 11, .56);
+  backdrop-filter: blur(10px) saturate(112%);
+  -webkit-backdrop-filter: blur(10px) saturate(112%);
+}
+
+.qa-confirm-dialog {
+  width: min(100%, 430px);
+  max-height: calc(100dvh - 48px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--linha);
+  border-radius: 22px;
+  background: var(--paper);
+  color: var(--texto);
+  box-shadow: 0 22px 60px rgba(17, 28, 21, .24);
+}
+
+.qa-confirm-dialog h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.qa-confirm-dialog p {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.qa-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.qa-confirm-actions button {
+  min-height: 46px !important;
+  border-radius: 12px !important;
+  font-weight: 750 !important;
+}
+
+.qa-confirm-primary {
+  background: var(--sage) !important;
+  color: #fff !important;
+}
+
+.qa-confirm-primary.is-danger {
+  background: var(--alert) !important;
+}
+
+.qa-confirm-secondary,
+.qa-confirm-cancel {
+  border: 1px solid var(--linha) !important;
+  background: var(--paper-2) !important;
+  color: var(--texto) !important;
+}
+
+/* Compras — cadastro rápido alinhado e ação + compacta. */
+#subCompras .linha-add {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, .42fr) 46px;
+  align-items: stretch;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+#subCompras .linha-add > #novoItem {
+  min-width: 0 !important;
+}
+
+#subCompras .linha-add > #novoItemCiclo {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#subCompras .linha-add > #btnAdd {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  align-self: stretch;
+}
+
+#subCompras .ui-purchase-create-destination {
+  margin-top: 9px;
+}
+
+#subCompras .lista-item-acoes,
+#subCompras .lifeos-action-row {
+  gap: 4px !important;
+}
+
+#subCompras .ui-purchase-action {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  color: var(--sage) !important;
+  background: var(--sage-soft) !important;
+}
+
+#subCompras .ui-purchase-action svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+#subCompras button[aria-label*="Editar"] svg,
+#subCompras button[aria-label*="Excluir"] svg,
+#subCompras button[title="Editar"] svg,
+#subCompras button[title="Excluir"] svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Estoque — formulário em pares lógicos. */
+.qa-stock-form-layout {
+  display: grid;
+  gap: 0 10px;
+}
+
+.qa-stock-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.qa-stock-row > .campo {
+  min-width: 0;
+}
+
+.qa-stock-consumption-help {
+  display: block;
+  margin: -7px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+#subEstoque .est-controles {
+  gap: 4px !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#subEstoque .est-controles > button:not(.lifeos-icon-action):not(.ui-icon-button) {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 !important;
+  border: 1px solid var(--linha) !important;
+  border-radius: 10px !important;
+  background: var(--paper-2) !important;
+  color: var(--texto) !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+}
+
+#subEstoque .est-qtd {
+  min-width: 32px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 6px;
+  border-radius: 9px;
+  background: var(--paper-2);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tarefas — datas nunca podem extrapolar o grid. */
+.lifeos-form-grid-2,
+.lifeos-form-grid-2 > .campo {
+  min-width: 0;
+}
+
+#tfData,
+#etData {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Cardápio — planejamento primeiro e dias como carrossel legível. */
+#subCardapio .qa-cardapio-week-card {
+  scroll-margin-top: 12px;
+}
+
+#subCardapio .cardapio-week-labels {
+  display: none !important;
+}
+
+#subCardapio .cardapio-week-grid:not(.cardapio-week-labels) {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(104px, 31vw);
+  grid-template-columns: none !important;
+  gap: 8px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 8px;
+  margin-inline: -2px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+#subCardapio .cardapio-week-grid:not(.cardapio-week-labels)::-webkit-scrollbar {
+  display: none;
+}
+
+.qa-cardapio-slot {
+  position: relative;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+#subCardapio .qa-cardapio-slot .dia-slot {
+  width: 100% !important;
+  min-height: 92px !important;
+  padding: 24px 10px 10px !important;
+  border-radius: 15px !important;
+}
+
+.qa-slot-day {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.qa-slot-edit {
+  position: absolute;
+  z-index: 3;
+  top: 6px;
+  right: 6px;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  color: var(--sage) !important;
+  background: color-mix(in srgb, var(--paper) 90%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--texto) 8%, transparent) !important;
+}
+
+.qa-slot-edit svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Plantas — mesma régua horizontal para visão geral, filtros e cômodos. */
+#abaPlantas .phase3-plant-overview {
+  width: auto !important;
+  min-width: 0;
+  box-sizing: border-box;
+  align-items: stretch;
+  margin:
+    14px
+    var(--shell-gutter)
+    4px !important;
+}
+
+#abaPlantas .phase3-plant-stat {
+  min-width: 0;
+  min-height: 80px;
+  height: auto;
+  box-sizing: border-box;
+}
+
+#abaPlantas .phase3-plant-stat span {
+  overflow-wrap: anywhere;
+}
+
+#abaPlantas .filtros-plantas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+
+#abaPlantas .filtro-btn[data-filtro="sala"],
+#abaPlantas .filtro-btn[data-filtro="outros"] {
+  display: none !important;
+}
+
+#abaPlantas #listaPlantas,
+#abaPlantas #listaPlantas > .cartao {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#abaPlantas #listaPlantas > .cartao {
+  overflow: hidden;
+}
+
+/* Tablet — os mesmos princípios de estabilidade, sem copiar o shell mobile. */
+body.tablet-mode .panel,
+body.tablet-mode .pagina,
+body.tablet-mode .conteudo-grid {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.tablet-mode .panel {
+  overflow: hidden;
+}
+
+body.tablet-mode .task-row,
+body.tablet-mode .planta-row,
+body.tablet-mode .conta-row,
+body.tablet-mode .estoque-row {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.tablet-mode button:not(:disabled):active {
+  transform: none !important;
+}
+
+@media (max-width: 430px) {
+  #subCompras .linha-add {
+    grid-template-columns: minmax(0, 1fr) 102px 44px;
+    gap: 6px !important;
+  }
+
+  .qa-stock-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #subCardapio .cardapio-week-grid:not(.cardapio-week-labels) {
+    grid-auto-columns: minmax(108px, 34vw);
+  }
+}
+
+@media (max-width: 360px) {
+  #subCompras .linha-add {
+    grid-template-columns: minmax(0, 1fr) 94px 42px;
+  }
+
+  #subCompras .linha-add > #btnAdd {
+    width: 42px !important;
+    min-width: 42px !important;
+  }
+
+  .qa-stock-row {
+    grid-template-columns: 1fr;
+  }
+
+  #abaPlantas .phase3-plant-overview {
+    gap: 6px;
+  }
+
+  #abaPlantas .phase3-plant-stat {
+    padding: 10px 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #abaHoje .hero-titulo.qa-slide-enter,
+  #abaHoje .hero-sub.qa-slide-enter,
+  #abaHoje .qa-hero-icon.qa-slide-enter {
+    animation: none !important;
+  }
+}
