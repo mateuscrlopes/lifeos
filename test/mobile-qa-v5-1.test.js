@@ -60,7 +60,8 @@ test('QA v5.1 contém correções estruturais de plantas, central e configuraç�
   assert.match(css, /planta-card > div:last-child > button/);
   assert.match(css, /cf-conta-item\.qa51-overdue/);
   assert.match(css, /ac-rule-title \.ac-chip/);
-  assert.match(js, /handleNewPurchaseLocation/);
+  assert.match(js, /openNewPurchaseLocationModal/);
+  assert.match(js, /bindPurchaseLocationButton/);
   assert.match(js, /enhanceCentralFinance/);
   assert.match(js, /qa51-measure-body/);
 });
@@ -78,4 +79,20 @@ test('busca do Histórico remove a lupa nativa do Safari e preserva o ícone Lif
   assert.match(css, /-webkit-appearance: none !important/);
   assert.match(css, /::-webkit-search-decoration/);
   assert.match(css, /padding: 11px 14px 11px 50px !important/);
+});
+
+test('v5.1 força nova versão de JS e CSS para evitar módulo antigo no iPhone', () => {
+  const status = read('public/status-estoque.js');
+  const js = read('public/mobile-qa-v5-1.js');
+  assert.match(status, /mobile-qa-v5-1\.js\?v=2/);
+  assert.match(js, /mobile-qa-v5-1\.css\?v=2/);
+  assert.match(js, /pageshow/);
+});
+
+test('Locais de compra liga o botão Novo diretamente ao modal e esconde o formulário inline', () => {
+  const js = read('public/mobile-qa-v5-1.js');
+  assert.match(js, /button\.onclick = event =>/);
+  assert.match(js, /openNewPurchaseLocationModal\(\)/);
+  assert.match(js, /inputNovoLocalCompra/);
+  assert.match(js, /oldInline\.style\.display = 'none'/);
 });
