@@ -25,7 +25,13 @@ app.use((req, res, next) => {
 // A importação financeira pode receber até 50 e-mails com trechos do corpo.
 // 2 MB mantém o limite controlado e comporta o máximo já aceito pela rota.
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static('public'));
+app.use(express.static('public', {
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  },
+}));
 
 app.get('/config', (req, res) => {
   res.json({ supabaseUrl: config.supabaseUrl, supabaseAnonKey: config.supabaseAnonKey });
