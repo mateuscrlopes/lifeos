@@ -7,7 +7,7 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
 test('módulo de medidas é carregado pela aplicação', () => {
   const status = read('public/status-estoque.js');
-  assert.match(status, /ritmo-medidas-save\.js\?v=1/);
+  assert.match(status, /ritmo-medidas-save\.js\?v=2/);
 });
 
 test('salvamento de medidas confirma persistência no banco e não falha silenciosamente', () => {
@@ -32,4 +32,22 @@ test('botão salvar é explicitamente button e o handler impede a execução dup
   assert.match(js, /button\.type = 'button'/);
   assert.match(js, /event\.stopImmediatePropagation/);
   assert.match(js, /let salvando = false/);
+});
+
+test('novo registro é distinguido visualmente da edição', () => {
+  const js = read('public/ritmo-medidas-save.js');
+  assert.match(js, /titulo\.textContent = 'Registrar medidas'/);
+  assert.match(js, /querySelector\('#ritmoExcluirMedida'\)\?\.remove\(\)/);
+  assert.match(js, /ritmoMedidaModo = 'novo'/);
+  assert.match(js, /titulo\.textContent = 'Editar medidas'/);
+  assert.match(js, /ritmoMedidaModo = 'editar'/);
+});
+
+test('após salvar, Ritmo recarrega dados e preserva a aba atual', () => {
+  const js = read('public/ritmo-medidas-save.js');
+  assert.match(js, /recarregarRitmoPreservandoAba/);
+  assert.match(js, /lifeos:ritmo-abrir/);
+  assert.match(js, /\[data-ritmo-tab\]\.is-active/);
+  assert.match(js, /dataset\.ritmoTab/);
+  assert.match(js, /querySelector\(`\[data-ritmo-tab=/);
 });
