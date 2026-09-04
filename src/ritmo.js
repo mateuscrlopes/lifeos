@@ -65,6 +65,85 @@ function semAcentos(valor = '') {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+// Alguns planos de nutricionistas usam fontes PDF sem mapa ToUnicode correto.
+// Nesses arquivos o texto visualmente legivel chega do pdf-parse com os codigos
+// dos glifos deslocados. Ex.: "3ODQR DOLPHQWDU" representa "Plano alimentar".
+// A transformacao abaixo e deterministica e so e adotada quando o vocabulario
+// de alimentacao fica claramente mais coerente que o texto original.
+function decodificarGlifosDeslocados(texto = '') {
+  let saida = '';
+  for (const caractere of String(texto || '')) {
+    const codigo = caractere.charCodeAt(0);
+
+    // Nesta familia de fontes, espaco e digitos foram gravados 29 posicoes antes.
+    if (codigo >= 3 && codigo <= 28) {
+      saida += String.fromCharCode(codigo + 29);
+      continue;
+    }
+
+    // Iniciais maiusculas A–V tambem aparecem 29 posicoes antes ($ ... 9).
+    if (codigo >= 36 && codigo <= 57) {
+      saida += String.fromCharCode(codigo + 29);
+      continue;
+    }
+
+    // O restante do alfabeto latino costuma aparecer tres posicoes depois.
+    if ((codigo >= 65 && codigo <= 90) || (codigo >= 97 && codigo <= 122)) {
+      let base = codigo >= 97 ? 97 : 65;
+      saida += String.fromCharCode(base + ((codigo - base - 3 + 26) % 26));
+      continue;
+    }
+
+    saida += caractere;
+  }
+  return saida;
+}
+
+function normalizarRuidoFonte(valor = '') {
+  return semAcentos(valor)
+    .toLowerCase()
+    .replace(/\bcafb\b/g, 'cafe')
+    .replace(/\bmanhz\b/g, 'manha')
+    .replace(/\balmoao\b/g, 'almoco')
+    .replace(/\bcola[a-z]o\b/g, 'colacao')
+    .replace(/\bpr[a-z][ -]?treino\b/g, 'pre treino')
+    .replace(/\bpos[ -]?treino\b/g, 'pos treino')
+    .replace(/[^a-z0-9\s:;|\-–—]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pontuarTextoPlano(valor = '') {
+  const base = normalizarRuidoFonte(valor);
+  if (!base) return 0;
+
+  const fortes = [
+    'plano alimentar', 'planejamento alimentar', 'cafe da manha', 'almoco',
+    'jantar', 'lanche da manha', 'lanche da tarde', 'ceia',
+  ];
+  const apoio = [
+    'nutricionista', 'paciente', 'frango', 'arroz', 'ovo', 'colher',
+    'unidade', 'porcao', 'grama', 'opcao',
+  ];
+
+  let pontos = 0;
+  for (const termo of fortes) if (base.includes(termo)) pontos += 5;
+  for (const termo of apoio) if (base.includes(termo)) pontos += 1;
+  return pontos;
+}
+
+export function decodificarTextoPdfSeNecessario(textoRecebido = '') {
+  const original = String(textoRecebido || '');
+  const candidato = decodificarGlifosDeslocados(original);
+  const pontosOriginal = pontuarTextoPlano(original);
+  const pontosCandidato = pontuarTextoPlano(candidato);
+
+  if (pontosCandidato >= 6 && pontosCandidato >= pontosOriginal + 4) {
+    return normalizar(candidato);
+  }
+  return normalizar(original);
+}
+
 const REFEICOES = [
   ['cafe da manha', 'Café da manhã'],
   ['desjejum', 'Café da manhã'],
@@ -78,18 +157,22 @@ const REFEICOES = [
   ['pos treino', 'Pós-treino'],
 ];
 
-const CABECALHOS_REFEICAO_RE = /\s+(?=(?:caf[eé]\s+da\s+manh[aã]|desjejum|lanche\s+da\s+manh[aã]|cola[cç][aã]o|almo[cç]o|lanche\s+da\s+tarde|jantar|ceia|pr[eé][\s-]*treino|p[oó]s[\s-]*treino)\b)/gi;
+const CABECALHOS_REFEICAO_RE = /\s+(?=(?:caf[eé]\s+da\s+manh[aãz]|desjejum|lanche\s+da\s+manh[aãz]|cola[cç][aãa-z]o|almo(?:[cç]|a)o|lanche\s+da\s+tarde|jantar|ceia|pr[eé][\s-]*treino|p[oó]s[\s-]*treino)\b)/gi;
 
 function separarCabecalhosEmbutidos(texto = '') {
   // pdf-parse pode devolver tabelas inteiras em uma linha. Quebrar apenas antes de
-  // nomes conhecidos de refeição torna o parser tolerante sem tentar interpretar
-  // livremente o conteúdo do nutricionista.
+  // nomes conhecidos de refeicao torna o parser tolerante sem tentar interpretar
+  // livremente o conteudo do nutricionista.
   return String(texto || '').replace(CABECALHOS_REFEICAO_RE, '\n');
 }
 
 function detectarCabecalhoRefeicao(linha) {
   const original = String(linha || '').trim();
-  const base = semAcentos(original).toLowerCase().replace(/\s+/g, ' ').trim();
+  const baseCrua = semAcentos(original).toLowerCase().replace(/\s+/g, ' ').trim();
+  const base = baseCrua
+    .replace(/\bcafb\b/g, 'cafe')
+    .replace(/\bmanhz\b/g, 'manha')
+    .replace(/\balmoao\b/g, 'almoco');
 
   for (const [chave, titulo] of REFEICOES) {
     const comeca = base === chave
@@ -101,18 +184,32 @@ function detectarCabecalhoRefeicao(linha) {
     if (!comeca) continue;
 
     const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
-    let restante = original.slice(chave.length)
+    // O comprimento canonico e usado apenas para remover o cabecalho. Em PDFs com
+    // acentos corrompidos pode sobrar um caractere, removido pelos separadores.
+    let restante = original.slice(Math.min(original.length, chave.length))
       .replace(/^[\s:;|\-–—]+/, '')
       .trim();
     if (horario) restante = restante.replace(horario, '').replace(/^[\s:;|\-–—]+/, '').trim();
     return { titulo, horario, restante };
   }
 
-  return null;
-}
+  // Fallback estreito para as tres grafias que aparecem em PDFs com fonte
+  // deslocada e diacriticos sem mapeamento Unicode.
+  const ruido = normalizarRuidoFonte(original);
+  const alternativas = [
+    [/^cafe\s+da\s+manha\b/, 'Café da manhã'],
+    [/^almoco\b/, 'Almoço'],
+    [/^jantar\b/, 'Jantar'],
+    [/^lanche\s+da\s+manha\b/, 'Lanche da manhã'],
+    [/^lanche\s+da\s+tarde\b/, 'Lanche da tarde'],
+  ];
+  for (const [re, titulo] of alternativas) {
+    if (!re.test(ruido)) continue;
+    const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
+    return { titulo, horario, restante: '' };
+  }
 
-function tituloRefeicao(linha) {
-  return detectarCabecalhoRefeicao(linha)?.titulo || null;
+  return null;
 }
 
 function limparItem(linha) {
@@ -130,7 +227,7 @@ function opcoesDaSecao(linhas = []) {
   let atual = null;
 
   for (const linha of limpas) {
-    const match = semAcentos(linha).match(/^opcao\s*(\d+)?\s*[:\-–]?\s*(.*)$/i);
+    const match = normalizarRuidoFonte(linha).match(/^opcao\s*(\d+)?\s*[:\-–]?\s*(.*)$/i);
     if (match) {
       if (atual?.itens?.length) grupos.push(atual);
       atual = {
@@ -149,7 +246,8 @@ function opcoesDaSecao(linhas = []) {
 }
 
 export function estruturarPlanoAlimentar(textoRecebido) {
-  const texto = normalizar(separarCabecalhosEmbutidos(normalizar(textoRecebido)));
+  const textoDecodificado = decodificarTextoPdfSeNecessario(textoRecebido);
+  const texto = normalizar(separarCabecalhosEmbutidos(textoDecodificado));
   const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
   const secoes = [];
   let atual = null;
@@ -174,7 +272,7 @@ export function estruturarPlanoAlimentar(textoRecebido) {
 
   const precisaRevisao = !refeicoes.length;
   return {
-    versao: 2,
+    versao: 3,
     refeicoes,
     caracteres_lidos: texto.length,
     status: precisaRevisao ? 'revisao_necessaria' : 'estruturado',
@@ -190,7 +288,7 @@ async function lerPdf(buffer) {
   try {
     parser = new PDFParse({ data: buffer, CanvasFactory });
     const resultado = await parser.getText({ first: 20 });
-    return normalizar(resultado?.text);
+    return decodificarTextoPdfSeNecessario(resultado?.text);
   } catch (erro) {
     const protegido = erro instanceof PasswordException || erro?.name === 'PasswordException';
     if (protegido) throw new Error('O PDF está protegido por senha.');
