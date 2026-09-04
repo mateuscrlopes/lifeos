@@ -1,0 +1,154 @@
+/* LifeOS — componentes compartilhados oficiais.
+   Cores e dimensões vêm de tokens.css. */
+
+.lifeos-btn {
+  min-height: var(--touch-target, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm, 10px);
+  font: inherit;
+  font-size: var(--text-body, 14px);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, opacity .16s ease;
+}
+
+.lifeos-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.lifeos-btn--primary {
+  background: var(--sage);
+  color: #fff;
+}
+
+.lifeos-btn--primary:hover:not(:disabled) { background: var(--sage-mid); }
+
+.lifeos-btn--secondary {
+  background: var(--sage-soft);
+  color: var(--sage);
+  border-color: color-mix(in srgb, var(--sage) 20%, transparent);
+}
+
+.lifeos-btn--danger {
+  background: var(--alert);
+  color: #fff;
+}
+
+.lifeos-btn--ghost {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--linha);
+}
+
+.lifeos-icon,
+.lifeos-icon-button svg { display: block; flex: none; }
+
+.lifeos-icon-button {
+  width: var(--touch-target, 44px);
+  height: var(--touch-target, 44px);
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-sm, 10px);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.lifeos-icon-button:hover { background: var(--paper-2); color: var(--texto); }
+
+.lifeos-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  background: rgba(10, 20, 15, .46);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.lifeos-confirm {
+  width: min(100%, 430px);
+  max-height: min(90dvh, 620px);
+  overflow: auto;
+  background: var(--paper);
+  color: var(--texto);
+  border: 1px solid var(--linha);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+
+.lifeos-confirm__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 20px 14px;
+}
+
+.lifeos-confirm__head h2 {
+  margin: 0;
+  font-size: var(--text-section-title, 18px);
+  line-height: 1.25;
+}
+
+.lifeos-confirm__head p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: var(--text-body, 14px);
+  line-height: 1.45;
+}
+
+.lifeos-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--linha);
+}
+
+.lifeos-toast-region {
+  position: fixed;
+  z-index: 11000;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  width: min(calc(100% - 32px), 440px);
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.lifeos-toast {
+  pointer-events: auto;
+  padding: 11px 14px;
+  border: 1px solid var(--linha);
+  border-radius: var(--r-md);
+  background: var(--paper);
+  color: var(--texto);
+  box-shadow: var(--shadow);
+  font-size: var(--text-body, 14px);
+  line-height: 1.35;
+}
+
+.lifeos-toast--error { border-color: color-mix(in srgb, var(--alert) 45%, var(--linha)); }
+.lifeos-toast--warning { border-color: color-mix(in srgb, var(--sun) 45%, var(--linha)); }
+.lifeos-toast--ok { border-color: color-mix(in srgb, var(--sage) 35%, var(--linha)); }
+
+body.lifeos-modal-open,
+body.lifeos-confirm-open { overflow: hidden; }
+
+@media (max-width: 520px) {
+  .lifeos-confirm-overlay { align-items: end; padding-inline: 0; padding-bottom: 0; }
+  .lifeos-confirm { width: 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0; }
+  .lifeos-confirm__actions { display: grid; grid-template-columns: 1fr 1fr; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
