@@ -287,3 +287,13 @@
   script.defer = true;
   document.head.appendChild(script);
 })();
+
+// Tablet Casa v4 — navegação e módulos próprios para tela grande.
+(() => {
+  if (document.getElementById('tablet-house-v4-script')) return;
+  const script = document.createElement('script');
+  script.id = 'tablet-house-v4-script';
+  script.src = '/tablet-house-v4.js?v=1';
+  script.defer = true;
+  document.head.appendChild(script);
+})();
