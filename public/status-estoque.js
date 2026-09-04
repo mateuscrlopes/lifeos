@@ -21,6 +21,7 @@ import './phase4-polish.js?v=1';
 import './audit-qa-polish.js?v=3';
 import './ritmo-food-v2-loader.js?v=1';
 import './mobile-qa-v5.js?v=1';
+import './mobile-qa-v5-1.js?v=1';
 
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
 
