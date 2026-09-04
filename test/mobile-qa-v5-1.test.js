@@ -64,3 +64,18 @@ test('QA v5.1 contém correções estruturais de plantas, central e configuraç�
   assert.match(js, /enhanceCentralFinance/);
   assert.match(js, /qa51-measure-body/);
 });
+
+test('Ritmo reserva colunas próprias para horário, ícone, conteúdo e origem', () => {
+  const css = read('public/mobile-qa-v5-1.css');
+  assert.match(css, /grid-template-areas:[\s\S]*"time icon copy"[\s\S]*"source icon copy"/);
+  assert.match(css, /ritmo-plan-row > \.ritmo-plan-copy/);
+  assert.match(css, /ritmo-plan-row > \.ritmo-row-icon/);
+  assert.match(css, /ritmo-plan-row > \.ritmo-plan-source/);
+});
+
+test('busca do Histórico remove a lupa nativa do Safari e preserva o ícone LifeOS', () => {
+  const css = read('public/mobile-qa-v5-1.css');
+  assert.match(css, /-webkit-appearance: none !important/);
+  assert.match(css, /::-webkit-search-decoration/);
+  assert.match(css, /padding: 11px 14px 11px 50px !important/);
+});
