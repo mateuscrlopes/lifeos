@@ -6,11 +6,16 @@
   let scheduled = false;
 
   function ensureStyle() {
-    if (document.getElementById('lifeos-mobile-qa-v5-1')) return;
+    const href = '/mobile-qa-v5-1.css?v=2';
+    const existing = document.getElementById('lifeos-mobile-qa-v5-1');
+    if (existing) {
+      if (!existing.getAttribute('href')?.endsWith('v=2')) existing.setAttribute('href', href);
+      return;
+    }
     const link = document.createElement('link');
     link.id = 'lifeos-mobile-qa-v5-1';
     link.rel = 'stylesheet';
-    link.href = '/mobile-qa-v5-1.css?v=1';
+    link.href = href;
     document.head.appendChild(link);
   }
 
@@ -75,17 +80,11 @@
   }
 
   // ------------------------------------------------------------------
-  // Locais de compra: + Novo passa a abrir o mesmo padrão modal do estoque.
-  // A criação continua usando a função de negócio já ligada ao input legado.
+  // Locais de compra: + Novo usa modal de forma explícita.
+  // O input legado continua existindo apenas como ponte para a função de
+  // negócio já consolidada, mas nunca é apresentado ao usuário.
   // ------------------------------------------------------------------
-  function handleNewPurchaseLocation(event) {
-    const button = event.target.closest('#btnNovoLocalCompra');
-    if (!button) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation?.();
-
+  function openNewPurchaseLocationModal() {
     const oldInline = document.getElementById('inputNovoLocalCompra');
     if (oldInline) {
       oldInline.style.display = 'none';
@@ -129,6 +128,33 @@
       event.preventDefault();
       submit();
     });
+  }
+
+  function bindPurchaseLocationButton(root = document) {
+    const button = root.querySelector?.('#btnNovoLocalCompra');
+    if (!button) return;
+
+    const oldInline = document.getElementById('inputNovoLocalCompra');
+    if (oldInline) {
+      oldInline.style.display = 'none';
+      oldInline.classList.add('oculto');
+    }
+
+    button.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      openNewPurchaseLocationModal();
+    };
+    button.dataset.qa51ModalBound = '1';
+  }
+
+  function handleNewPurchaseLocation(event) {
+    const button = event.target.closest('#btnNovoLocalCompra');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    openNewPurchaseLocationModal();
   }
 
   // ------------------------------------------------------------------
@@ -214,6 +240,7 @@
   function enhance(root = document) {
     ensureStyle();
     enhanceCentralFinance(root);
+    bindPurchaseLocationButton(root);
   }
 
   function schedule() {
@@ -237,6 +264,7 @@
     window.addEventListener('lifeos:ready', () => setTimeout(schedule, 60));
     window.addEventListener('lifeos:financeiro-abrir', () => setTimeout(schedule, 40));
     window.addEventListener('lifeos:contas-atualizadas', () => setTimeout(schedule, 40));
+    window.addEventListener('pageshow', () => setTimeout(schedule, 0));
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
