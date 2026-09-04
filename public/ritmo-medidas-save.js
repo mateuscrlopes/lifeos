@@ -91,6 +91,39 @@
     if (conteudo) conteudo.innerHTML = '';
   }
 
+  function corrigirModalNovo() {
+    const conteudo = $('ritmoModalConteudo');
+    if (!conteudo) return;
+    const titulo = conteudo.querySelector('.ritmo-sheet-head h3');
+    if (titulo) titulo.textContent = 'Registrar medidas';
+    conteudo.querySelector('#ritmoExcluirMedida')?.remove();
+    const button = $('ritmoSalvarMedida');
+    if (button) {
+      button.type = 'button';
+      button.dataset.ritmoMedidaModo = 'novo';
+    }
+  }
+
+  function corrigirModalEdicao() {
+    const conteudo = $('ritmoModalConteudo');
+    if (!conteudo) return;
+    const titulo = conteudo.querySelector('.ritmo-sheet-head h3');
+    if (titulo) titulo.textContent = 'Editar medidas';
+    const button = $('ritmoSalvarMedida');
+    if (button) {
+      button.type = 'button';
+      button.dataset.ritmoMedidaModo = 'editar';
+    }
+  }
+
+  function recarregarRitmoPreservandoAba() {
+    const aba = document.querySelector('[data-ritmo-tab].is-active')?.dataset.ritmoTab || 'evolucao';
+    window.dispatchEvent(new CustomEvent('lifeos:ritmo-abrir'));
+    window.requestAnimationFrame(() => {
+      document.querySelector(`[data-ritmo-tab="${aba}"]`)?.click();
+    });
+  }
+
   async function salvar(button) {
     if (salvando) return;
     const ctx = contexto();
@@ -118,8 +151,11 @@
 
       medidaEditandoId = data.id;
       mostrarStatus(button, 'Medidas salvas.');
-      window.dispatchEvent(new CustomEvent('lifeos:ritmo-medidas-salvas', { detail: data }));
-      window.setTimeout(fecharModal, 350);
+      window.setTimeout(() => {
+        fecharModal();
+        window.dispatchEvent(new CustomEvent('lifeos:ritmo-medidas-salvas', { detail: data }));
+        recarregarRitmoPreservandoAba();
+      }, 350);
     } catch (erro) {
       console.error('[Ritmo] Falha ao salvar medidas:', erro);
       mostrarStatus(button, erro?.message || 'Não foi possível salvar as medidas. Tente novamente.', true);
@@ -134,10 +170,13 @@
     const editar = event.target.closest('[data-editar-medida]');
     if (editar) {
       medidaEditandoId = editar.dataset.editarMedida || null;
+      window.queueMicrotask(corrigirModalEdicao);
       return;
     }
+
     if (event.target.closest('#ritmoNovaMedida')) {
       medidaEditandoId = null;
+      window.queueMicrotask(corrigirModalNovo);
       return;
     }
 
