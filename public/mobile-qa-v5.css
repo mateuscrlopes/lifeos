@@ -1,0 +1,957 @@
+/* LifeOS — QA Mobile v5
+   Camada de estabilização visual baseada em auditoria real no iPhone.
+   Objetivo: corrigir causas sistêmicas sem redesenhar módulos estáveis. */
+
+@media (max-width: 820px) {
+  html,
+  body,
+  #appRoot,
+  #telaApp,
+  .app-body {
+    max-width: 100vw;
+    overflow-x: hidden !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="month"],
+  input[type="datetime-local"],
+  .campo input[type="date"],
+  .campo input[type="time"],
+  .ritmo-field input[type="date"],
+  .ritmo-field input[type="time"],
+  .ac-field input[type="date"],
+  .cf-editor-campo input[type="date"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    inline-size: 100% !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value,
+  input[type="month"]::-webkit-date-and-time-value {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .lifeos-form-grid-2,
+  .lifeos-form-grid-3,
+  .ritmo-form-grid,
+  .ac-grid-2,
+  .ac-grid-responsive,
+  .cf-editor-grid,
+  .campo,
+  .ritmo-field,
+  .ac-field,
+  .cf-editor-campo {
+    min-width: 0 !important;
+  }
+
+  .modal-overlay,
+  .ritmo-modal,
+  .ac-overlay,
+  .cf-modal,
+  .ui-sheet-overlay,
+  .qa-confirm-overlay,
+  .qa5-overlay {
+    overflow-x: hidden !important;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .modal-folha,
+  .modal-caixa,
+  .ritmo-sheet,
+  .ac-sheet,
+  .cf-modal-conteudo,
+  .ui-sheet,
+  .qa-confirm-dialog,
+  .qa5-dialog {
+    width: min(100%, 560px) !important;
+    max-width: calc(100vw - 28px) !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .ritmo-sheet {
+    max-height: min(92dvh, calc(100dvh - 24px)) !important;
+    overflow-y: auto !important;
+  }
+
+  /* O degradê deve integrar a barra ao fundo, sem esconder conteúdo. */
+  .qa-bottom-fade {
+    height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+    background: linear-gradient(
+      to bottom,
+      rgba(247, 246, 242, 0) 0%,
+      rgba(247, 246, 242, .58) 42%,
+      var(--bg) 86%
+    ) !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Confirmações — mesmo padrão visual do modal “Limpar cardápio”.
+------------------------------------------------------------------- */
+.qa-confirm-actions {
+  grid-template-columns: 1fr !important;
+  gap: 9px !important;
+}
+
+.qa-confirm-actions button,
+.qa-confirm-primary,
+.qa-confirm-secondary,
+.qa-confirm-cancel {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 50px !important;
+  height: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+}
+
+.qa-confirm-primary.is-danger {
+  color: #fff !important;
+  background: var(--alert) !important;
+}
+
+.qa-confirm-primary.is-danger:empty::after {
+  content: "Excluir";
+}
+
+/* ------------------------------------------------------------------
+   Hoje — abrir e expandir têm responsabilidades diferentes.
+------------------------------------------------------------------- */
+#cardsHoje .qa-card-toggle {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#cardsHoje .qa-card-open {
+  pointer-events: auto !important;
+}
+
+/* ------------------------------------------------------------------
+   Compras — formulário rápido em uma única régua.
+------------------------------------------------------------------- */
+#subCompras .linha-add {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 112px 48px !important;
+  grid-template-rows: 48px !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+#subCompras #novoItem {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 48px !important;
+  margin: 0 !important;
+}
+
+#subCompras #novoItemCiclo {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 48px !important;
+  margin: 0 !important;
+}
+
+#subCompras #btnAdd {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  line-height: 1 !important;
+}
+
+#subCompras #btnAdd svg {
+  margin: 0 !important;
+}
+
+#subCompras .ui-purchase-create-destination {
+  display: grid !important;
+  grid-template-columns: 132px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 12px !important;
+}
+
+#subCompras .ui-purchase-create-destination label {
+  min-width: 0;
+  margin: 0 !important;
+  line-height: 1.25;
+  white-space: normal !important;
+}
+
+#subCompras .ui-purchase-create-destination select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 48px !important;
+}
+
+/* ------------------------------------------------------------------
+   Estoque — status junto ao item; controles formam uma única família.
+------------------------------------------------------------------- */
+#itensEstoque .item,
+#subEstoque #itensEstoque .item {
+  position: relative;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+#itensEstoque .qa5-stock-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#itensEstoque .qa5-stock-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#itensEstoque .qa5-stock-name-row .badge {
+  position: static !important;
+  min-height: 23px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  color: #fff !important;
+}
+
+#itensEstoque .est-controles {
+  flex: 0 0 auto;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+
+#itensEstoque .est-controles > .badge {
+  display: none !important;
+}
+
+#itensEstoque .est-controles button,
+#itensEstoque .est-controles .est-qtd {
+  flex: 0 0 auto;
+}
+
+#itensEstoque .est-controles > button:not(.lifeos-icon-action):not(.ui-icon-button) {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border-radius: 11px !important;
+}
+
+#itensEstoque .est-qtd {
+  min-width: 38px !important;
+  height: 36px !important;
+  border-radius: 11px !important;
+}
+
+#itensEstoque .lifeos-icon-action,
+#itensEstoque .ui-icon-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+/* ------------------------------------------------------------------
+   Plantas — uma única régua e ação Cuidar de verdade.
+------------------------------------------------------------------- */
+#abaPlantas .qa-plant-toolbar,
+#abaPlantas .phase3-plant-overview,
+#abaPlantas .filtros-plantas,
+#abaPlantas #listaPlantas {
+  box-sizing: border-box !important;
+}
+
+#abaPlantas #listaPlantas {
+  padding-inline: var(--shell-gutter) !important;
+}
+
+#abaPlantas #listaPlantas > .cartao {
+  width: 100% !important;
+  margin-inline: 0 !important;
+  padding: 16px !important;
+  border-radius: 22px !important;
+}
+
+#abaPlantas .planta-card {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  align-items: center !important;
+  gap: 9px !important;
+  min-width: 0 !important;
+  padding: 13px 0 !important;
+}
+
+#abaPlantas .planta-card > div:first-child {
+  min-width: 0 !important;
+}
+
+#abaPlantas .planta-card > button {
+  width: auto !important;
+  min-width: 68px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 18%, var(--linha)) !important;
+  border-radius: 11px !important;
+  background: var(--sage-soft) !important;
+  color: var(--sage) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+}
+
+#abaPlantas .planta-card .badge {
+  min-width: 54px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------
+   Cardápio — seletor de refeição com densidade e hierarquia melhores.
+------------------------------------------------------------------- */
+#modalRefeicao .modal-folha {
+  padding: 20px !important;
+}
+
+#modalRefeicao .lifeos-nutrition-grid {
+  gap: 8px !important;
+  margin-bottom: 13px;
+}
+
+#modalRefeicao .lifeos-nutrition-grid .campo label {
+  font-size: 11px !important;
+}
+
+#modalRefeicao .lifeos-nutrition-grid input {
+  min-height: 46px !important;
+}
+
+#modalRefeicao #modalRefLista {
+  display: grid;
+  gap: 7px;
+  max-height: min(46dvh, 440px);
+  overflow-y: auto;
+  padding: 2px 1px 6px;
+}
+
+#modalRefeicao #modalRefLista > * {
+  margin: 0 !important;
+}
+
+#modalRefeicao .modal-header + .campo {
+  margin-top: 4px;
+}
+
+/* ------------------------------------------------------------------
+   Ritmo — planos, exercícios, medidas e fotos.
+------------------------------------------------------------------- */
+#secaoRitmo .ritmo-plan-row {
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+#secaoRitmo .ritmo-plan-row .ritmo-row-main {
+  min-width: 0 !important;
+}
+
+#secaoRitmo .ritmo-plan-row .ritmo-row-main strong,
+#secaoRitmo .ritmo-plan-row .ritmo-row-main small {
+  display: block;
+  max-width: 100%;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+#secaoRitmo .ritmo-plan-row > .ritmo-btn {
+  width: auto !important;
+  min-width: 66px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  align-self: center;
+}
+
+#secaoRitmo .qa5-agenda-wrap {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: stretch;
+  gap: 6px;
+  border-bottom: 1px solid var(--linha);
+}
+
+#secaoRitmo .qa5-agenda-wrap > .ritmo-activity-row {
+  border-bottom: 0 !important;
+}
+
+#secaoRitmo .qa5-agenda-edit {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  align-self: center;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border: 1px solid var(--linha) !important;
+  border-radius: 11px !important;
+  background: var(--paper-2) !important;
+  color: var(--sage) !important;
+}
+
+#secaoRitmo .ritmo-exercise-inputs {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+#secaoRitmo .ritmo-exercise-inputs .ritmo-field {
+  min-width: 0 !important;
+}
+
+#secaoRitmo .phase4-exercise-media img,
+#secaoRitmo .phase4-exercise-gallery img,
+#secaoRitmo .ritmo-photo img {
+  cursor: zoom-in;
+}
+
+#secaoRitmo .qa5-consistency-open {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--sage);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#secaoRitmo .qa5-water-over {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin-top: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+#secaoRitmo .qa5-measures-sheet .ritmo-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+}
+
+#secaoRitmo .qa5-measures-sheet .ritmo-field:first-child {
+  grid-column: 1 / -1;
+}
+
+#secaoRitmo .qa5-measures-sheet .ritmo-field label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+#secaoRitmo .qa5-measure-help {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  display: grid !important;
+  place-items: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--linha) !important;
+  border-radius: 999px !important;
+  background: var(--paper-2) !important;
+  color: var(--sage) !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+#secaoRitmo .qa5-photo-note {
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+#secaoRitmo .qa5-plan-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#secaoRitmo .qa5-plan-delete {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 11px !important;
+  border: 1px solid color-mix(in srgb, var(--alert) 20%, var(--linha)) !important;
+  background: var(--alert-soft) !important;
+  color: var(--alert) !important;
+}
+
+#secaoRitmo .qa5-pdf-review {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--linha);
+  border-radius: 13px;
+  background: var(--paper-2);
+}
+
+#secaoRitmo .qa5-pdf-review summary {
+  cursor: pointer;
+  color: var(--sage);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+#secaoRitmo .qa5-pdf-review pre {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font: 11px/1.5 var(--sans);
+}
+
+/* ------------------------------------------------------------------
+   Financeiro — vencido precisa ser impossível de confundir.
+------------------------------------------------------------------- */
+#acertosRoot .ac-row.qa5-overdue,
+#acertosRoot .ac-row:has(.ac-chip.danger) {
+  border-left: 3px solid var(--alert);
+  padding-left: 11px;
+}
+
+#acertosRoot .ac-row.qa5-overdue [data-ac-pay],
+#acertosRoot .ac-row:has(.ac-chip.danger) [data-ac-pay] {
+  background: var(--alert) !important;
+  color: #fff !important;
+}
+
+#acertosRoot .ac-row.qa5-overdue .ac-row-meta,
+#acertosRoot .ac-row:has(.ac-chip.danger) .ac-row-meta {
+  color: var(--alert) !important;
+}
+
+#acertosRoot .ac-rule-card .ac-chip,
+#acertosRoot .ac-rule-card [class*="chip"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+#acModal .ac-money-input {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 12px !important;
+}
+
+#acModal .ac-money-input > span {
+  position: static !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+#acModal .ac-money-input > input {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-inline: 0 !important;
+}
+
+/* ------------------------------------------------------------------
+   Configurações — locais, histórico e ações destrutivas.
+------------------------------------------------------------------- */
+#secaoConfig .qa5-danger-text {
+  color: var(--alert) !important;
+  border-color: color-mix(in srgb, var(--alert) 28%, var(--linha)) !important;
+  background: var(--alert-soft) !important;
+}
+
+#secaoConfig .qa5-icon-action,
+#modalEditarLocalCompra .qa5-icon-action {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 11px !important;
+}
+
+#modalEditarLocalCompra .modal-caixa {
+  padding: 20px !important;
+}
+
+#modalEditarLocalCompra #elcEnderecos > div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 40px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 9px 0 !important;
+}
+
+#modalEditarLocalCompra #elcEnderecos > div > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+#modalEditarLocalCompra #elcEnderecos > div > button {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  display: grid !important;
+  place-items: center;
+  padding: 0 !important;
+  border-radius: 11px !important;
+  background: var(--alert-soft) !important;
+  color: var(--alert) !important;
+}
+
+#modalEditarLocalCompra #elcNovoEnd,
+#modalEditarLocalCompra #elcNovoLat,
+#modalEditarLocalCompra #elcNovoLon {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+#modalEditarLocalCompra #elcNovoEnd {
+  grid-column: 1 / -1;
+}
+
+#modalEditarLocalCompra #elcNovoLat,
+#modalEditarLocalCompra #elcNovoLon {
+  grid-column: auto;
+}
+
+#modalEditarLocalCompra #elcCategorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+#modalEditarLocalCompra #elcCategorias > * {
+  max-width: 100%;
+}
+
+#modalEditarLocalCompra #elcCategorias button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+}
+
+#modalEditarLocalCompra #btnExcluirLocalCompra {
+  width: 44px !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+  color: var(--alert) !important;
+  background: var(--alert-soft) !important;
+  border-color: color-mix(in srgb, var(--alert) 26%, var(--linha)) !important;
+}
+
+.ui-history-search svg {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.ui-history-search input {
+  padding-left: 42px !important;
+}
+
+.ui-history-restore {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+.ui-history-restore > span {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.ui-history-restore svg {
+  margin: 0 !important;
+}
+
+/* ------------------------------------------------------------------
+   Popover e diálogos auxiliares do QA v5.
+------------------------------------------------------------------- */
+.qa5-overlay {
+  position: fixed;
+  z-index: 16000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 14px max(18px, env(safe-area-inset-bottom, 0px));
+  background: rgba(10, 19, 14, .55);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.qa5-dialog {
+  width: min(100%, 430px);
+  max-height: min(86dvh, 720px);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid var(--linha);
+  border-radius: 22px;
+  background: var(--paper);
+  color: var(--texto);
+  box-shadow: 0 22px 60px rgba(17, 28, 21, .22);
+}
+
+.qa5-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.qa5-dialog-head h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+}
+
+.qa5-dialog-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.qa5-dialog-close {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--texto);
+}
+
+.qa5-measure-guide {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.qa5-measure-figure {
+  width: 112px;
+  aspect-ratio: 2 / 3;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--paper-2);
+}
+
+.qa5-measure-figure svg {
+  width: 82px;
+  height: 132px;
+}
+
+.qa5-measure-copy strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 15px;
+}
+
+.qa5-measure-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.qa5-lightbox img {
+  display: block;
+  width: 100%;
+  max-height: 72dvh;
+  object-fit: contain;
+  border-radius: 16px;
+  background: var(--paper-2);
+}
+
+.qa5-week-list {
+  display: grid;
+  gap: 8px;
+}
+
+.qa5-week-item {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.qa5-week-item:last-child {
+  border-bottom: 0;
+}
+
+.qa5-week-item time {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.qa5-week-item strong {
+  font-size: 12px;
+}
+
+.qa5-week-item span {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.qa5-bell-popover {
+  position: fixed;
+  z-index: 11000;
+  top: calc(env(safe-area-inset-top, 0px) + 68px);
+  right: 64px;
+  width: min(280px, calc(100vw - 88px));
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--texto);
+  box-shadow: 0 14px 36px rgba(17, 28, 21, .16);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.qa5-bell-popover::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  border-left: 1px solid var(--linha);
+  border-top: 1px solid var(--linha);
+  background: var(--paper);
+}
+
+@media (max-width: 390px) {
+  #subCompras .linha-add {
+    grid-template-columns: minmax(0, 1fr) 102px 46px !important;
+    gap: 6px !important;
+  }
+
+  #subCompras .ui-purchase-create-destination {
+    grid-template-columns: 116px minmax(0, 1fr) !important;
+  }
+
+  #secaoRitmo .qa5-measures-sheet .ritmo-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .qa5-measure-guide {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+
+  .qa5-measure-figure {
+    width: 90px;
+  }
+}
