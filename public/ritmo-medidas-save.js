@@ -4,6 +4,7 @@
   'use strict';
 
   let medidaEditandoId = null;
+  let modoPendente = null;
   let salvando = false;
 
   const $ = id => document.getElementById(id);
@@ -89,31 +90,35 @@
     const conteudo = $('ritmoModalConteudo');
     if (modal) modal.hidden = true;
     if (conteudo) conteudo.innerHTML = '';
+    modoPendente = null;
   }
 
-  function corrigirModalNovo() {
+  function aplicarModoModal(modo = modoPendente) {
     const conteudo = $('ritmoModalConteudo');
-    if (!conteudo) return;
-    const titulo = conteudo.querySelector('.ritmo-sheet-head h3');
-    if (titulo) titulo.textContent = 'Registrar medidas';
-    conteudo.querySelector('#ritmoExcluirMedida')?.remove();
     const button = $('ritmoSalvarMedida');
-    if (button) {
-      button.type = 'button';
-      button.dataset.ritmoMedidaModo = 'novo';
+    if (!conteudo || !button || !modo) return false;
+
+    const titulo = conteudo.querySelector('.ritmo-sheet-head h3');
+    if (modo === 'novo') {
+      if (titulo) titulo.textContent = 'Registrar medidas';
+      conteudo.querySelector('#ritmoExcluirMedida')?.remove();
+      medidaEditandoId = null;
+    } else if (modo === 'editar') {
+      if (titulo) titulo.textContent = 'Editar medidas';
     }
+
+    button.type = 'button';
+    button.dataset.ritmoMedidaModo = modo;
+    return true;
   }
 
-  function corrigirModalEdicao() {
-    const conteudo = $('ritmoModalConteudo');
-    if (!conteudo) return;
-    const titulo = conteudo.querySelector('.ritmo-sheet-head h3');
-    if (titulo) titulo.textContent = 'Editar medidas';
-    const button = $('ritmoSalvarMedida');
-    if (button) {
-      button.type = 'button';
-      button.dataset.ritmoMedidaModo = 'editar';
-    }
+  function garantirModoModal() {
+    if (!modoPendente) return;
+    aplicarModoModal(modoPendente);
+    window.queueMicrotask(() => aplicarModoModal(modoPendente));
+    window.requestAnimationFrame(() => aplicarModoModal(modoPendente));
+    window.setTimeout(() => aplicarModoModal(modoPendente), 0);
+    window.setTimeout(() => aplicarModoModal(modoPendente), 40);
   }
 
   function recarregarRitmoPreservandoAba() {
@@ -140,7 +145,8 @@
 
     try {
       const payload = payloadAtual(ctx.usuario.id);
-      const id = await resolverIdEdicao(ctx);
+      const modo = button.dataset.ritmoMedidaModo || modoPendente;
+      const id = modo === 'editar' ? await resolverIdEdicao(ctx) : null;
       const consulta = id
         ? ctx.client.from('ritmo_medidas').update(payload).eq('id', id).eq('usuario_id', ctx.usuario.id).select('*').single()
         : ctx.client.from('ritmo_medidas').upsert(payload, { onConflict: 'usuario_id,data' }).select('*').single();
@@ -170,13 +176,15 @@
     const editar = event.target.closest('[data-editar-medida]');
     if (editar) {
       medidaEditandoId = editar.dataset.editarMedida || null;
-      window.queueMicrotask(corrigirModalEdicao);
+      modoPendente = 'editar';
+      garantirModoModal();
       return;
     }
 
     if (event.target.closest('#ritmoNovaMedida')) {
       medidaEditandoId = null;
-      window.queueMicrotask(corrigirModalNovo);
+      modoPendente = 'novo';
+      garantirModoModal();
       return;
     }
 
@@ -192,11 +200,12 @@
   function preparar() {
     const button = $('ritmoSalvarMedida');
     if (button) button.type = 'button';
+    if (button && modoPendente) aplicarModoModal(modoPendente);
   }
 
   function iniciar() {
     document.addEventListener('click', tratarClique, true);
-    const observer = new MutationObserver(preparar);
+    const observer = new MutationObserver(() => preparar());
     observer.observe(document.body, { childList: true, subtree: true });
     preparar();
     window.addEventListener('pageshow', preparar);
