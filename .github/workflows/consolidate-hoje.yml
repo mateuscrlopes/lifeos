@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   consolidate:
@@ -45,12 +46,34 @@ jobs:
         run: npm test
       - name: Static validation
         run: npm run check
-      - name: Commit
+      - name: Assert ownership migrated
         run: |
-          git config user.name "lifeos-hoje-owner-bot"
-          git config user.email "actions@users.noreply.github.com"
-          rm -f scripts/consolidate-hoje-owner.mjs
+          node - <<'NODE'
+          const fs = require('fs');
+          const app = fs.readFileSync('public/app.js', 'utf8');
+          if (!app.includes("from './hoje-view.js'")) throw new Error('app.js ainda não importa hoje-view.js');
+          if (app.includes('function renderHoje(')) throw new Error('renderHoje legado ainda existe em app.js');
+          const mobile = fs.readFileSync('public/mobile-qa-v5.js', 'utf8');
+          if (mobile.includes('handleTodayDisclosure') || mobile.includes('handleTodayPlantsOpen')) throw new Error('patches de Hoje ainda existem em mobile-qa-v5.js');
+          NODE
+      - name: Commit migration on integration branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f scripts/consolidate-hoje-owner.mjs .github/workflows/consolidate-hoje.yml
           git add -A
-          git reset .github/workflows/consolidate-hoje.yml
-          git commit -m "refactor: consolidate Hoje owner [hoje-owner-bot]"
-          git push origin HEAD:refactor/architectural-consolidation
+          if git diff --cached --quiet; then
+            echo "No migration changes to commit"
+            exit 0
+          fi
+          BOT_BRANCH="automation/hoje-owner-${GITHUB_RUN_ID}"
+          git checkout -b "$BOT_BRANCH"
+          git commit -m "refactor: aplica ownership único da tela Hoje [hoje-owner-bot]"
+          git push origin "$BOT_BRANCH"
+          gh pr create \
+            --base refactor/architectural-consolidation \
+            --head "$BOT_BRANCH" \
+            --title "refactor: aplica ownership único da tela Hoje" \
+            --body "PR intermediário gerado pela migração arquitetural. A transformação passou por syntax check, testes, validação estática e assert de ownership antes do commit."
