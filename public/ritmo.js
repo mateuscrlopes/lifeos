@@ -523,7 +523,7 @@
   }
 
   function tabBtn(id, nome) {
-    return `<button class="ritmo-tab ${R.aba === id ? 'is-active' : ''}" data-ritmo-tab="${id}">${nome}</button>`;
+    return `<button type="button" class="ritmo-tab ${R.aba === id ? 'is-active' : ''}" data-ritmo-tab="${id}">${nome}</button>`;
   }
 
   function renderHoje() {
@@ -998,6 +998,7 @@
     ritmoModalDirty = false;
     conteudo.innerHTML = html;
     modal.hidden = false;
+    document.body.classList.add('lifeos-modal-open');
     conteudo.querySelectorAll('[data-fechar-ritmo]').forEach(b => b.addEventListener('click', solicitarFecharModal));
     conteudo.addEventListener('input', marcarModalSujo);
     conteudo.addEventListener('change', marcarModalSujo);
@@ -1008,8 +1009,18 @@
     if (e.target.matches('input,select,textarea')) ritmoModalDirty = true;
   }
 
-  function solicitarFecharModal() {
-    if (ritmoModalDirty && !confirm('Deseja sair sem salvar as alterações?')) return;
+  async function solicitarFecharModal() {
+    if (ritmoModalDirty) {
+      const sair = typeof window.lifeosConfirmAction === 'function'
+        ? await window.lifeosConfirmAction({
+            title: 'Sair sem salvar?',
+            message: 'As alterações feitas neste formulário serão descartadas.',
+            confirmLabel: 'Sair sem salvar',
+            danger: true,
+          })
+        : confirm('Deseja sair sem salvar as alterações?');
+      if (!sair) return;
+    }
     fecharModal();
   }
 
@@ -1029,21 +1040,28 @@
       modal.hidden = true;
       modal.onclick = null;
     }
+    if (conteudo) conteudo.innerHTML = '';
+    document.body.classList.remove('lifeos-modal-open');
   }
 
   function modalHead(titulo, subtitulo = '') {
     return `<div class="ritmo-sheet-head"><div><h3>${escapar(titulo)}</h3>${subtitulo ? `<p>${escapar(subtitulo)}</p>` : ''}</div><button type="button" class="ritmo-close" data-fechar-ritmo aria-label="Fechar" title="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>`;
   }
 
+  function navegarRitmo(aba) {
+    if (!aba) return;
+    R.aba = aba;
+    render();
+    const body = el('appBody');
+    if (body) {
+      body.scrollTop = 0;
+      requestAnimationFrame(() => { body.scrollTop = 0; });
+    }
+  }
+
   function ligarEventos() {
-    document.querySelectorAll('[data-ritmo-tab]').forEach(b => b.addEventListener('click', () => {
-      R.aba = b.dataset.ritmoTab;
-      render();
-    }));
-    document.querySelectorAll('[data-ritmo-go]').forEach(b => b.addEventListener('click', () => {
-      R.aba = b.dataset.ritmoGo;
-      render();
-    }));
+    document.querySelectorAll('[data-ritmo-tab]').forEach(b => b.addEventListener('click', () => navegarRitmo(b.dataset.ritmoTab)));
+    document.querySelectorAll('[data-ritmo-go]').forEach(b => b.addEventListener('click', () => navegarRitmo(b.dataset.ritmoGo)));
     document.querySelectorAll('[data-checkin]').forEach(b => b.addEventListener('click', () => abrirCheckin(b.dataset.checkin)));
     document.querySelectorAll('[data-plano-checkin]').forEach(b => b.addEventListener('click', () => abrirCheckin(b.dataset.planoCheckin)));
     document.querySelectorAll('[data-excluir-checkin]').forEach(b => b.addEventListener('click', () => excluirCheckin(b.dataset.excluirCheckin)));
@@ -1061,8 +1079,8 @@
     el('ritmoAguaMenos')?.addEventListener('click', () => alterarAgua(-500));
     el('ritmoAbrirCardapio')?.addEventListener('click', abrirCardapioCasa);
     el('ritmoAbrirCardapio2')?.addEventListener('click', abrirCardapioCasa);
-    el('ritmoNovaAtividade')?.addEventListener('click', abrirNovaAtividade);
-    el('ritmoNovaMedida')?.addEventListener('click', abrirNovaMedida);
+    el('ritmoNovaAtividade')?.addEventListener('click', () => abrirNovaAtividade(null));
+    el('ritmoNovaMedida')?.addEventListener('click', () => abrirNovaMedida(null));
     el('ritmoEditarMetas')?.addEventListener('click', abrirEditarMetas);
     el('ritmoSalvarPerfil')?.addEventListener('click', salvarPerfil);
     el('ritmoPdfPlano')?.addEventListener('change', importarPdf);

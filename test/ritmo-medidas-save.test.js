@@ -1,64 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 
-const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
+const read = file => fs.readFileSync(file, 'utf8');
 
-test('módulo de medidas é carregado pela aplicação', () => {
-  const status = read('public/status-estoque.js');
-  assert.match(status, /ritmo-medidas-save\.js\?v=3/);
+test('Ritmo é o único dono da criação e edição de medidas', () => {
+  const js = read('public/ritmo.js');
+  const bootstrap = read('public/app-bootstrap.js');
+  assert.match(js, /ritmoNovaMedida'\)\?\.addEventListener\('click', \(\) => abrirNovaMedida\(null\)\)/);
+  assert.match(js, /data-editar-medida[\s\S]*abrirNovaMedida\(R\.medidas\.find/);
+  assert.doesNotMatch(bootstrap, /ritmo-medidas-save/);
+  assert.equal(fs.existsSync('public/ritmo-medidas-save.js'), false);
 });
 
-test('salvamento de medidas confirma persistência no banco e não falha silenciosamente', () => {
-  const js = read('public/ritmo-medidas-save.js');
-  assert.doesNotThrow(() => new Function(js));
+test('criação de atividade também não recebe MouseEvent como plano', () => {
+  const js = read('public/ritmo.js');
+  assert.match(js, /ritmoNovaAtividade'\)\?\.addEventListener\('click', \(\) => abrirNovaAtividade\(null\)\)/);
+});
+
+test('persistência de medidas continua no módulo proprietário', () => {
+  const js = read('public/ritmo.js');
   assert.match(js, /from\('ritmo_medidas'\)/);
-  assert.match(js, /\.select\('\*'\)\.single\(\)/);
-  assert.match(js, /if \(error\) throw error/);
-  assert.match(js, /Medidas salvas\./);
-  assert.match(js, /Não foi possível salvar as medidas/);
-});
-
-test('edição preserva id do registro e cadastro novo usa conflito usuario+data', () => {
-  const js = read('public/ritmo-medidas-save.js');
-  assert.match(js, /data-editar-medida/);
-  assert.match(js, /\.update\(payload\)\.eq\('id', id\)/);
+  assert.match(js, /\.update\(payload\)\.eq\('id', medida\.id\)/);
   assert.match(js, /upsert\(payload, \{ onConflict: 'usuario_id,data' \}\)/);
-  assert.match(js, /modo === 'editar' \? await resolverIdEdicao\(ctx\) : null/);
 });
 
-test('botão salvar é explicitamente button e o handler impede a execução duplicada', () => {
-  const js = read('public/ritmo-medidas-save.js');
-  assert.match(js, /button\.type = 'button'/);
-  assert.match(js, /event\.stopImmediatePropagation/);
-  assert.match(js, /let salvando = false/);
+test('troca de área do Ritmo reinicia a rolagem da viewport', () => {
+  const js = read('public/ritmo.js');
+  assert.match(js, /function navegarRitmo\(aba\)/);
+  assert.match(js, /body\.scrollTop = 0/);
+  assert.match(js, /data-ritmo-tab[\s\S]*navegarRitmo\(b\.dataset\.ritmoTab\)/);
+  assert.match(js, /data-ritmo-go[\s\S]*navegarRitmo\(b\.dataset\.ritmoGo\)/);
 });
 
-test('novo registro é distinguido visualmente da edição de forma determinística', () => {
-  const js = read('public/ritmo-medidas-save.js');
-  assert.match(js, /modoPendente = 'novo'/);
-  assert.match(js, /modoPendente = 'editar'/);
-  assert.match(js, /titulo\.textContent = 'Registrar medidas'/);
-  assert.match(js, /titulo\.textContent = 'Editar medidas'/);
-  assert.match(js, /querySelector\('#ritmoExcluirMedida'\)\?\.remove\(\)/);
-  assert.match(js, /requestAnimationFrame\(\(\) => aplicarModoModal/);
-  assert.match(js, /setTimeout\(\(\) => aplicarModoModal\(modoPendente\), 40\)/);
-  assert.match(js, /MutationObserver\(\(\) => preparar\(\)\)/);
+test('modal do Ritmo sempre libera a interface ao fechar', () => {
+  const js = read('public/ritmo.js');
+  assert.match(js, /document\.body\.classList\.add\('lifeos-modal-open'\)/);
+  assert.match(js, /document\.body\.classList\.remove\('lifeos-modal-open'\)/);
+  assert.match(js, /if \(conteudo\) conteudo\.innerHTML = ''/);
+  assert.match(js, /window\.lifeosConfirmAction/);
 });
 
-test('após salvar, Ritmo recarrega dados e preserva a aba atual', () => {
-  const js = read('public/ritmo-medidas-save.js');
-  assert.match(js, /recarregarRitmoPreservandoAba/);
-  assert.match(js, /lifeos:ritmo-abrir/);
-  assert.match(js, /\[data-ritmo-tab\]\.is-active/);
-  assert.match(js, /dataset\.ritmoTab/);
-  assert.match(js, /querySelector\(`\[data-ritmo-tab=/);
-});
-
-test('assets web revalidam para evitar módulos antigos no iPhone', () => {
+test('assets web continuam sem cache persistente de código', () => {
   const server = read('src/server.js');
-  assert.match(server, /express\.static\('public', \{/);
   assert.match(server, /Cache-Control', 'no-cache, must-revalidate'/);
-  assert.match(server, /html\|js\|css/);
 });

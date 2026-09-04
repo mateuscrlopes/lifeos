@@ -5,7 +5,7 @@ import fs from 'node:fs';
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('fase 3 é carregada depois das camadas anteriores do mobile', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const oldPolish = status.indexOf("import './product-polish-v4.js?v=4'");
   const phase3 = status.indexOf("import './phase3-polish.js?v=1'");
   assert.ok(oldPolish >= 0);

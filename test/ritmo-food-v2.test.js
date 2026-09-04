@@ -47,7 +47,7 @@ test('Ritmo food v2 substitui controles alimentares duplicados', () => {
 });
 
 test('alimentacao unificada carrega apenas no almoco e jantar', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const loader = read('public/ritmo-food-v2-loader.js');
   assert.match(status, /ritmo-food-v2-loader\.js\?v=1/);
   assert.doesNotMatch(status, /import '\.\/ritmo-food-v2\.js\?v=1'/);

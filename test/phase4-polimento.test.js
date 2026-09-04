@@ -61,7 +61,7 @@ test('mídia é progressiva: treino continua funcional se catálogo falhar', () 
 });
 
 test('loader traz fase 4 depois das camadas anteriores', () => {
-  const loader = read('public/status-estoque.js');
+  const loader = read('public/app-bootstrap.js');
   const phase3 = loader.indexOf("import './phase3-polish.js?v=1'");
   const phase4 = loader.indexOf("import './phase4-polish.js?v=1'");
   assert.ok(phase3 >= 0);

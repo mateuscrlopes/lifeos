@@ -51,7 +51,7 @@ test('Plantas retiram filtros de cômodo misturados aos filtros de prazo', () =>
 });
 
 test('camada QA é carregada no mobile e tablet', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const tablet = read('public/tablet-enhancements.js');
   assert.match(status, /audit-qa-polish\.js/);
   assert.match(tablet, /audit-qa-polish\.js/);
@@ -79,7 +79,7 @@ test('degradê inferior fica restrito à área próxima da barra', () => {
 test('cache da correção de confirmação é incrementado', () => {
   const html = read('public/index.html');
   const app = read('public/app.js');
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const qa = read('public/audit-qa-polish.js');
   const tablet = read('public/tablet.html');
   assert.match(html, /app\.js\?v=13/);

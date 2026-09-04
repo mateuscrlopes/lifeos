@@ -30,7 +30,7 @@ test('Central Financeira e Acertos usam o módulo Financeiro', () => {
 });
 
 test('shell mobile v3 é carregado por último sem duplicar a navegação da home', () => {
-  const status = ler('public/status-estoque.js');
+  const status = ler('public/app-bootstrap.js');
   const shell = ler('public/mobile-shell-v3.js');
   const css = ler('public/mobile-shell-v3.css');
 

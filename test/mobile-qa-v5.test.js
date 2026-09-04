@@ -15,7 +15,7 @@ async function getParser() {
 }
 
 test('QA Mobile v5 é carregado após as camadas existentes', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   assert.match(status, /audit-qa-polish\.js\?v=3/);
   assert.match(status, /mobile-qa-v5\.js\?v=1/);
   assert.ok(status.indexOf('mobile-qa-v5.js') > status.indexOf('audit-qa-polish.js'));
