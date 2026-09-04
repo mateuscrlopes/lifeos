@@ -1,0 +1,41 @@
+name: LifeOS architecture migration
+
+on:
+  push:
+    branches:
+      - "refactor/architectural-consolidation"
+    paths:
+      - "scripts/apply-architecture-refactor.mjs"
+      - ".github/workflows/architecture-refactor.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/architectural-consolidation
+          fetch-depth: 0
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply structural migration
+        run: node scripts/apply-architecture-refactor.mjs
+      - name: Validate syntax after migration
+        run: node --check public/ritmo.js && node --check public/app-bootstrap.js
+      - name: Commit migration result
+        run: |
+          git config user.name "lifeos-architecture-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "refactor: consolidate frontend ownership [architecture-bot]"
+          git push origin HEAD:refactor/architectural-consolidation
