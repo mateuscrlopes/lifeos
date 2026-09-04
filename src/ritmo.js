@@ -239,15 +239,33 @@ export function estruturarPlanoAlimentar(textoRecebido) {
   const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
   const secoes = [];
   let atual = null;
+  let horarioPendente = null;
 
   for (const linha of linhas) {
+    // A quebra de cabeçalhos embutidos pode separar "12:00 - Almoço" em
+    // "12:00 -" + "Almoço". Guardamos esse horário por uma única linha para
+    // associá-lo ao cabeçalho seguinte, em vez de descartá-lo.
+    const somenteHorario = linha.match(/^\s*(([01]?\d|2[0-3]):[0-5]\d)\s*[:;|\-–—]*\s*$/);
+    if (somenteHorario) {
+      horarioPendente = somenteHorario[1];
+      continue;
+    }
+
     const cabecalho = detectarCabecalhoRefeicao(linha);
     if (cabecalho) {
       if (atual) secoes.push(atual);
-      atual = { nome: cabecalho.titulo, horario: cabecalho.horario, linhas: [] };
+      atual = {
+        nome: cabecalho.titulo,
+        horario: cabecalho.horario || horarioPendente,
+        linhas: [],
+      };
+      horarioPendente = null;
       if (cabecalho.restante) atual.linhas.push(cabecalho.restante);
       continue;
     }
+
+    // Horário pendente só vale para o cabeçalho imediatamente seguinte.
+    horarioPendente = null;
     if (atual) atual.linhas.push(linha);
   }
   if (atual) secoes.push(atual);
