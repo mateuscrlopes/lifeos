@@ -1,7 +1,7 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
@@ -13,7 +13,7 @@ test('módulo de medidas é carregado pela aplicação', () => {
 test('salvamento de medidas confirma persistência no banco e não falha silenciosamente', () => {
   const js = read('public/ritmo-medidas-save.js');
   assert.doesNotThrow(() => new Function(js));
-  assert.match(js, /#?ritmo_medidas|from\('ritmo_medidas'\)/);
+  assert.match(js, /from\('ritmo_medidas'\)/);
   assert.match(js, /\.select\('\*'\)\.single\(\)/);
   assert.match(js, /if \(error\) throw error/);
   assert.match(js, /Medidas salvas\./);
