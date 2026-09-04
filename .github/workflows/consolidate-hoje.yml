@@ -1,0 +1,46 @@
+name: Consolidate Hoje owner
+
+on:
+  push:
+    branches:
+      - refactor/architectural-consolidation
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    if: ${{ !contains(github.event.head_commit.message, '[hoje-owner-bot]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/architectural-consolidation
+          fetch-depth: 0
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Apply Hoje consolidation
+        run: node scripts/consolidate-hoje-owner.mjs
+      - name: Syntax
+        run: node --check public/hoje-view.js && node --check public/app.js && node --check public/central-financeira.js && node --check public/audit-qa-polish.js && node --check public/phase3-polish.js && node --check public/mobile-qa-v5.js
+      - name: Tests
+        run: npm test
+      - name: Static validation
+        run: npm run check
+      - name: Commit
+        run: |
+          git config user.name "lifeos-hoje-owner-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git reset .github/workflows/consolidate-hoje.yml
+          git rm --cached scripts/consolidate-hoje-owner.mjs >/dev/null 2>&1 || true
+          rm -f scripts/consolidate-hoje-owner.mjs
+          git add -u scripts/consolidate-hoje-owner.mjs
+          git commit -m "refactor: consolidate Hoje owner [hoje-owner-bot]"
+          git push origin HEAD:refactor/architectural-consolidation
