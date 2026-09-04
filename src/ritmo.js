@@ -75,8 +75,16 @@ function decodificarGlifosDeslocados(texto = '') {
   for (const caractere of String(texto || '')) {
     const codigo = caractere.charCodeAt(0);
 
-    // Nesta familia de fontes, espaco e digitos foram gravados 29 posicoes antes.
-    if (codigo >= 3 && codigo <= 28) {
+    // Newline, carriage return e tab sao estrutura real do texto extraido e nao
+    // fazem parte da codificacao da fonte.
+    if (codigo === 9 || codigo === 10 || codigo === 13) {
+      saida += caractere;
+      continue;
+    }
+
+    // Nesta familia de fontes, espaco, pontuacao e digitos foram gravados
+    // 29 posicoes antes. O ':' usado nos horarios corresponde ao codigo 29.
+    if (codigo >= 3 && codigo <= 29) {
       saida += String.fromCharCode(codigo + 29);
       continue;
     }
@@ -89,7 +97,7 @@ function decodificarGlifosDeslocados(texto = '') {
 
     // O restante do alfabeto latino costuma aparecer tres posicoes depois.
     if ((codigo >= 65 && codigo <= 90) || (codigo >= 97 && codigo <= 122)) {
-      let base = codigo >= 97 ? 97 : 65;
+      const base = codigo >= 97 ? 97 : 65;
       saida += String.fromCharCode(base + ((codigo - base - 3 + 26) % 26));
       continue;
     }
@@ -108,7 +116,8 @@ function normalizarRuidoFonte(valor = '') {
     .replace(/\bcola[a-z]o\b/g, 'colacao')
     .replace(/\bpr[a-z][ -]?treino\b/g, 'pre treino')
     .replace(/\bpos[ -]?treino\b/g, 'pos treino')
-    .replace(/[^a-z0-9\s:;|\-–—]/g, ' ')
+    .replace(/[-–—]+/g, ' ')
+    .replace(/[^a-z0-9\s:;|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -157,7 +166,7 @@ const REFEICOES = [
   ['pos treino', 'Pós-treino'],
 ];
 
-const CABECALHOS_REFEICAO_RE = /\s+(?=(?:caf[eé]\s+da\s+manh[aãz]|desjejum|lanche\s+da\s+manh[aãz]|cola[cç][aãa-z]o|almo(?:[cç]|a)o|lanche\s+da\s+tarde|jantar|ceia|pr[eé][\s-]*treino|p[oó]s[\s-]*treino)\b)/gi;
+const CABECALHOS_REFEICAO_RE = /\s+(?=(?:caf(?:e|b)\s+da\s+manh(?:a|z)|desjejum|lanche\s+da\s+manh(?:a|z)|cola[cça-z][aãa-z]o|almo(?:[cç]|a)o|lanche\s+da\s+tarde|jantar|ceia|pr[eéa-z][\s-]*treino|p[oó]s[\s-]*treino)\b)/gi;
 
 function separarCabecalhosEmbutidos(texto = '') {
   // pdf-parse pode devolver tabelas inteiras em uma linha. Quebrar apenas antes de
@@ -168,45 +177,24 @@ function separarCabecalhosEmbutidos(texto = '') {
 
 function detectarCabecalhoRefeicao(linha) {
   const original = String(linha || '').trim();
-  const baseCrua = semAcentos(original).toLowerCase().replace(/\s+/g, ' ').trim();
-  const base = baseCrua
-    .replace(/\bcafb\b/g, 'cafe')
-    .replace(/\bmanhz\b/g, 'manha')
-    .replace(/\balmoao\b/g, 'almoco');
+  const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
+  const semPrefixo = original
+    .replace(/^\s*(?:([01]?\d|2[0-3]):[0-5]\d)?\s*[:;|\-–—]*\s*/, '')
+    .trim();
+  const base = normalizarRuidoFonte(semPrefixo);
 
   for (const [chave, titulo] of REFEICOES) {
-    const comeca = base === chave
-      || base.startsWith(chave + ' ')
-      || base.startsWith(chave + ':')
-      || base.startsWith(chave + '-')
-      || base.startsWith(chave + '–')
-      || base.startsWith(chave + '—');
+    const comeca = base === chave || base.startsWith(chave + ' ');
     if (!comeca) continue;
 
-    const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
-    // O comprimento canonico e usado apenas para remover o cabecalho. Em PDFs com
-    // acentos corrompidos pode sobrar um caractere, removido pelos separadores.
-    let restante = original.slice(Math.min(original.length, chave.length))
+    // As correcoes de ruido acima preservam o comprimento dos nomes de refeicao
+    // usados pelos PDFs observados, entao conseguimos manter conteudo que venha na
+    // mesma linha do cabecalho.
+    const restante = semPrefixo
+      .slice(Math.min(semPrefixo.length, chave.length))
       .replace(/^[\s:;|\-–—]+/, '')
       .trim();
-    if (horario) restante = restante.replace(horario, '').replace(/^[\s:;|\-–—]+/, '').trim();
     return { titulo, horario, restante };
-  }
-
-  // Fallback estreito para as tres grafias que aparecem em PDFs com fonte
-  // deslocada e diacriticos sem mapeamento Unicode.
-  const ruido = normalizarRuidoFonte(original);
-  const alternativas = [
-    [/^cafe\s+da\s+manha\b/, 'Café da manhã'],
-    [/^almoco\b/, 'Almoço'],
-    [/^jantar\b/, 'Jantar'],
-    [/^lanche\s+da\s+manha\b/, 'Lanche da manhã'],
-    [/^lanche\s+da\s+tarde\b/, 'Lanche da tarde'],
-  ];
-  for (const [re, titulo] of alternativas) {
-    if (!re.test(ruido)) continue;
-    const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
-    return { titulo, horario, restante: '' };
   }
 
   return null;
