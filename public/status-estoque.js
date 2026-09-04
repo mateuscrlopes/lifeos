@@ -22,7 +22,7 @@ import './audit-qa-polish.js?v=3';
 import './ritmo-food-v2-loader.js?v=1';
 import './mobile-qa-v5.js?v=1';
 import './mobile-qa-v5-1.js?v=2';
-import './ritmo-medidas-save.js?v=1';
+import './ritmo-medidas-save.js?v=2';
 
 export const NIVEIS_VISUAL = ['cheio', '75', 'metade', '25', 'quase_acabando', 'acabou'];
 
@@ -62,13 +62,13 @@ function statusNivelVisual(nivel, minimoNivel) {
 }
 
 function statusPresenca(quantidade) {
-  return Number(quantidade) > 0 ? 'suficiente' : 'acabou';
+  return Number(quantidade) > 0 ? 'Tem' : 'Não tem';
 }
 
 export function calcularStatus(quantidade, minimo, tipo, nivel, minimoNivel) {
   switch (tipo) {
     case 'nivel_visual': return statusNivelVisual(nivel, minimoNivel);
-    case 'presenca': return statusPresenca(quantidade);
+    case 'presenca': return statusPresenca(quantidade) === 'Tem' ? 'suficiente' : 'acabou';
     case 'peso_volume':
     case 'contavel':
     default: return statusNumerico(quantidade, minimo);
