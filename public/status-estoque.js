@@ -62,13 +62,13 @@ function statusNivelVisual(nivel, minimoNivel) {
 }
 
 function statusPresenca(quantidade) {
-  return Number(quantidade) > 0 ? 'Tem' : 'Não tem';
+  return Number(quantidade) > 0 ? 'suficiente' : 'acabou';
 }
 
 export function calcularStatus(quantidade, minimo, tipo, nivel, minimoNivel) {
   switch (tipo) {
     case 'nivel_visual': return statusNivelVisual(nivel, minimoNivel);
-    case 'presenca': return statusPresenca(quantidade) === 'Tem' ? 'suficiente' : 'acabou';
+    case 'presenca': return statusPresenca(quantidade);
     case 'peso_volume':
     case 'contavel':
     default: return statusNumerico(quantidade, minimo);
