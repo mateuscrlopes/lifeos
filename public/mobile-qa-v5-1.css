@@ -1,0 +1,265 @@
+/* LifeOS — QA Mobile v5.1
+   Correções finais observadas após uso real no iPhone.
+   Esta folha atua sobre componentes estáveis e não depende de mutação para
+   desenhar estados básicos como o botão Cuidar das plantas. */
+
+/* ---------------------------------------------------------------
+   Hoje — reserva o espaço da Central Financeira enquanto ela atualiza.
+   Evita o salto de layout quando o usuário volta de Ritmo/Financeiro.
+---------------------------------------------------------------- */
+#abaHoje #cardsHoje:not(:has(#cfToday))::before {
+  content: '';
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  margin-top: 14px;
+  border: 1px solid var(--module-border, var(--linha));
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--texto) 3%, transparent);
+}
+
+/* ---------------------------------------------------------------
+   Plantas — uma única régua horizontal e ação Cuidar definida em CSS.
+   A lista estava dentro de .secao (já com gutter) e ainda recebia outro
+   gutter próprio. Removemos a duplicidade na origem do layout.
+---------------------------------------------------------------- */
+#abaPlantas > .secao {
+  padding-inline: 0 !important;
+}
+
+#abaPlantas #listaPlantas {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 12px var(--shell-gutter) 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#abaPlantas #listaPlantas > .cartao {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#abaPlantas .planta-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#abaPlantas .planta-card > div:last-child {
+  flex: 0 0 auto;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 7px !important;
+}
+
+/* O botão é filho do bloco de ações, não filho direto do .planta-card.
+   Este seletor corrige a causa do antigo "Cuidar" virar texto. */
+#abaPlantas .planta-card > div:last-child > button {
+  width: auto !important;
+  min-width: 64px !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 1px solid color-mix(in srgb, var(--sage) 18%, var(--linha)) !important;
+  border-radius: 11px !important;
+  background: var(--sage-soft) !important;
+  color: var(--sage) !important;
+  font-family: var(--sans) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+
+/* ---------------------------------------------------------------
+   Central Financeira — atraso segue a semântica visual da tela Hoje.
+---------------------------------------------------------------- */
+.cf-conta-item.qa51-overdue .cf-conta-meta {
+  color: var(--alert) !important;
+  font-weight: 750 !important;
+}
+
+.cf-conta-item.qa51-overdue .cf-conta-lateral button {
+  min-width: 62px;
+  min-height: 34px;
+  margin-top: 5px !important;
+  padding: 7px 11px !important;
+  border-radius: 999px !important;
+  background: rgba(178, 60, 60, .10) !important;
+  color: var(--alert) !important;
+  font-weight: 800 !important;
+}
+
+/* ---------------------------------------------------------------
+   Cobranças recorrentes — chip Ativa não herda margin/display genérico.
+---------------------------------------------------------------- */
+#acertosRoot .ac-rule-title {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+#acertosRoot .ac-rule-title .ac-chip {
+  display: inline-flex !important;
+  min-height: 24px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+}
+
+/* ---------------------------------------------------------------
+   Histórico — ícone ocupa sua própria faixa e nunca invade placeholder.
+---------------------------------------------------------------- */
+.ui-history-search {
+  position: relative !important;
+}
+
+.ui-history-search > svg {
+  position: absolute !important;
+  left: 15px !important;
+  top: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translateY(-50%) !important;
+  pointer-events: none !important;
+  z-index: 2;
+}
+
+.ui-history-search > input {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding: 11px 14px 11px 48px !important;
+  text-indent: 0 !important;
+}
+
+/* ---------------------------------------------------------------
+   Novo local de compra — usa a mesma superfície modal do QA v5.
+---------------------------------------------------------------- */
+.qa51-location-form {
+  display: grid;
+  gap: 12px;
+}
+
+.qa51-location-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.qa51-location-form input {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  box-sizing: border-box !important;
+  padding: 11px 13px !important;
+  border: 1px solid var(--linha) !important;
+  border-radius: 12px !important;
+  background: var(--paper) !important;
+  color: var(--texto) !important;
+  font-size: 16px !important;
+}
+
+/* ---------------------------------------------------------------
+   Medidas — silhueta humana mais legível e marcador da região.
+---------------------------------------------------------------- */
+.qa51-measure-layout {
+  display: grid;
+  grid-template-columns: minmax(126px, .72fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.qa51-measure-figure {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 12px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sage-soft) 60%, var(--paper)), var(--paper-2));
+  color: var(--sage);
+}
+
+.qa51-measure-body {
+  width: min(100%, 168px);
+  height: auto;
+  overflow: visible;
+}
+
+.qa51-measure-body .body-fill {
+  fill: color-mix(in srgb, var(--sage) 13%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.qa51-measure-body .measure-line {
+  stroke: var(--alert);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.qa51-measure-body .measure-dot {
+  fill: var(--alert);
+}
+
+.qa51-measure-copy strong {
+  display: block;
+  color: var(--texto);
+  font-size: 16px;
+}
+
+.qa51-measure-copy p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.qa51-measure-tip {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 430px) {
+  .qa51-measure-layout {
+    grid-template-columns: 118px minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .qa51-measure-figure {
+    min-height: 260px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 350px) {
+  .qa51-measure-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .qa51-measure-figure {
+    min-height: 230px;
+  }
+}
