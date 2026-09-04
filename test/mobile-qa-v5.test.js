@@ -1,9 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { estruturarPlanoAlimentar } from '../src/ritmo.js';
 
 const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+let parserFn = null;
+
+async function getParser() {
+  if (parserFn) return parserFn;
+  process.env.SUPABASE_URL ||= 'https://example.supabase.co';
+  process.env.SUPABASE_ANON_KEY ||= 'test-anon-key';
+  const modulo = await import('../src/ritmo.js');
+  parserFn = modulo.estruturarPlanoAlimentar;
+  return parserFn;
+}
 
 test('QA Mobile v5 é carregado após as camadas existentes', () => {
   const status = read('public/status-estoque.js');
@@ -107,7 +116,8 @@ test('plano alimentar vazio abre caminho de revisão e pode ser removido', () =>
   assert.match(js, /ativo:\s*false/);
 });
 
-test('parser de PDF separa cabeçalhos que chegam na mesma linha', () => {
+test('parser de PDF separa cabeçalhos que chegam na mesma linha', async () => {
+  const estruturarPlanoAlimentar = await getParser();
   const parsed = estruturarPlanoAlimentar(
     'Café da manhã 07:30 2 fatias de pão; 2 ovos Almoço 12:30 arroz; feijão; frango Jantar 20:00 sopa; torradas'
   );
@@ -118,7 +128,8 @@ test('parser de PDF separa cabeçalhos que chegam na mesma linha', () => {
   assert.equal(parsed.refeicoes[2].nome, 'Jantar');
 });
 
-test('parser preserva trecho limitado quando precisa de revisão manual', () => {
+test('parser preserva trecho limitado quando precisa de revisão manual', async () => {
+  const estruturarPlanoAlimentar = await getParser();
   const parsed = estruturarPlanoAlimentar('Plano personalizado sem títulos convencionais. '.repeat(400));
   assert.equal(parsed.status, 'revisao_necessaria');
   assert.ok(parsed.texto_revisao.length > 0);
