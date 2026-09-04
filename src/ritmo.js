@@ -9,6 +9,7 @@ import { config } from './config.js';
 
 const LIMITE_PDF = 12 * 1024 * 1024;
 const MAX_TEXTO = 180000;
+const MAX_TEXTO_REVISAO = 8000;
 
 function adminClient() {
   return createClient(config.supabaseUrl, config.supabaseServiceKey, {
@@ -77,12 +78,41 @@ const REFEICOES = [
   ['pos treino', 'Pós-treino'],
 ];
 
-function tituloRefeicao(linha) {
-  const base = semAcentos(linha).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const CABECALHOS_REFEICAO_RE = /\s+(?=(?:caf[eé]\s+da\s+manh[aã]|desjejum|lanche\s+da\s+manh[aã]|cola[cç][aã]o|almo[cç]o|lanche\s+da\s+tarde|jantar|ceia|pr[eé][\s-]*treino|p[oó]s[\s-]*treino)\b)/gi;
+
+function separarCabecalhosEmbutidos(texto = '') {
+  // pdf-parse pode devolver tabelas inteiras em uma linha. Quebrar apenas antes de
+  // nomes conhecidos de refeição torna o parser tolerante sem tentar interpretar
+  // livremente o conteúdo do nutricionista.
+  return String(texto || '').replace(CABECALHOS_REFEICAO_RE, '\n');
+}
+
+function detectarCabecalhoRefeicao(linha) {
+  const original = String(linha || '').trim();
+  const base = semAcentos(original).toLowerCase().replace(/\s+/g, ' ').trim();
+
   for (const [chave, titulo] of REFEICOES) {
-    if (base === chave || base.startsWith(chave + ' ') || base.includes(chave + ':')) return titulo;
+    const comeca = base === chave
+      || base.startsWith(chave + ' ')
+      || base.startsWith(chave + ':')
+      || base.startsWith(chave + '-')
+      || base.startsWith(chave + '–')
+      || base.startsWith(chave + '—');
+    if (!comeca) continue;
+
+    const horario = original.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
+    let restante = original.slice(chave.length)
+      .replace(/^[\s:;|\-–—]+/, '')
+      .trim();
+    if (horario) restante = restante.replace(horario, '').replace(/^[\s:;|\-–—]+/, '').trim();
+    return { titulo, horario, restante };
   }
+
   return null;
+}
+
+function tituloRefeicao(linha) {
+  return detectarCabecalhoRefeicao(linha)?.titulo || null;
 }
 
 function limparItem(linha) {
@@ -119,17 +149,17 @@ function opcoesDaSecao(linhas = []) {
 }
 
 export function estruturarPlanoAlimentar(textoRecebido) {
-  const texto = normalizar(textoRecebido);
+  const texto = normalizar(separarCabecalhosEmbutidos(normalizar(textoRecebido)));
   const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
   const secoes = [];
   let atual = null;
 
   for (const linha of linhas) {
-    const titulo = tituloRefeicao(linha);
-    if (titulo) {
+    const cabecalho = detectarCabecalhoRefeicao(linha);
+    if (cabecalho) {
       if (atual) secoes.push(atual);
-      const horario = linha.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/)?.[0] || null;
-      atual = { nome: titulo, horario, linhas: [] };
+      atual = { nome: cabecalho.titulo, horario: cabecalho.horario, linhas: [] };
+      if (cabecalho.restante) atual.linhas.push(cabecalho.restante);
       continue;
     }
     if (atual) atual.linhas.push(linha);
@@ -142,14 +172,16 @@ export function estruturarPlanoAlimentar(textoRecebido) {
     opcoes: opcoesDaSecao(secao.linhas),
   })).filter(ref => ref.opcoes.length);
 
+  const precisaRevisao = !refeicoes.length;
   return {
-    versao: 1,
+    versao: 2,
     refeicoes,
     caracteres_lidos: texto.length,
-    status: refeicoes.length ? 'estruturado' : 'revisao_necessaria',
-    observacao: refeicoes.length
-      ? 'Plano lido automaticamente. Revise horários, porções e opções antes de usar.'
-      : 'O PDF foi lido, mas a estrutura de refeições não ficou clara. Revise o conteúdo manualmente.',
+    status: precisaRevisao ? 'revisao_necessaria' : 'estruturado',
+    observacao: precisaRevisao
+      ? 'O PDF foi lido, mas a estrutura de refeições não ficou clara. O trecho extraído está disponível para revisão manual.'
+      : 'Plano lido automaticamente. Revise horários, porções e opções antes de usar.',
+    ...(precisaRevisao ? { texto_revisao: texto.slice(0, MAX_TEXTO_REVISAO) } : {}),
   };
 }
 
