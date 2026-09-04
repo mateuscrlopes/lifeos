@@ -8,9 +8,6 @@ function replaceRequired(source, search, replacement, label) {
   return source.replace(search, replacement);
 }
 
-// ---------------------------------------------------------------------------
-// Ritmo: corrige a causa raiz. Eventos do navegador nunca são entidades de domínio.
-// ---------------------------------------------------------------------------
 const ritmoPath = 'public/ritmo.js';
 let ritmo = read(ritmoPath);
 
@@ -58,13 +55,8 @@ ritmo = replaceRequired(
 
 write(ritmoPath, ritmo);
 
-// O hotfix concorrente deixa de existir: a causa agora está corrigida no proprietário.
 if (fs.existsSync('public/ritmo-medidas-save.js')) fs.unlinkSync('public/ritmo-medidas-save.js');
 
-// ---------------------------------------------------------------------------
-// Testes antigos procuravam o bootloader dentro do domínio de estoque.
-// A partir de agora, toda verificação de ordem de carregamento aponta para o bootstrap.
-// ---------------------------------------------------------------------------
 const loaderTests = [
   'test/confiabilidade-painel.test.js',
   'test/alimentacao-contextual.test.js',
@@ -90,7 +82,6 @@ for (const path of loaderTests) {
 
 write('test/ritmo-medidas-save.test.js', `import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\n\nconst read = file => fs.readFileSync(file, 'utf8');\n\ntest('Ritmo é o único dono da criação e edição de medidas', () => {\n  const js = read('public/ritmo.js');\n  const bootstrap = read('public/app-bootstrap.js');\n  assert.match(js, /ritmoNovaMedida'\\)\\?\\.addEventListener\\('click', \\(\\) => abrirNovaMedida\\(null\\)\\)/);\n  assert.match(js, /data-editar-medida[\\s\\S]*abrirNovaMedida\\(R\\.medidas\\.find/);\n  assert.doesNotMatch(bootstrap, /ritmo-medidas-save/);\n  assert.equal(fs.existsSync('public/ritmo-medidas-save.js'), false);\n});\n\ntest('criação de atividade também não recebe MouseEvent como plano', () => {\n  const js = read('public/ritmo.js');\n  assert.match(js, /ritmoNovaAtividade'\\)\\?\\.addEventListener\\('click', \\(\\) => abrirNovaAtividade\\(null\\)\\)/);\n});\n\ntest('persistência de medidas continua no módulo proprietário', () => {\n  const js = read('public/ritmo.js');\n  assert.match(js, /from\\('ritmo_medidas'\\)/);\n  assert.match(js, /\\.update\\(payload\\)\\.eq\\('id', medida\\.id\\)/);\n  assert.match(js, /upsert\\(payload, \\{ onConflict: 'usuario_id,data' \\}\\)/);\n});\n\ntest('troca de área do Ritmo reinicia a rolagem da viewport', () => {\n  const js = read('public/ritmo.js');\n  assert.match(js, /function navegarRitmo\\(aba\\)/);\n  assert.match(js, /body\\.scrollTop = 0/);\n  assert.match(js, /data-ritmo-tab[\\s\\S]*navegarRitmo\\(b\\.dataset\\.ritmoTab\\)/);\n  assert.match(js, /data-ritmo-go[\\s\\S]*navegarRitmo\\(b\\.dataset\\.ritmoGo\\)/);\n});\n\ntest('modal do Ritmo sempre libera a interface ao fechar', () => {\n  const js = read('public/ritmo.js');\n  assert.match(js, /document\\.body\\.classList\\.add\\('lifeos-modal-open'\\)/);\n  assert.match(js, /document\\.body\\.classList\\.remove\\('lifeos-modal-open'\\)/);\n  assert.match(js, /if \\(conteudo\\) conteudo\\.innerHTML = ''/);\n  assert.match(js, /window\\.lifeosConfirmAction/);\n});\n\ntest('assets web continuam sem cache persistente de código', () => {\n  const server = read('src/server.js');\n  assert.match(server, /Cache-Control', 'no-cache, must-revalidate'/);\n});\n`);
 
-// Validação sintática passa a conhecer o novo ponto de entrada e a UI oficial.
 const validarPath = 'scripts/validar.js';
 let validar = read(validarPath);
 validar = replaceRequired(
@@ -101,15 +92,6 @@ validar = replaceRequired(
 );
 write(validarPath, validar);
 
-// A qualidade deve rodar também durante esta família de refactors.
-const qualityPath = '.github/workflows/quality.yml';
-let quality = read(qualityPath);
-if (!quality.includes('"refactor/**"')) {
-  quality = quality.replace('      - "feat/**"', '      - "feat/**"\n      - "refactor/**"');
-  write(qualityPath, quality);
-}
-
-// Arquivos temporários não fazem parte do resultado da arquitetura.
 for (const path of ['scripts/apply-architecture-refactor.mjs', '.github/workflows/architecture-refactor.yml']) {
   if (fs.existsSync(path)) fs.unlinkSync(path);
 }
