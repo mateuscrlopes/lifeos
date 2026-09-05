@@ -35,9 +35,21 @@ if (!app.includes("import { renderizarListaPlantas } from './plantas-view.js?v=1
   throw new Error('Owner visual de Plantas não foi importado.');
 }
 if (!app.includes('renderizarListaPlantas({')) {
-  throw new Error('Plant as não delegam renderização ao owner visual.');
+  throw new Error('Plantas não delegam renderização ao owner visual.');
 }
 write(appPath, app);
+
+const foundationTestPath = 'test/fundacao-produto.test.js';
+let foundationTests = read(foundationTestPath);
+foundationTests = foundationTests.replace(
+  "test('conteúdo persistido é escapado antes de entrar em templates HTML', () => {\n  const app = read('../public/app.js');\n  const tablet = read('../public/tablet.html');",
+  "test('conteúdo persistido é escapado antes de entrar em templates HTML', () => {\n  const app = read('../public/app.js');\n  const plantasView = read('../public/plantas-view.js');\n  const tablet = read('../public/tablet.html');",
+);
+foundationTests = foundationTests.replace(
+  '  assert.match(app, /escapeHtml\\(nomeEspecie\\)/);',
+  '  assert.match(plantasView, /document\\.createTextNode\\(nomeEspecie\\)/);',
+);
+write(foundationTestPath, foundationTests);
 
 const architectureTestPath = 'test/architecture-policy.test.js';
 let tests = read(architectureTestPath);
