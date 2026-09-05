@@ -10,6 +10,17 @@
   display: none !important;
 }
 
+/*
+ * A camada QA v5.1 ainda cria um ::before em #cardsHoje para reservar espaço
+ * para a Central Financeira enquanto #cfToday não existe. No layout atual essa
+ * reserva virou um card branco permanente entre Cardápio e Contas próximas.
+ * Hoje é o owner desta superfície, então o pseudo-elemento não deve existir.
+ */
+#abaHoje #cardsHoje:not(:has(#cfToday))::before {
+  content: none !important;
+  display: none !important;
+}
+
 .hoje-conta-item { gap: 10px; }
 .hoje-conta-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
 .hoje-conta-copy > span:first-child { font-weight: 650; }
