@@ -23,6 +23,11 @@ test('faixa contextual legada nunca ocupa espaço abaixo do Cardápio da Casa', 
   assert.match(css, /#cardsHoje > #acMobileDestaque\s*\{[\s\S]*display:\s*none\s*!important/);
 });
 
+test('placeholder da Central Financeira não cria card branco no Hoje', () => {
+  const css = ler('public/hoje.css');
+  assert.match(css, /#abaHoje #cardsHoje:not\(:has\(#cfToday\)\)::before\s*\{[\s\S]*content:\s*none\s*!important[\s\S]*display:\s*none\s*!important/);
+});
+
 test('ações da lista de compras permanecem estáveis mesmo antes da iconização', () => {
   const css = ler('public/styles/components.css');
   assert.match(css, /#itens \.item > div:last-child[\s\S]*display:\s*flex\s*!important/);
