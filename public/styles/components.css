@@ -64,6 +64,47 @@
 
 .lifeos-icon-button:hover { background: var(--paper-2); color: var(--texto); }
 
+/* Lista de compras — a barra de ações não pode mudar de anatomia entre renders.
+   Enquanto o renderer legado ainda nasce com o texto “Comprei”, este fallback
+   reserva o mesmo espaço do componente final e mantém editar/excluir visíveis. */
+#itens .item > div:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex: 0 0 auto !important;
+  gap: 2px !important;
+  min-width: max-content;
+  margin-left: auto !important;
+}
+
+#itens .item > div:last-child > button {
+  flex: 0 0 44px;
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
+#itens .item > div:last-child > button:first-child:not(.ui-purchase-action):not([data-ui-action="purchase"]) {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 13px !important;
+  background: var(--sage-soft) !important;
+  color: var(--sage) !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+
+#itens .item > div:last-child > button:first-child:not(.ui-purchase-action):not([data-ui-action="purchase"])::before {
+  content: '✓';
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .lifeos-confirm-overlay {
   position: fixed;
   inset: 0;
