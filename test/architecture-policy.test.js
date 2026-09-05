@@ -51,7 +51,6 @@ test('documentação arquitetural é obrigatória', () => {
   assert.match(policy, /status-estoque\.js.*livre de efeitos colaterais/s);
 });
 
-
 test('Hoje usa CSS declarativo e catálogo oficial de ícones', () => {
   const html = read('public/index.html');
   const hoje = read('public/hoje-view.js');
@@ -63,7 +62,6 @@ test('Hoje usa CSS declarativo e catálogo oficial de ícones', () => {
   assert.doesNotMatch(hoje, /document\.head\.appendChild\(link\)|function ensureStyle\(/);
   assert.match(icons, /chevronDown:/);
 });
-
 
 test('Hoje e Casa possuem owners reais fora do monólito', () => {
   const app = read('public/app.js');
@@ -84,7 +82,6 @@ test('Hoje e Casa possuem owners reais fora do monólito', () => {
   assert.match(casa, /export function subCasaAtiva/);
 });
 
-
 test('Plantas delega a lista para um owner visual dedicado', () => {
   const app = read('public/app.js');
   const view = read('public/plantas-view.js');
@@ -96,7 +93,6 @@ test('Plantas delega a lista para um owner visual dedicado', () => {
   assert.match(view, /className = 'planta-card'/);
   assert.doesNotMatch(view, /supa\.|from\('/);
 });
-
 
 test('navegação e Mais possuem owner dedicado', () => {
   const app = read('public/app.js');
@@ -112,4 +108,35 @@ test('navegação e Mais possuem owner dedicado', () => {
   assert.match(app, /window\.trocarAba = trocarAba/);
   assert.match(app, /window\.abrirSecao = abrirSecao/);
   assert.match(app, /window\.voltarContexto = voltarContexto/);
+});
+
+test('Financeiro é owner da própria superfície e não reescreve Hoje', () => {
+  const finance = read('public/central-financeira.js');
+  const hoje = read('public/hoje-view.js');
+
+  assert.match(finance, /lifeosFinanceiroContas/);
+  assert.match(finance, /lifeos:hoje-abrir-conta/);
+  assert.match(finance, /LifeOSModal/);
+  assert.doesNotMatch(finance, /MutationObserver/);
+  assert.doesNotMatch(finance, /cardsHoje|cfToday|cfRenderizarHoje/);
+  assert.match(hoje, /lifeos:hoje-abrir-conta/);
+});
+
+test('Tablet mantém shell nativo da Casa, sem abrir o mobile comprimido', () => {
+  const tablet = read('public/tablet-house-v4.js');
+  const loader = read('public/tablet-enhancements.js');
+
+  assert.match(tablet, /const MODULE_TITLES/);
+  assert.match(tablet, /Financeiro da Casa/);
+  assert.match(loader, /tablet-house-v4\.js/);
+  assert.doesNotMatch(tablet, /window\.location\.assign/);
+});
+
+test('hotfix concorrente de medidas foi removido do runtime', () => {
+  const bootstrap = read('public/app-bootstrap.js');
+  const ritmo = read('public/ritmo.js');
+
+  assert.equal(fs.existsSync('public/ritmo-medidas-save.js'), false);
+  assert.doesNotMatch(bootstrap, /ritmo-medidas-save/);
+  assert.match(ritmo, /addEventListener\('click', \(\) => abrirNovaMedida\(null\)\)/);
 });
