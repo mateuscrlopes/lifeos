@@ -33,8 +33,28 @@ jobs:
       - name: Apply deterministic consolidation
         run: node scripts/continue-architecture-phase2.mjs
 
-      - name: Test
-        run: npm test
+      - name: Test with diagnostic capture
+        id: tests
+        continue-on-error: true
+        run: |
+          set +e
+          npm test > phase2-test.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat phase2-test.log
+          exit 0
+
+      - name: Upload test diagnostic
+        if: steps.tests.outputs.exit_code != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-test-diagnostic
+          path: phase2-test.log
+          retention-days: 1
+
+      - name: Stop on test failure
+        if: steps.tests.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Validate
         run: npm run check
