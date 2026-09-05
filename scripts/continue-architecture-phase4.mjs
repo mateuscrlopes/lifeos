@@ -80,13 +80,37 @@ ritmoTests = ritmoTests.replace(
 );
 write(ritmoTestPath, ritmoTests);
 
-// 3. Contrato arquitetural trava regressão da navegação monolítica.
+const mobileTestPath = 'test/mobile-shell-v3.test.js';
+let mobileTests = read(mobileTestPath);
+mobileTests = mobileTests.replace(
+  "  const app = ler('public/app.js');\n\n  assert.match(html, /id=\"abaFinanceiro\"/);",
+  "  const app = ler('public/app.js');\n  const navigation = ler('public/navigation.js');\n\n  assert.match(html, /id=\"abaFinanceiro\"/);",
+);
+mobileTests = mobileTests.replace('  assert.match(app, /\'abaFinanceiro\'/);', "  assert.match(navigation, /'abaFinanceiro'/);");
+mobileTests = mobileTests.replace(
+  "  const app = ler('public/app.js');\n  const casa = ler('public/casa-view.js');\n  assert.match(html, /id=\"casaPageTitle\"/);",
+  "  const navigation = ler('public/navigation.js');\n  const casa = ler('public/casa-view.js');\n  assert.match(html, /id=\"casaPageTitle\"/);",
+);
+mobileTests = mobileTests.replace('  assert.match(app, /function voltarAbaContextual/);', '  assert.match(navigation, /function voltarAbaContextual/);');
+mobileTests = mobileTests.replace('  assert.match(app, /origemCasa/);', '  assert.match(navigation, /origemCasa/);');
+write(mobileTestPath, mobileTests);
+
+// 3. Contratos arquiteturais passam a refletir a fronteira real entre Casa e Navegação.
 const architectureTestPath = 'test/architecture-policy.test.js';
 let tests = read(architectureTestPath);
+tests = tests.replace(
+  "  const casa = read('public/casa-view.js');\n\n  assert.match(app, /import \\{ renderizarHoje \\} from '\\.\\/hoje-view\\.js\\?v=2';/);",
+  "  const casa = read('public/casa-view.js');\n  const navigation = read('public/navigation.js');\n\n  assert.match(app, /import \\{ renderizarHoje \\} from '\\.\\/hoje-view\\.js\\?v=2';/);",
+);
+tests = tests.replace(
+  "  assert.match(app, /import \\{ trocarSubCasa, subCasaAtiva \\} from '\\.\\/casa-view\\.js\\?v=1';/);",
+  "  assert.match(app, /import \\{ trocarSubCasa \\} from '\\.\\/casa-view\\.js\\?v=1';/);\n  assert.match(navigation, /import \\{ trocarSubCasa, subCasaAtiva \\} from '\\.\\/casa-view\\.js\\?v=1';/);",
+);
+
 if (!tests.includes('navegação e Mais possuem owner dedicado')) {
   tests += `\n\ntest('navegação e Mais possuem owner dedicado', () => {\n  const app = read('public/app.js');\n  const navigation = read('public/navigation.js');\n\n  assert.match(app, /import \\{ criarNavegacao \\} from '\\.\\/navigation\\.js\\?v=1';/);\n  assert.match(app, /criarNavegacao\\(\\{/);\n  assert.doesNotMatch(app, /const ABAS_PRINCIPAIS|const SECOES_MAIS|const _origensSecao/);\n  assert.doesNotMatch(app, /function trocarAba\\(|function abrirSecao\\(|function voltarContexto\\(/);\n  assert.match(navigation, /export function criarNavegacao/);\n  assert.match(navigation, /const SECOES_MAIS/);\n  assert.match(navigation, /function localizacaoAtual/);\n  assert.match(app, /window\\.trocarAba = trocarAba/);\n  assert.match(app, /window\\.abrirSecao = abrirSecao/);\n  assert.match(app, /window\\.voltarContexto = voltarContexto/);\n});\n`;
-  write(architectureTestPath, tests);
 }
+write(architectureTestPath, tests);
 
 for (const transient of [
   'scripts/continue-architecture-phase4.mjs',
