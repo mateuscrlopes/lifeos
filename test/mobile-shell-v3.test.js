@@ -7,6 +7,7 @@ const ler = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf
 test('LifeOS possui cinco módulos principais com Financeiro separado', () => {
   const html = ler('public/index.html');
   const app = ler('public/app.js');
+  const navigation = ler('public/navigation.js');
 
   assert.match(html, /id="abaFinanceiro"/);
   assert.match(html, /id="lifeosFinanceiroContas"/);
@@ -16,7 +17,7 @@ test('LifeOS possui cinco módulos principais com Financeiro separado', () => {
   assert.doesNotMatch(html, /data-tab="casa"/);
   assert.match(html, />\s*Hoje\s*<\/button>/);
   assert.match(html, />\s*Ritmo\s*<\/button>/);
-  assert.match(app, /'abaFinanceiro'/);
+  assert.match(navigation, /'abaFinanceiro'/);
   assert.match(app, /lifeos:financeiro-abrir/);
 });
 
@@ -85,13 +86,13 @@ test('shell respeita safe area em navegação e modais', () => {
 
 test('Casa é área interna do Hoje e mantém retorno contextual', () => {
   const html = ler('public/index.html');
-  const app = ler('public/app.js');
+  const navigation = ler('public/navigation.js');
   const casa = ler('public/casa-view.js');
   assert.match(html, /id="casaPageTitle"/);
   assert.match(html, /voltarCasaContextual\(\)/);
   assert.match(casa, /const TITULOS/);
-  assert.match(app, /function voltarAbaContextual/);
-  assert.match(app, /origemCasa/);
+  assert.match(navigation, /function voltarAbaContextual/);
+  assert.match(navigation, /origemCasa/);
 });
 
 test('barra inferior sobe acima do Home Indicator', () => {

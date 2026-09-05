@@ -69,13 +69,15 @@ test('Hoje e Casa possuem owners reais fora do monólito', () => {
   const app = read('public/app.js');
   const hoje = read('public/hoje-view.js');
   const casa = read('public/casa-view.js');
+  const navigation = read('public/navigation.js');
 
   assert.match(app, /import \{ renderizarHoje \} from '\.\/hoje-view\.js\?v=2';/);
   assert.match(app, /renderizarHoje\(\{dados,plantasUrgentes:urgentes\}\)/);
   assert.doesNotMatch(app, /function criarCartaoHoje\(|const mg=el\('metricasHoje'\)/);
   assert.match(hoje, /export function renderizarHoje/);
 
-  assert.match(app, /import \{ trocarSubCasa, subCasaAtiva \} from '\.\/casa-view\.js\?v=1';/);
+  assert.match(app, /import \{ trocarSubCasa \} from '\.\/casa-view\.js\?v=1';/);
+  assert.match(navigation, /import \{ trocarSubCasa, subCasaAtiva \} from '\.\/casa-view\.js\?v=1';/);
   assert.match(app, /window\.trocarSub = trocarSubCasa/);
   assert.doesNotMatch(app, /const CASA_TITULOS|function trocarSub\(/);
   assert.match(casa, /export function trocarSubCasa/);
@@ -93,4 +95,21 @@ test('Plantas delega a lista para um owner visual dedicado', () => {
   assert.match(view, /export function renderizarListaPlantas/);
   assert.match(view, /className = 'planta-card'/);
   assert.doesNotMatch(view, /supa\.|from\('/);
+});
+
+
+test('navegação e Mais possuem owner dedicado', () => {
+  const app = read('public/app.js');
+  const navigation = read('public/navigation.js');
+
+  assert.match(app, /import \{ criarNavegacao \} from '\.\/navigation\.js\?v=1';/);
+  assert.match(app, /criarNavegacao\(\{/);
+  assert.doesNotMatch(app, /const ABAS_PRINCIPAIS|const SECOES_MAIS|const _origensSecao/);
+  assert.doesNotMatch(app, /function trocarAba\(|function abrirSecao\(|function voltarContexto\(/);
+  assert.match(navigation, /export function criarNavegacao/);
+  assert.match(navigation, /const SECOES_MAIS/);
+  assert.match(navigation, /function localizacaoAtual/);
+  assert.match(app, /window\.trocarAba = trocarAba/);
+  assert.match(app, /window\.abrirSecao = abrirSecao/);
+  assert.match(app, /window\.voltarContexto = voltarContexto/);
 });

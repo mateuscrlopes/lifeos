@@ -7,10 +7,11 @@ const ler = caminho => fs.readFileSync(new URL(`../${caminho}`, import.meta.url)
 test('Ritmo entra no shell sem virar aplicativo separado', () => {
   const html = ler('public/index.html');
   const app = ler('public/app.js');
+  const navigation = ler('public/navigation.js');
   assert.match(html, /id="secaoRitmo"/);
   assert.match(html, /LifeOS.*Ritmo/s);
   assert.match(html, /onclick="voltarContexto\(\)"/);
-  assert.match(app, /secaoRitmo/);
+  assert.match(navigation, /secaoRitmo/);
   assert.match(app, /lifeos:ritmo-abrir/);
 });
 
@@ -136,11 +137,11 @@ test('Ritmo compõe plano diário único e soma macros sem duplicar consumo', ()
 });
 
 test('navegação pessoal volta para a origem real e Hoje é a única home', () => {
-  const app = ler('public/app.js');
+  const navigation = ler('public/navigation.js');
   const html = ler('public/index.html');
   const shell = ler('public/mobile-shell-v3.js');
-  assert.match(app, /function voltarContexto\(\)/);
-  assert.match(app, /_origensSecao/);
+  assert.match(navigation, /function voltarContexto\(\)/);
+  assert.match(navigation, /origensSecao/);
   assert.match(html, /onclick="voltarContexto\(\)"/);
   assert.match(html, />\s*Hoje\s*<\/button>/);
   assert.match(shell, /removeLegacyHomeShortcuts/);
@@ -149,11 +150,11 @@ test('navegação pessoal volta para a origem real e Hoje é a única home', () 
 
 test('Ritmo é item principal e ciclo é gerenciável pela interface', () => {
   const html = ler('public/index.html');
-  const app = ler('public/app.js');
+  const navigation = ler('public/navigation.js');
   const js = ler('public/ritmo.js');
   assert.match(html, /data-tab="ritmo"/);
   assert.doesNotMatch(html, /data-tab="casa"/);
-  assert.match(app, /function abrirRitmoContextual/);
+  assert.match(navigation, /function abrirRitmoContextual/);
   assert.match(js, /function abrirEditarCiclo/);
   assert.match(js, /ritmoSalvarCiclo/);
   assert.match(js, /ritmoEncerrarCiclo/);

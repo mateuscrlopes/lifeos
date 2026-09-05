@@ -5,7 +5,8 @@ import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-
 import { excluirContaPorId } from './contas.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { renderizarHoje } from './hoje-view.js?v=2';
-import { trocarSubCasa, subCasaAtiva } from './casa-view.js?v=1';
+import { trocarSubCasa } from './casa-view.js?v=1';
+import { criarNavegacao } from './navigation.js?v=1';
 import { renderizarListaPlantas } from './plantas-view.js?v=1';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
@@ -120,11 +121,6 @@ async function sair(){
   el('quem')&&(el('quem').textContent='');el('telaApp').style.display='none';el('telaLogin').style.display='flex';
 }
 
-// Mapeamento das abas principais
-const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais'];
-const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
-const _origensAba = new Map();
-
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
   const agora=new Date();
@@ -181,120 +177,28 @@ async function carregarClimaHoje(){
     cr.textContent=Math.round(Number(clima.temperatura))+'° · '+(clima.descricao||'Tempo variável');
   }else cr.textContent='Clima indisponível';
 }
-function trocarAba(qual,btn,opcoes={}){
-  const { registrarOrigem = true } = opcoes;
-  if(registrarOrigem){
-    const atual=localizacaoAtual?.() || null;
-    const destinoAtual=atual?.tipo==='tab' && atual.tab===qual;
-    const destinoCasa=qual==='casa' && atual?.tipo==='casa';
-    if(atual && !destinoAtual && !destinoCasa) _origensAba.set(qual,atual);
-  }
-  // Esconde todas as abas e seções
-  [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
-    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
-  });
-  const id='aba'+qual.charAt(0).toUpperCase()+qual.slice(1);
-  const alvo=el(id);if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
-  const origemCasa=qual==='casa'?_origensAba.get('casa'):null;
-  const tabAtiva=qual==='casa'
-    ? (origemCasa?.tipo==='tab' ? origemCasa.tab : origemCasa?.tipo==='secao' && origemCasa.secao==='ritmo' ? 'ritmo' : origemCasa?.tipo==='secao' ? 'mais' : 'hoje')
-    : qual;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab===tabAtiva));
-  const body=el('appBody');if(body)body.scrollTop=0;
-  if(qual==='hoje'&&usuario)carregarHoje();
-  if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
-  if(qual==='plantas'&&usuario)renderizarPlantasAtuais();
-}
-
-function abrirRitmoContextual(){
-  abrirSecao('ritmo');
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab==='ritmo'));
-}
-
-function voltarParaLocalizacao(origem){
-  if(origem?.tipo==='casa'){
-    trocarAba('casa',null,{registrarOrigem:false});
-    requestAnimationFrame(()=>trocarSubCasa(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
-    return;
-  }
-  if(origem?.tipo==='tab'){
-    trocarAba(origem.tab,null,{registrarOrigem:false});
-    return;
-  }
-  if(origem?.tipo==='secao'){
-    abrirSecao(origem.secao,{preservarOrigem:true});
-    return;
-  }
-  trocarAba('hoje',null,{registrarOrigem:false});
-}
-
-function voltarAbaContextual(qual){
-  voltarParaLocalizacao(_origensAba.get(qual));
-}
-
-function voltarCasaContextual(){
-  voltarAbaContextual('casa');
-}
-
-const _origensSecao = new Map();
-
-function localizacaoAtual(){
-  for(const id of SECOES_MAIS){
-    const node=el(id);
-    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
-      if(id==='abaPainelProjeto') return {tipo:'painel-projeto'};
-      return {tipo:'secao',secao:id.replace(/^secao/,'').toLowerCase()};
-    }
-  }
-  for(const id of ABAS_PRINCIPAIS){
-    const node=el(id);
-    if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
-      const tab=id.replace(/^aba/,'').toLowerCase();
-      if(tab==='casa'){
-        const sub=subCasaAtiva();
-        return {tipo:'casa',sub};
-      }
-      return {tipo:'tab',tab};
-    }
-  }
-  return {tipo:'tab',tab:'hoje'};
-}
-
-function abrirSecao(qual,{preservarOrigem=false}={}){
-  if(!preservarOrigem){
-    const atual=localizacaoAtual();
-    const mesmaSecao=atual.tipo==='secao' && atual.secao===qual;
-    if(!mesmaSecao) _origensSecao.set(qual,atual);
-  }
-  [...ABAS_PRINCIPAIS,...SECOES_MAIS].forEach(id=>{
-    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
-  });
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('ativa'));
-  const secao=el('secao'+qual.charAt(0).toUpperCase()+qual.slice(1));
-  if(secao){secao.style.display='block';secao.classList.remove('oculto');}
-  const body=el('appBody');if(body)body.scrollTop=0;
-  // Carregar dados da seção
-  if(qual==='ritmo')window.dispatchEvent(new CustomEvent('lifeos:ritmo-abrir'));
-  if(qual==='projetos')carregarProjetos();
-  if(qual==='rituais')carregarRituais();
-  if(qual==='config'){carregarTokens();carregarLocaisEstoque();carregarLocaisCompraConfig();carregarHistoricoExcluidos('todos');}
-}
-
-function voltarContexto(){
-  const atual=localizacaoAtual();
-  const qual=atual.tipo==='secao' ? atual.secao : null;
-  const origem=qual ? _origensSecao.get(qual) : null;
-  voltarParaLocalizacao(origem || (qual==='ritmo' ? {tipo:'tab',tab:'hoje'} : {tipo:'tab',tab:'mais'}));
-}
-
-function voltarMais(){
-  [...SECOES_MAIS].forEach(id=>{
-    const e=el(id);if(e){e.style.display='none';e.classList.add('oculto');}
-  });
-  const mais=el('abaMais');if(mais){mais.style.display='block';mais.classList.remove('oculto');}
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('ativa',b.dataset.tab==='mais'));
-  const body=el('appBody');if(body)body.scrollTop=0;
-}
+const {
+  trocarAba,
+  abrirSecao,
+  abrirRitmoContextual,
+  voltarContexto,
+  voltarMais,
+  voltarAbaContextual,
+  voltarCasaContextual,
+} = criarNavegacao({
+  onHoje:()=>{if(usuario)carregarHoje();},
+  onFinanceiro:()=>{if(usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));},
+  onPlantas:()=>{if(usuario)renderizarPlantasAtuais();},
+  onRitmo:()=>window.dispatchEvent(new CustomEvent('lifeos:ritmo-abrir')),
+  onProjetos:()=>carregarProjetos(),
+  onRituais:()=>carregarRituais(),
+  onConfig:()=>{
+    carregarTokens();
+    carregarLocaisEstoque();
+    carregarLocaisCompraConfig();
+    carregarHistoricoExcluidos('todos');
+  },
+});
 
 // --- LISTA ---
 async function carregarLista(){
