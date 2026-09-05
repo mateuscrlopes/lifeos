@@ -70,6 +70,17 @@ mobileTests = mobileTests.replace(
 );
 write(mobileTestPath, mobileTests);
 
+const auditTestPath = 'test/auditoria-qa-ui.test.js';
+let auditTests = read(auditTestPath);
+auditTests = auditTests.replace(
+  "test('cards do Hoje separam navegação de expansão', () => {\n  const app = read('public/app.js');",
+  "test('cards do Hoje separam navegação de expansão', () => {\n  const hoje = read('public/hoje-view.js');",
+);
+auditTests = auditTests.replaceAll('  assert.match(app, /qa-card-actions/);', '  assert.match(hoje, /qa-card-actions/);');
+auditTests = auditTests.replaceAll('  assert.match(app, /qa-card-open/);', '  assert.match(hoje, /qa-card-open/);');
+auditTests = auditTests.replaceAll('  assert.match(app, /qa-collapsible-card qa-collapsed/);', '  assert.match(hoje, /qa-collapsible-card qa-collapsed/);');
+write(auditTestPath, auditTests);
+
 const architectureTestPath = 'test/architecture-policy.test.js';
 let architectureTests = read(architectureTestPath);
 if (!architectureTests.includes('Hoje e Casa possuem owners reais fora do monólito')) {
