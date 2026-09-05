@@ -28,7 +28,12 @@ Uma correção não pode ser implementada criando uma segunda camada que observa
 | Confirmações | `public/ui/confirm.js` |
 | Ciclo de vida de modal/overlay | `public/ui/modal.js` |
 | Ordem de inicialização do mobile | `public/app-bootstrap.js` |
-| Navegação | módulo proprietário da navegação; nunca um patch visual |
+| Navegação mobile e seções do Mais | `public/navigation.js` |
+| Tela Hoje | `public/hoje-view.js` + `public/hoje.css` |
+| Navegação interna da Casa | `public/casa-view.js` |
+| Lista visual de Plantas | `public/plantas-view.js` |
+| Central Financeira | `public/central-financeira.js` |
+| Tablet da Casa | `public/tablet-house-v4.js` e shell do tablet |
 | Regra de estoque | `public/status-estoque.js` e domínio correspondente |
 | Regra de conta | domínio de contas |
 | Regra do Ritmo | módulo do Ritmo correspondente |
@@ -37,21 +42,21 @@ Uma correção não pode ser implementada criando uma segunda camada que observa
 
 ## 3. Regra de propriedade de DOM
 
-Um nó de montagem tem apenas um renderer proprietário. Outros módulos entregam **dados**, não reescrevem o DOM desse nó depois.
+Um nó de montagem tem apenas um renderer proprietário. Outros módulos entregam **dados** ou disparam **eventos de intenção**, sem reescrever o DOM desse nó depois.
 
 Superfícies oficiais:
 
 | Superfície | Dono |
 | --- | --- |
-| `#cardsHoje` / `#metricasHoje` / hero do Hoje | Hoje |
+| `#cardsHoje` / `#metricasHoje` / hero do Hoje | `hoje-view.js` |
 | `#ritmoMount` | Ritmo |
-| `#listaPlantas` | Plantas |
-| Central Financeira | Financeiro |
-| Acertos | Acertos |
+| `#listaPlantas` | `plantas-view.js` |
+| `#lifeosFinanceiroContas` | `central-financeira.js` |
+| `#lifeosFinanceiroAcertos` | Acertos |
 | `#itens`, `#itensEstoque`, `#itensTarefas` | Casa |
 | Tablet | shell/telas do tablet; nunca a interface mobile comprimida |
 
-Um módulo pode solicitar navegação para outro, mas não pode editar o DOM interno do outro.
+Um módulo pode solicitar navegação para outro, mas não pode editar o DOM interno do outro. Exemplo oficial: o card de conta do Hoje emite `lifeos:hoje-abrir-conta`; o Financeiro recebe a intenção e abre a conta sem renderizar dentro de `#cardsHoje`.
 
 ## 4. Componentes
 
@@ -114,6 +119,7 @@ O objetivo da migração é reduzir progressivamente a etapa 1 até ela desapare
 - Evento do navegador nunca deve ser confundido com entidade de negócio.
 - A tela é responsável por ligar e desligar seus eventos.
 - Não usar timers, microtasks ou `requestAnimationFrame` para "ganhar uma corrida" contra outro renderer. Se houver corrida, há dois donos e a arquitetura deve ser corrigida.
+- Comunicação entre owners deve preferir função pública ou evento de intenção; um owner não deve corrigir o DOM do outro.
 
 ## 8. Dados
 
@@ -139,7 +145,22 @@ A saída deve verificar, conforme aplicável:
 - layout sem overflow horizontal nas larguras suportadas;
 - mobile e tablet não compartilham uma tela apenas por compressão visual.
 
-## 10. Política de alteração futura
+## 10. Estado consolidado pelo PR #48
+
+A consolidação estabelece, como baseline obrigatório:
+
+- bootstrap mobile único e explícito;
+- regra de estoque sem efeitos colaterais;
+- componentes oficiais de ícone, toast, confirmação e modal;
+- owners dedicados para Hoje, Casa, navegação/Mais, Plantas e Central Financeira;
+- Tablet preservado como experiência nativa da Casa;
+- Ritmo sem o hotfix concorrente de persistência de medidas e com criação/edição ligada por wrappers explícitos;
+- contratos automatizados que impedem Financeiro de reescrever Hoje e evitam a volta do hotfix de medidas;
+- validação sintática incluindo os owners consolidados.
+
+As camadas antigas ainda listadas como compatibilidade em `app-bootstrap.js` são **legado em retirada**, não pontos permitidos para novas funcionalidades. Reduzi-las é trabalho incremental futuro e não deve reabrir a sobreposição de ownership resolvida por esta consolidação.
+
+## 11. Política de alteração futura
 
 Antes de alterar qualquer elemento, responder internamente:
 
