@@ -27,18 +27,20 @@ test('tablet não usa observador amplo da Home', () => {
   assert.match(codigo, /acTabletDestaque/);
 });
 
-test('celular remove o cardápio antigo antes do destaque compacto', () => {
+test('módulo completo preserva a experiência contextual do tablet', () => {
   const codigo = ler('public/alimentacao-contextual.js');
-  assert.match(codigo, /removerCardapioPadraoMobile/);
   assert.match(codigo, /Cardápio de hoje/);
-  assert.match(codigo, /acMobileDestaque/);
+  assert.match(codigo, /acTabletDestaque/);
 });
 
-test('instalação usa módulo completo no tablet e correção compacta no celular', () => {
+test('tablet usa módulo completo e mobile mantém apenas shim de compatibilidade', () => {
   const tablet = ler('public/tablet-enhancements.js');
   const mobile = ler('public/app.js');
+  const shim = ler('public/alimentacao-contextual-mobile-fix.js');
   const status = ler('public/app-bootstrap.js');
+
   assert.match(tablet, /alimentacao-contextual\.js\?v=2/);
   assert.match(mobile, /alimentacao-contextual-mobile-fix\.js\?v=2/);
   assert.doesNotMatch(status, /alimentacao-contextual\.js\?v=2/);
+  assert.doesNotMatch(shim, /MutationObserver|cardsHoje|acMobileDestaque|document\./);
 });
