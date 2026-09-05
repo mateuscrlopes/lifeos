@@ -2,6 +2,8 @@
 // Proprietário único dos mounts #heroHoje, #metricasHoje e #cardsHoje.
 // Recebe dados prontos; não consulta banco nem observa/muta a renderização de outros módulos.
 
+import { icon } from './ui/icons.js';
+
 let heroTimer = null;
 let heroSlides = [];
 let heroIndex = 0;
@@ -11,31 +13,10 @@ const dinheiro = valor => valor == null
   ? 'Valor não informado'
   : Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const ICONS = {
-  task: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
-  plant: '<path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/>',
-  bill: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/>',
-  stock: '<path d="m3 7 9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/>',
-  meal: '<path d="M4 3v7a3 3 0 0 0 3 3h1V3M8 3v10M18 3v18M15 8c0-3 1-5 3-5v10h-3Z"/>',
-  check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
-  tasks: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
-  cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/>',
-  box: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>',
-  chevron: '<path d="m9 18 6-6-6-6"/>',
+const svg = (name, size = 18) => {
+  const aliases = { tasks: 'task', stock: 'box' };
+  return icon(aliases[name] || name, size);
 };
-
-function svg(name, size = 18) {
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.check}</svg>`;
-}
-
-function ensureStyle() {
-  if (document.getElementById('lifeos-hoje-style')) return;
-  const link = document.createElement('link');
-  link.id = 'lifeos-hoje-style';
-  link.rel = 'stylesheet';
-  link.href = '/hoje.css?v=1';
-  document.head.appendChild(link);
-}
 
 function ensureHeading() {
   const metrics = el('metricasHoje');
@@ -200,7 +181,7 @@ function criarCartao(titulo, destino, quantidade = 0) {
   toggle.className = 'qa-card-toggle';
   toggle.setAttribute('aria-expanded', 'false');
   toggle.setAttribute('aria-label', `Expandir ${titulo}`);
-  toggle.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  toggle.innerHTML = svg('chevronDown', 17);
   toggle.addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
@@ -331,7 +312,6 @@ function renderCards(dados, plantasUrgentes) {
 
 export function renderizarHoje({ dados, plantasUrgentes = 0 }) {
   if (!dados) return;
-  ensureStyle();
   ensureHeading();
   renderHero(dados, plantasUrgentes);
   renderMetrics(dados);

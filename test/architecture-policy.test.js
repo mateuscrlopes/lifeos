@@ -50,3 +50,16 @@ test('documentação arquitetural é obrigatória', () => {
   assert.match(policy, /Cada superfície visual, comportamento ou regra de negócio tem um único dono/);
   assert.match(policy, /status-estoque\.js.*livre de efeitos colaterais/s);
 });
+
+
+test('Hoje usa CSS declarativo e catálogo oficial de ícones', () => {
+  const html = read('public/index.html');
+  const hoje = read('public/hoje-view.js');
+  const icons = read('public/ui/icons.js');
+
+  assert.match(html, /href="\/hoje\.css\?v=2"/);
+  assert.match(hoje, /import \{ icon \} from '\.\/ui\/icons\.js';/);
+  assert.doesNotMatch(hoje, /const ICONS = \{/);
+  assert.doesNotMatch(hoje, /document\.head\.appendChild\(link\)|function ensureStyle\(/);
+  assert.match(icons, /chevronDown:/);
+});
