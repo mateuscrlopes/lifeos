@@ -51,12 +51,11 @@ test('Plantas retiram filtros de cômodo misturados aos filtros de prazo', () =>
 });
 
 test('camada QA é carregada no mobile e tablet', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const tablet = read('public/tablet-enhancements.js');
   assert.match(status, /audit-qa-polish\.js/);
   assert.match(tablet, /audit-qa-polish\.js/);
 });
-
 
 test('ações principais não dependem de confirm nativo do iOS', () => {
   const app = read('public/app.js');
@@ -79,10 +78,11 @@ test('degradê inferior fica restrito à área próxima da barra', () => {
 test('cache da correção de confirmação é incrementado', () => {
   const html = read('public/index.html');
   const app = read('public/app.js');
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const qa = read('public/audit-qa-polish.js');
   const tablet = read('public/tablet.html');
-  assert.match(html, /app\.js\?v=13/);
+  assert.match(html, /app-bootstrap\.js\?v=1/);
+  assert.match(status, /app\.js\?v=14/);
   assert.match(app, /status-estoque\.js\?v=4/);
   assert.match(status, /ui-refinements\.js\?v=8/);
   assert.match(status, /audit-qa-polish\.js\?v=3/);
@@ -90,20 +90,17 @@ test('cache da correção de confirmação é incrementado', () => {
   assert.match(tablet, /tablet-enhancements\.js\?v=4/);
 });
 
-
 test('cards do Hoje separam navegação de expansão', () => {
-  const app = read('public/app.js');
+  const hoje = read('public/hoje-view.js');
   const ui = read('public/ui-refinements.js');
   const audit = read('public/audit-qa-polish.js');
-  const finance = read('public/central-financeira.js');
 
-  assert.match(app, /qa-card-actions/);
-  assert.match(app, /qa-card-open/);
-  assert.match(app, /qa-collapsible-card qa-collapsed/);
+  assert.match(hoje, /qa-card-actions/);
+  assert.match(hoje, /qa-card-open/);
+  assert.match(hoje, /qa-collapsible-card qa-collapsed/);
   assert.match(ui, /event\.target\.closest\('\.qa-card-toggle'\)/);
   assert.match(ui, /card\.classList\.contains\('qa-collapsible-card'\)/);
   assert.match(audit, /existingAction\.hidden = false/);
-  assert.match(finance, /cf-hoje-interior qa-collapsible-card qa-collapsed/);
 });
 
 test('sheets com X não exibem alça falsa e usam superfície uniforme', () => {

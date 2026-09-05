@@ -65,10 +65,10 @@ test('le valor e data de comprovante PDF sem IA', async () => {
   assert.match(resultado.pago_em, /^2026-09-01T10:32:00-03:00$/);
 });
 
-test('interface carrega acertos e tema', () => {
-  const status = fs.readFileSync(new URL('../public/status-estoque.js', import.meta.url), 'utf8');
-  assert.match(status, /acertos\.js\?v=5/);
-  assert.match(status, /theme\.js\?v=1/);
+test('interface carrega acertos e tema pelo bootstrap', () => {
+  const bootstrap = fs.readFileSync(new URL('../public/app-bootstrap.js', import.meta.url), 'utf8');
+  assert.match(bootstrap, /acertos\.js\?v=5/);
+  assert.match(bootstrap, /theme\.js\?v=1/);
 });
 
 test('hardening remove execucao anonima dos RPCs financeiros', () => {

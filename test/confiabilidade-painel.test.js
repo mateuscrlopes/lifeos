@@ -30,7 +30,7 @@ test('instalação troca insert direto pela RPC', () => {
 
 test('tablet carrega painel v4 e central financeira v5', () => {
   const tablet = ler('public/tablet-enhancements.js');
-  const status = ler('public/status-estoque.js');
+  const status = ler('public/app-bootstrap.js');
   assert.match(tablet, /painel-casa-v4\.js\?v=1/);
   assert.match(status, /central-financeira-email\.js\?v=5/);
 });

@@ -19,7 +19,7 @@ test('hero antigo é corrigido quando usa cardápio genérico', () => {
 
 test('correção é carregada diretamente pelo app.js', () => {
   const app = ler('public/app.js');
-  const status = ler('public/status-estoque.js');
+  const status = ler('public/app-bootstrap.js');
   assert.match(app, /alimentacao-contextual-mobile-fix\.js\?v=2/);
   assert.doesNotMatch(status, /alimentacao-contextual\.js\?v=1/);
 });

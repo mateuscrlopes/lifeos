@@ -82,7 +82,7 @@ test('busca do Histórico remove a lupa nativa do Safari e preserva o ícone Lif
 });
 
 test('v5.1 força nova versão de JS e CSS para evitar módulo antigo no iPhone', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const js = read('public/mobile-qa-v5-1.js');
   assert.match(status, /mobile-qa-v5-1\.js\?v=2/);
   assert.match(js, /mobile-qa-v5-1\.css\?v=2/);

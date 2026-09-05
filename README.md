@@ -2,67 +2,52 @@
 
 Sistema operacional pessoal e doméstico de Mateus e Ghustavo.
 
-## Estado atual
+O LifeOS reúne a rotina da Casa e os módulos pessoais em uma única aplicação: Hoje, Casa, Financeiro, Plantas, Ritmo, projetos, rituais, configurações e uma experiência própria para o tablet da Casa.
 
-**Onda 1 concluída — v0.16.0**
+## Arquitetura do frontend
 
-Módulos funcionando:
-- Lista de compras compartilhada (tempo real)
-- Estoque (3 tipos de medição + inventário rotativo + ponte com a lista)
-- Contas (status por vencimento + recorrência)
-- Tarefas e rotinas (responsável + recorrência)
-- Rituais (pauta + sessões + histórico + gera tarefas)
-- Alimentação (cardápio semanal + geração de lista)
-- Tela Hoje (painel que reúne tudo)
+A política oficial está em [`docs/ARQUITETURA_FRONTEND.md`](docs/ARQUITETURA_FRONTEND.md).
 
-Publicado em: https://lifeos-6rib.onrender.com
+Princípio central:
 
-## Estrutura
+> Cada superfície visual, comportamento ou regra de negócio tem um único dono.
 
-```
-src/
-  server.js       — backend Node (serve a tela e a rota /config)
-  config.js       — lê e valida as variáveis de ambiente
-  supabase.js     — conexão com o banco
+Baseline atual:
 
-public/
-  app.js          — lógica da tela (frontend)
-  index.html      — a tela
-  hoje.js         — monta os dados da Tela Hoje
-  status-estoque.js  — calcula status dos itens de estoque
-  status-conta.js    — calcula status das contas
-  ponte-estoque.js   — sincroniza estoque ↔ lista
-  inventario.js      — lógica do inventário rotativo
+- `public/app-bootstrap.js`: único bootstrap do mobile;
+- `public/hoje-view.js` + `public/hoje.css`: owner da tela Hoje;
+- `public/casa-view.js`: navegação interna da Casa;
+- `public/navigation.js`: navegação mobile e seções do Mais;
+- `public/plantas-view.js`: lista visual de Plantas;
+- `public/central-financeira.js`: Central Financeira, sem reescrever a tela Hoje;
+- `public/tablet-house-v4.js`: experiência nativa do tablet da Casa;
+- `public/status-estoque.js`: regra de estoque sem efeitos colaterais;
+- `public/ui/`: ícones, toast, confirmação e ciclo de vida de modais compartilhados.
 
-db/
-  001_nucleo.sql         — tabelas base (casa, usuarios, eventos)
-  002_perfis.sql         — perfis de Mateus e Ghustavo
-  003_lista_compras.sql  — lista de compras
-  004_estoque.sql        — estoque
-  005_ponte_estoque_lista.sql — ponte estoque ↔ lista
-  006_contas.sql         — contas
-  007_tarefas.sql        — tarefas
-  008_estoque_tipos.sql  — tipos de medição do estoque
-  009_inventario.sql     — inventário rotativo
-  010_alimentacao.sql    — refeições e cardápio
-  011_rituais.sql        — rituais e sessões
+Camadas antigas ainda listadas em `app-bootstrap.js` existem somente como compatibilidade durante a migração. Elas não devem receber novas responsabilidades.
+
+## Desenvolvimento
+
+Requer Node.js 22 ou superior.
+
+```bash
+npm ci
+npm test
+npm run check
+npm start
 ```
 
-## Como rodar localmente
+`npm test` executa os testes de regressão e contratos arquiteturais. `npm run check` valida sintaxe dos módulos críticos e owners consolidados.
 
-1. Instale as dependências: `npm install`
-2. Crie o `.env` a partir do `.env.example` e preencha as chaves do Supabase
-3. Inicie: `npm start`
-4. Abra: http://localhost:3000
+## Estrutura principal
 
-## Deploy
+- `public/`: frontend mobile e tablet;
+- `src/`: servidor, APIs e integrações privilegiadas;
+- `db/`: migrations, funções e políticas do banco;
+- `test/`: testes funcionais, de regressão e arquitetura;
+- `docs/`: documentação técnica e de produto;
+- `android-gumate/`: cliente Android do Gumate.
 
-O Render republica automaticamente a cada `git push` na branch `main`.
-As variáveis de ambiente (SUPABASE_URL e SUPABASE_ANON_KEY) ficam
-configuradas no painel do Render — nunca no código.
+## Qualidade
 
-## Segurança
-
-- `.env` nunca vai para o Git (ver `.gitignore`)
-- A chave `service_role` do Supabase nunca deve ser usada no frontend
-- RLS ativado em todas as tabelas
+O workflow `LifeOS quality` roda testes e validação estática em pull requests. Mudanças arquiteturais devem manter os contratos de ownership em `test/architecture-policy.test.js` verdes.

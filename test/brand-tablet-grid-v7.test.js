@@ -31,7 +31,7 @@ test('dashboard tablet organiza seis módulos em pares alinhados', () => {
 });
 
 test('cache v7 força atualização no mobile e tablet', () => {
-  const status = read('public/status-estoque.js');
+  const status = read('public/app-bootstrap.js');
   const polish = read('public/product-polish-v4.js');
   const enhancements = read('public/tablet-enhancements.js');
   const tablet = read('public/tablet.html');

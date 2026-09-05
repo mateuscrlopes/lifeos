@@ -104,9 +104,10 @@ test('viewport permite zoom e usa viewport dinâmica', () => {
 
 test('conteúdo persistido é escapado antes de entrar em templates HTML', () => {
   const app = read('../public/app.js');
+  const plantasView = read('../public/plantas-view.js');
   const tablet = read('../public/tablet.html');
   assert.match(app, /const escapeHtml=/);
-  assert.match(app, /escapeHtml\(nomeEspecie\)/);
+  assert.match(plantasView, /document\.createTextNode\(nomeEspecie\)/);
   assert.match(app, /escapeHtml\(projeto\.descricao\)/);
   assert.match(app, /escapeHtml\(e\.endereco\|\|'Sem endereço'\)/);
   assert.match(app, /escapeHtml\(nome\)/);

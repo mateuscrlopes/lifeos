@@ -20,6 +20,8 @@
     } catch {}
   </script>
   <link rel="stylesheet" href="tokens.css"/>
+  <link rel="stylesheet" href="/styles/components.css?v=1"/>
+  <link rel="stylesheet" href="/hoje.css?v=2"/>
   <link rel="stylesheet" href="/ghumat-refinement.css?v=1"/>
   <link rel="stylesheet" href="/ritmo.css?v=5"/>
   <style>
@@ -423,17 +425,13 @@
           <button class="sub-aba" data-sub="cardapio" onclick="trocarSub('cardapio',this)">Cardápio</button>
         </div>
 
-        <!-- sub: COMPRAS -->
         <div id="subCompras" class="sub-conteudo">
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Adicionar à lista</label>
                 <div class="linha-add" style="flex-wrap:wrap">
                   <input id="novoItem" type="text" placeholder="Ex.: leite" style="min-width:160px"/>
-                  <select id="novoItemCiclo" class="sel" style="width:auto;min-width:112px">
-                    <option value="semanal">Semanal</option>
-                    <option value="mensal">Do mês</option>
-                  </select>
+                  <select id="novoItemCiclo" class="sel" style="width:auto;min-width:112px"><option value="semanal">Semanal</option><option value="mensal">Do mês</option></select>
                   <button class="btn-acao" id="btnAdd">Add</button>
                 </div>
               </div>
@@ -443,688 +441,81 @@
           </div>
         </div>
 
-        <!-- sub: ESTOQUE -->
         <div id="subEstoque" class="sub-conteudo oculto" style="display:none;">
           <div class="secao">
             <div class="cartao">
               <div class="campo"><label>Nome</label><input id="estNome" type="text" placeholder="Nome do item"/></div>
               <div class="campo"><label>Local</label><select id="estLocal" class="sel"><option value="">— Sem local —</option></select></div>
               <div class="campo"><label class="toggle-label"><input id="estCritico" type="checkbox"/>Item crítico</label></div>
-              <div class="campo"><label>Tipo</label>
-                <select id="estTipo" class="sel">
-                  <option value="contavel">Unidade contável</option>
-                  <option value="peso_volume">Peso / Volume</option>
-                  <option value="nivel_visual">Nível visual</option>
-                </select>
-              </div>
-              <div id="estCamposNum">
-                <div class="lifeos-form-grid-2">
-                  <div class="campo"><label>Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div>
-                  <div class="campo"><label>Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div>
-                </div>
-                <div class="campo"><label>Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div>
-              </div>
-              <div id="estCamposNivel" class="oculto" style="display:none;">
-                <div class="lifeos-form-grid-2">
-                  <div class="campo"><label>Nível atual</label>
-                    <select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select>
-                  </div>
-                  <div class="campo"><label>Alertar abaixo de</label>
-                    <select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select>
-                  </div>
-                </div>
-              </div>
-              <div class="campo"><label>Consumo estimado</label>
-                <div style="display:flex;gap:8px;">
-                  <input id="estTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1;padding:12px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:15px;background:var(--bg);"/>
-                  <select id="estTaxaPeriodo" class="sel" style="flex:1;"><option value="">— por —</option><option value="dia">por dia</option><option value="semana">por semana</option><option value="mes">por mês</option></select>
-                  <div style="flex:1;display:flex;align-items:center;gap:4px;"><input id="estAlertaDias" type="number" min="1" value="7" style="width:50px;padding:12px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><span style="font-size:11px;color:var(--muted)">dias</span></div>
-                </div>
-              </div>
-              <button class="btn-acao" id="btnAddEstoque" style="width:100%">Adicionar ao estoque</button>
-              <div id="avisoEstoque" class="aviso"></div>
+              <div class="campo"><label>Tipo</label><select id="estTipo" class="sel"><option value="contavel">Unidade contável</option><option value="peso_volume">Peso / Volume</option><option value="nivel_visual">Nível visual</option></select></div>
+              <div id="estCamposNum"><div class="lifeos-form-grid-2"><div class="campo"><label>Quantidade</label><input id="estQtd" type="number" min="0" step="any" value="0"/></div><div class="campo"><label>Mínimo</label><input id="estMin" type="number" min="0" step="any" value="1"/></div></div><div class="campo"><label>Unidade</label><input id="estUnidade" type="text" placeholder="unidades"/></div></div>
+              <div id="estCamposNivel" class="oculto" style="display:none;"><div class="lifeos-form-grid-2"><div class="campo"><label>Nível atual</label><select id="estNivelAtual" class="sel"><option value="cheio">Cheio</option><option value="75">~75%</option><option value="metade">Metade</option><option value="25">~25%</option><option value="quase_acabando">Quase acabando</option><option value="acabou">Acabou</option></select></div><div class="campo"><label>Alertar abaixo de</label><select id="estNivelMin" class="sel"><option value="75">~75%</option><option value="metade">Metade</option><option value="25" selected>~25%</option><option value="quase_acabando">Quase acabando</option></select></div></div></div>
+              <div class="campo"><label>Consumo estimado</label><div style="display:flex;gap:8px;"><input id="estTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1;padding:12px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:15px;background:var(--bg);"/><select id="estTaxaPeriodo" class="sel" style="flex:1;"><option value="">— por —</option><option value="dia">por dia</option><option value="semana">por semana</option><option value="mes">por mês</option></select><div style="flex:1;display:flex;align-items:center;gap:4px;"><input id="estAlertaDias" type="number" min="1" value="7" style="width:50px;padding:12px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><span style="font-size:11px;color:var(--muted)">dias</span></div></div></div>
+              <button class="btn-acao" id="btnAddEstoque" style="width:100%">Adicionar ao estoque</button><div id="avisoEstoque" class="aviso"></div>
             </div>
-            <div class="cartao">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Itens em estoque</span>
-                <button class="btn-acao secundario" id="btnInventario" style="font-size:12px;padding:6px 12px">Inventário</button>
-              </div>
-              <div id="itensEstoque"><div class="vazio">Carregando...</div></div>
-            </div>
+            <div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Itens em estoque</span><button class="btn-acao secundario" id="btnInventario" style="font-size:12px;padding:6px 12px">Inventário</button></div><div id="itensEstoque"><div class="vazio">Carregando...</div></div></div>
           </div>
         </div>
 
-        <!-- sub: TAREFAS -->
         <div id="subTarefas" class="sub-conteudo oculto" style="display:none;">
-          <div class="secao">
-            <div class="cartao">
-              <div class="campo"><label>Nova tarefa</label><input id="tfTitulo" type="text" placeholder="Ex.: Lavar roupa"/></div>
-              <div class="lifeos-form-grid-2">
-                <div class="campo"><label>Responsável</label>
-                  <select id="tfResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select>
-                </div>
-                <div class="campo"><label>Data</label><input id="tfData" type="date"/></div>
-              </div>
-              <div class="campo"><label class="toggle-label"><input id="tfRecorrente" type="checkbox"/>Repete (rotina)</label></div>
-              <div id="tfRecorrenciaBox" class="campo oculto" style="display:none;"><input id="tfRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div>
-              <button class="btn-acao" id="btnAddTarefa" style="width:100%">Adicionar tarefa</button>
-              <div id="avisoTarefa" class="aviso"></div>
-            </div>
-            <div class="cartao"><div id="itensTarefas"><div class="vazio">Carregando...</div></div></div>
-          </div>
+          <div class="secao"><div class="cartao"><div class="campo"><label>Nova tarefa</label><input id="tfTitulo" type="text" placeholder="Ex.: Lavar roupa"/></div><div class="lifeos-form-grid-2"><div class="campo"><label>Responsável</label><select id="tfResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div><div class="campo"><label>Data</label><input id="tfData" type="date"/></div></div><div class="campo"><label class="toggle-label"><input id="tfRecorrente" type="checkbox"/>Repete (rotina)</label></div><div id="tfRecorrenciaBox" class="campo oculto" style="display:none;"><input id="tfRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div><button class="btn-acao" id="btnAddTarefa" style="width:100%">Adicionar tarefa</button><div id="avisoTarefa" class="aviso"></div></div><div class="cartao"><div id="itensTarefas"><div class="vazio">Carregando...</div></div></div></div>
         </div>
 
-        <!-- sub: CONTAS -->
         <div id="subContas" class="sub-conteudo oculto" style="display:none;">
-          <div class="secao">
-            <div class="cartao">
-              <div class="campo"><label>Nome da conta</label><input id="ctNome" type="text" placeholder="Ex.: Energia"/></div>
-              <div class="lifeos-form-grid-2 lifeos-account-grid">
-                <div class="campo"><label>Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div>
-                <div class="campo"><label>Vencimento</label><input id="ctVenc" type="date"/></div>
-              </div>
-              <div class="campo"><label class="toggle-label"><input id="ctRecorrente" type="checkbox"/>Repete todo mês</label></div>
-              <button class="btn-acao" id="btnAddConta" style="width:100%">Adicionar conta</button>
-              <div id="avisoConta" class="aviso"></div>
-            </div>
-            <div class="cartao"><div id="itensContas"><div class="vazio">Carregando...</div></div></div>
-          </div>
+          <div class="secao"><div class="cartao"><div class="campo"><label>Nome da conta</label><input id="ctNome" type="text" placeholder="Ex.: Energia"/></div><div class="lifeos-form-grid-2 lifeos-account-grid"><div class="campo"><label>Valor (R$)</label><input id="ctValor" type="number" min="0" step="0.01" placeholder="opcional"/></div><div class="campo"><label>Vencimento</label><input id="ctVenc" type="date"/></div></div><div class="campo"><label class="toggle-label"><input id="ctRecorrente" type="checkbox"/>Repete todo mês</label></div><button class="btn-acao" id="btnAddConta" style="width:100%">Adicionar conta</button><div id="avisoConta" class="aviso"></div></div><div class="cartao"><div id="itensContas"><div class="vazio">Carregando...</div></div></div></div>
         </div>
 
-        <!-- sub: CARDÁPIO -->
         <div id="subCardapio" class="sub-conteudo oculto" style="display:none;">
           <div class="secao">
-            <div class="cartao">
-              <div class="campo"><label>Nova refeição</label><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div>
-              <div class="lifeos-form-grid-2">
-                <div class="campo"><label>Serve para</label>
-                  <select id="refTipo" class="sel"><option value="almoco">Almoço</option><option value="janta">Jantar</option><option value="ambos">Almoço/Jantar</option></select>
-                </div>
-                <div class="campo"><label>Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div>
-              </div>
-              <div class="lifeos-form-grid-3 lifeos-nutrition-grid">
-                <div class="campo"><label>Calorias</label><input id="refKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
-                <div class="campo"><label>Proteína</label><input id="refProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
-                <div class="campo"><label>Carboidratos</label><input id="refCarbo" type="number" min="0" step="0.1" placeholder="g"/></div>
-              </div>
-              <div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Ingredientes</div>
-              <div id="refIngredientes"></div>
-              <button class="btn-acao secundario" id="btnAddIngrediente" style="font-size:13px;margin-bottom:12px">+ Ingrediente</button>
-              <button class="btn-acao" id="btnSalvarRefeicao" style="width:100%">Salvar refeição</button>
-              <div id="avisoRefeicao" class="aviso"></div>
-            </div>
+            <div class="cartao"><div class="campo"><label>Nova refeição</label><input id="refNome" type="text" placeholder="Ex.: Frango com batata"/></div><div class="lifeos-form-grid-2"><div class="campo"><label>Serve para</label><select id="refTipo" class="sel"><option value="almoco">Almoço</option><option value="janta">Jantar</option><option value="ambos">Almoço/Jantar</option></select></div><div class="campo"><label>Porções</label><input id="refPorcoes" type="number" min="1" value="2"/></div></div><div class="lifeos-form-grid-3 lifeos-nutrition-grid"><div class="campo"><label>Calorias</label><input id="refKcal" type="number" min="0" step="1" placeholder="kcal"/></div><div class="campo"><label>Proteína</label><input id="refProteina" type="number" min="0" step="0.1" placeholder="g"/></div><div class="campo"><label>Carboidratos</label><input id="refCarbo" type="number" min="0" step="0.1" placeholder="g"/></div></div><div style="margin-bottom:8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Ingredientes</div><div id="refIngredientes"></div><button class="btn-acao secundario" id="btnAddIngrediente" style="font-size:13px;margin-bottom:12px">+ Ingrediente</button><button class="btn-acao" id="btnSalvarRefeicao" style="width:100%">Salvar refeição</button><div id="avisoRefeicao" class="aviso"></div></div>
             <div class="cartao"><div id="listaRefeicoes"><div class="vazio">Carregando...</div></div></div>
-            <div class="cartao">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Cardápio da semana</span>
-                <select id="planResp" class="sel" style="width:auto;padding:7px 12px;font-size:13px"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select>
-              </div>
-              <div class="cardapio-week-grid cardapio-week-labels">
-                <div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div>
-              </div>
-              <div class="cardapio-shared-note">O cardápio da Casa organiza só as refeições compartilhadas e já preparadas.</div>
-              <div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Almoço</div>
-              <div class="cardapio-week-grid" id="slotsAlmoco"></div>
-              <div style="font-size:11px;color:var(--muted);margin:12px 0 4px">Jantar</div>
-              <div class="cardapio-week-grid" id="slotsJanta"></div>
-              <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-acao secundario" id="btnSugerirPlan">Sugerir semana</button>
-                <button class="btn-acao" id="btnSalvarPlan">Salvar</button>
-                <button class="btn-acao secundario" id="btnGerarLista">Gerar lista</button>
-                <button class="btn-acao secundario" id="btnLimparPlan">Limpar tudo</button>
-              </div>
-              <div id="avisoPlan" class="aviso"></div>
-            </div>
+            <div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Cardápio da semana</span><select id="planResp" class="sel" style="width:auto;padding:7px 12px;font-size:13px"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div><div class="cardapio-week-grid cardapio-week-labels"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div><div class="cardapio-shared-note">O cardápio da Casa organiza só as refeições compartilhadas e já preparadas.</div><div style="font-size:11px;color:var(--muted);margin:10px 0 4px">Almoço</div><div class="cardapio-week-grid" id="slotsAlmoco"></div><div style="font-size:11px;color:var(--muted);margin:12px 0 4px">Jantar</div><div class="cardapio-week-grid" id="slotsJanta"></div><div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn-acao secundario" id="btnSugerirPlan">Sugerir semana</button><button class="btn-acao" id="btnSalvarPlan">Salvar</button><button class="btn-acao secundario" id="btnGerarLista">Gerar lista</button><button class="btn-acao secundario" id="btnLimparPlan">Limpar tudo</button></div><div id="avisoPlan" class="aviso"></div></div>
           </div>
         </div>
       </div>
 
+      <div id="abaFinanceiro" class="oculto lifeos-module-page" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarAbaContextual('financeiro')" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Financeiro</h1><p>Contas da casa e acertos entre vocês, em um só lugar.</p></div></header><section class="lifeos-finance-mount" id="lifeosFinanceiroContas"></section><section class="lifeos-finance-mount" id="lifeosFinanceiroAcertos"></section></div>
 
-      <!-- aba: FINANCEIRO -->
-      <div id="abaFinanceiro" class="oculto lifeos-module-page" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarAbaContextual('financeiro')" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Financeiro</h1>
-            <p>Contas da casa e acertos entre vocês, em um só lugar.</p>
-          </div>
-        </header>
-        <section class="lifeos-finance-mount" id="lifeosFinanceiroContas"></section>
-        <section class="lifeos-finance-mount" id="lifeosFinanceiroAcertos"></section>
-      </div>
+      <div id="abaPlantas" class="oculto lifeos-module-page" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarAbaContextual('plantas')" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Plantas</h1><p>Cuidados, rotinas e histórico das plantas.</p></div></header><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;"><span style="font-size:13px;color:var(--muted)" id="plantasContador"></span><button class="btn-acao" id="btnNovaPlanta" style="font-size:13px;padding:8px 14px">+ Nova planta</button></div><div class="filtros-plantas"><button class="filtro-btn ativo" data-filtro="todas">Todas</button><button class="filtro-btn" data-filtro="vencida">Vencidas</button><button class="filtro-btn" data-filtro="hoje">Hoje</button><button class="filtro-btn" data-filtro="breve">Em breve</button><button class="filtro-btn" data-filtro="sala">Sala</button><button class="filtro-btn" data-filtro="outros">Outros</button></div><div class="secao"><div id="listaPlantas"></div></div></div>
 
-      <!-- aba: PLANTAS -->
-      <div id="abaPlantas" class="oculto lifeos-module-page" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarAbaContextual('plantas')" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Plantas</h1>
-            <p>Cuidados, rotinas e histórico das plantas.</p>
-          </div>
-        </header>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;">
-          <span style="font-size:13px;color:var(--muted)" id="plantasContador"></span>
-          <button class="btn-acao" id="btnNovaPlanta" style="font-size:13px;padding:8px 14px">+ Nova planta</button>
-        </div>
-        <div class="filtros-plantas">
-          <button class="filtro-btn ativo" data-filtro="todas">Todas</button>
-          <button class="filtro-btn" data-filtro="vencida">Vencidas</button>
-          <button class="filtro-btn" data-filtro="hoje">Hoje</button>
-          <button class="filtro-btn" data-filtro="breve">Em breve</button>
-          <button class="filtro-btn" data-filtro="sala">Sala</button>
-          <button class="filtro-btn" data-filtro="outros">Outros</button>
-        </div>
-        <div class="secao"><div id="listaPlantas"></div></div>
-      </div>
-
-      <!-- aba: MAIS -->
       <div id="abaMais" class="oculto" style="display:none;">
-
-        <div class="config-section-titulo">Pessoal</div>
-        <div class="secao">
-          <!-- Projetos -->
-<div class="cartao clicavel" onclick="abrirSecao('projetos')">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:15px;font-weight:700">Projetos pessoais</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:3px">Seus objetivos e acompanhamentos</div>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-        </div>
-        <div class="config-section-titulo">Casa</div>
-        <div class="secao">
-          <div class="cartao clicavel" onclick="abrirSecao('rituais')">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div><div style="font-size:15px;font-weight:700">Rituais</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Reuniões e rotinas da Casa</div></div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-          <div class="cartao clicavel" onclick="abrirSecao('config')">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div><div style="font-size:15px;font-weight:700">Configurações</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Tokens, locais, histórico</div></div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-        </div>
-        <div style="padding:20px;text-align:center;">
-          <button id="btnSair" style="font-size:13px;color:var(--muted);padding:8px 16px;border-radius:999px;background:var(--paper-2);">Sair da conta</button>
-        </div>
+        <div class="config-section-titulo">Pessoal</div><div class="secao"><div class="cartao clicavel" onclick="abrirSecao('projetos')"><div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:15px;font-weight:700">Projetos pessoais</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Seus objetivos e acompanhamentos</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div></div>
+        <div class="config-section-titulo">Casa</div><div class="secao"><div class="cartao clicavel" onclick="abrirSecao('rituais')"><div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:15px;font-weight:700">Rituais</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Reuniões e rotinas da Casa</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="cartao clicavel" onclick="abrirSecao('config')"><div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:15px;font-weight:700">Configurações</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Tokens, locais, histórico</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div></div><div style="padding:20px;text-align:center;"><button id="btnSair" style="font-size:13px;color:var(--muted);padding:8px 16px;border-radius:999px;background:var(--paper-2);">Sair da conta</button></div>
       </div>
 
-      <!-- SEÇÃO: RITMO (submódulo pessoal dentro do LifeOS) -->
-      <div id="secaoRitmo" class="oculto lifeos-module-page" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Ritmo</h1>
-            <p>Seu espaço privado de alimentação, movimento e evolução.</p>
-          </div>
-        </header>
-        <div id="ritmoMount">
-          <div class="secao"><div class="cartao"><div class="vazio">Carregando seu Ritmo...</div></div></div>
-        </div>
-      </div>
+      <div id="secaoRitmo" class="oculto lifeos-module-page" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Ritmo</h1><p>Seu espaço privado de alimentação, movimento e evolução.</p></div></header><div id="ritmoMount"><div class="secao"><div class="cartao"><div class="vazio">Carregando seu Ritmo...</div></div></div></div></div>
 
-      <!-- SEÇÃO: PROJETOS (dentro de Mais) -->
-      <div id="secaoProjetos" class="oculto" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Projetos</h1>
-            <p>Objetivos e acompanhamentos pessoais.</p>
-          </div>
-        </header>
-        <div class="secao">
-          <button class="btn-acao" id="btnNovoProjeto" style="width:100%;margin-bottom:14px">+ Novo projeto</button>
-          <div id="listaProjetos"><div class="vazio">Carregando...</div></div>
-        </div>
-      </div>
+      <div id="secaoProjetos" class="oculto" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Projetos</h1><p>Objetivos e acompanhamentos pessoais.</p></div></header><div class="secao"><button class="btn-acao" id="btnNovoProjeto" style="width:100%;margin-bottom:14px">+ Novo projeto</button><div id="listaProjetos"><div class="vazio">Carregando...</div></div></div></div>
 
-      <!-- PAINEL DO PROJETO -->
-      <div id="abaPainelProjeto" class="oculto" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" id="btnVoltarProjetos" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS · Projetos</span>
-            <h1 id="ppNome"></h1>
-          </div>
-        </header>
-        <div class="secao">
-          <div class="cartao" id="ppProgresso"></div>
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Objetivos</span>
-              <button class="btn-acao secundario" id="btnAddObjetivo" style="font-size:12px;padding:5px 10px">+ Objetivo</button>
-            </div>
-            <div id="ppObjetivos"></div>
-            <div id="inputObjetivo" class="oculto" style="display:none;margin-top:10px;">
-              <div style="display:flex;gap:8px;"><input id="novoObjetivo" type="text" placeholder="Ex.: Treinar 4x por semana" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarObjetivo" style="font-size:13px;padding:8px 12px">Salvar</button></div>
-            </div>
-          </div>
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Tarefas</span>
-              <button class="btn-acao secundario" id="btnAddTarefaProjeto" style="font-size:12px;padding:5px 10px">+ Tarefa</button>
-            </div>
-            <div id="ppTarefas"></div>
-            <div id="inputTarefaProjeto" class="oculto" style="display:none;margin-top:10px;">
-              <div class="campo"><input id="novaTarefaProjeto" type="text" placeholder="Título da tarefa"/></div>
-              <div style="display:flex;gap:10px;margin-bottom:10px;">
-                <div class="campo"><label>Data</label><input id="tfpData" type="date"/></div>
-                <div class="campo" style="flex:1"><label>Visibilidade</label><select id="tfpPriv" class="sel"><option value="false">Pública</option><option value="true">Privada</option></select></div>
-              </div>
-              <button class="btn-acao" id="btnSalvarTarefaProjeto" style="width:100%;font-size:13px">Salvar tarefa</button>
-              <div id="avisoTarefaProjeto" class="aviso"></div>
-            </div>
-          </div>
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Itens necessários</span>
-              <button class="btn-acao secundario" id="btnAddItemProjeto" style="font-size:12px;padding:5px 10px">+ Item</button>
-            </div>
-            <div id="ppItens"></div>
-            <div id="inputItemProjeto" class="oculto" style="display:none;margin-top:10px;">
-              <div style="display:flex;gap:8px;margin-bottom:8px;"><input id="novoItemProjeto" type="text" placeholder="Ex.: Whey, Shampoo" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarItemProjeto" style="font-size:13px;padding:8px 12px">Add</button></div>
-              <label class="toggle-label" style="font-size:13px;margin-bottom:4px;"><input id="itemProjetoParaLista" type="checkbox"/>Adicionar à lista agora</label>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;margin-bottom:20px;">
-            <button class="btn-acao secundario" id="btnEditarProjeto" style="font-size:13px">Editar projeto</button>
-            <button class="btn-acao perigo" id="btnRemoverProjeto" style="font-size:13px">Remover</button>
-          </div>
-        </div>
-      </div>
+      <div id="abaPainelProjeto" class="oculto" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" id="btnVoltarProjetos" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS · Projetos</span><h1 id="ppNome"></h1></div></header><div class="secao"><div class="cartao" id="ppProgresso"></div><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Objetivos</span><button class="btn-acao secundario" id="btnAddObjetivo" style="font-size:12px;padding:5px 10px">+ Objetivo</button></div><div id="ppObjetivos"></div><div id="inputObjetivo" class="oculto" style="display:none;margin-top:10px;"><div style="display:flex;gap:8px;"><input id="novoObjetivo" type="text" placeholder="Ex.: Treinar 4x por semana" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarObjetivo" style="font-size:13px;padding:8px 12px">Salvar</button></div></div></div><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Tarefas</span><button class="btn-acao secundario" id="btnAddTarefaProjeto" style="font-size:12px;padding:5px 10px">+ Tarefa</button></div><div id="ppTarefas"></div><div id="inputTarefaProjeto" class="oculto" style="display:none;margin-top:10px;"><div class="campo"><input id="novaTarefaProjeto" type="text" placeholder="Título da tarefa"/></div><div style="display:flex;gap:10px;margin-bottom:10px;"><div class="campo"><label>Data</label><input id="tfpData" type="date"/></div><div class="campo" style="flex:1"><label>Visibilidade</label><select id="tfpPriv" class="sel"><option value="false">Pública</option><option value="true">Privada</option></select></div></div><button class="btn-acao" id="btnSalvarTarefaProjeto" style="width:100%;font-size:13px">Salvar tarefa</button><div id="avisoTarefaProjeto" class="aviso"></div></div></div><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Itens necessários</span><button class="btn-acao secundario" id="btnAddItemProjeto" style="font-size:12px;padding:5px 10px">+ Item</button></div><div id="ppItens"></div><div id="inputItemProjeto" class="oculto" style="display:none;margin-top:10px;"><div style="display:flex;gap:8px;margin-bottom:8px;"><input id="novoItemProjeto" type="text" placeholder="Ex.: Whey, Shampoo" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarItemProjeto" style="font-size:13px;padding:8px 12px">Add</button></div><label class="toggle-label" style="font-size:13px;margin-bottom:4px;"><input id="itemProjetoParaLista" type="checkbox"/>Adicionar à lista agora</label></div></div><div style="display:flex;gap:8px;margin-bottom:20px;"><button class="btn-acao secundario" id="btnEditarProjeto" style="font-size:13px">Editar projeto</button><button class="btn-acao perigo" id="btnRemoverProjeto" style="font-size:13px">Remover</button></div></div></div>
 
-      <!-- SEÇÃO: RITUAIS -->
-      <div id="secaoRituais" class="oculto" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Rituais</h1>
-            <p>Reuniões e rotinas da Casa.</p>
-          </div>
-        </header>
-        <div class="secao">
-          <div class="cartao">
-            <div class="campo"><label>Nome do ritual</label><input id="ritNome" type="text" placeholder="Ex.: Planejamento semanal"/></div>
-            <div class="campo"><label>Frequência</label><select id="ritFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select></div>
-            <div class="campo"><label>Pauta padrão</label><textarea id="ritPauta" placeholder="Tópicos, um por linha"></textarea></div>
-            <div class="campo"><label class="toggle-label"><input id="ritPrivado" type="checkbox"/>Conteúdo privado</label></div>
-            <button class="btn-acao" id="btnSalvarRitual" style="width:100%">Salvar ritual</button>
-            <div id="avisoRitual" class="aviso"></div>
-          </div>
-          <div class="cartao"><div id="listaRituais"><div class="vazio">Carregando...</div></div></div>
-        </div>
-      </div>
+      <div id="secaoRituais" class="oculto" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Rituais</h1><p>Reuniões e rotinas da Casa.</p></div></header><div class="secao"><div class="cartao"><div class="campo"><label>Nome do ritual</label><input id="ritNome" type="text" placeholder="Ex.: Planejamento semanal"/></div><div class="campo"><label>Frequência</label><select id="ritFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select></div><div class="campo"><label>Pauta padrão</label><textarea id="ritPauta" placeholder="Tópicos, um por linha"></textarea></div><div class="campo"><label class="toggle-label"><input id="ritPrivado" type="checkbox"/>Conteúdo privado</label></div><button class="btn-acao" id="btnSalvarRitual" style="width:100%">Salvar ritual</button><div id="avisoRitual" class="aviso"></div></div><div class="cartao"><div id="listaRituais"><div class="vazio">Carregando...</div></div></div></div></div>
 
-      <!-- SEÇÃO: CONFIGURAÇÕES -->
-      <div id="secaoConfig" class="oculto" style="display:none;">
-        <header class="lifeos-page-head lifeos-page-head--with-back">
-          <button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-          <div class="lifeos-page-head-copy">
-            <span class="lifeos-page-kicker">LifeOS</span>
-            <h1>Configurações</h1>
-            <p>Preferências, locais e histórico do LifeOS.</p>
-          </div>
-        </header>
-        <div class="secao">
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Tokens Siri</span>
-              <button class="btn-acao secundario" id="btnGerarToken" style="font-size:12px;padding:5px 10px">+ Gerar</button>
-            </div>
-            <div id="listaTokens"></div>
-            <div id="avisoTokens" class="aviso"></div>
-          </div>
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Locais do estoque</span>
-              <button class="btn-acao secundario" id="btnNovoLocalEstoque" style="font-size:12px;padding:5px 10px">+ Novo</button>
-            </div>
-            <div id="listaLocaisEstoque"></div>
-            <div id="inputNovoLocalEstoque" class="oculto" style="display:none;margin-top:10px;">
-              <div style="display:flex;gap:8px;"><input id="nomeNovoLocalEstoque" type="text" placeholder="Ex.: Despensa" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarNovoLocalEstoque" style="font-size:13px;padding:8px 12px">Salvar</button></div>
-            </div>
-          </div>
-          <div class="cartao">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-              <span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Locais de compra</span>
-              <button class="btn-acao secundario" id="btnNovoLocalCompra" style="font-size:12px;padding:5px 10px">+ Novo</button>
-            </div>
-            <div id="listaLocaisCompra"></div>
-            <div id="inputNovoLocalCompra" class="oculto" style="display:none;margin-top:10px;">
-              <div class="campo"><input id="nomeNovoLocalCompra" type="text" placeholder="Ex.: Padaria"/></div>
-              <div id="avisoNovoLocalCompra" class="aviso"></div>
-            </div>
-          </div>
-          <div class="cartao">
-            <div style="margin-bottom:12px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Histórico de excluídos</div>
-            <div class="filtros-plantas" style="padding:0 0 12px;">
-              <button class="filtro-btn ativo" data-modulo="todos">Todos</button>
-              <button class="filtro-btn" data-modulo="tarefas">Tarefas</button>
-              <button class="filtro-btn" data-modulo="contas">Contas</button>
-              <button class="filtro-btn" data-modulo="estoque">Estoque</button>
-              <button class="filtro-btn" data-modulo="lista_compras">Lista</button>
-              <button class="filtro-btn" data-modulo="rituais">Rituais</button>
-            </div>
-            <div id="listaHistorico"></div>
-          </div>
-        </div>
-      </div>
+      <div id="secaoConfig" class="oculto" style="display:none;"><header class="lifeos-page-head lifeos-page-head--with-back"><button class="lifeos-icon-action" onclick="voltarContexto()" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><div class="lifeos-page-head-copy"><span class="lifeos-page-kicker">LifeOS</span><h1>Configurações</h1><p>Preferências, locais e histórico do LifeOS.</p></div></header><div class="secao"><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Tokens Siri</span><button class="btn-acao secundario" id="btnGerarToken" style="font-size:12px;padding:5px 10px">+ Gerar</button></div><div id="listaTokens"></div><div id="avisoTokens" class="aviso"></div></div><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Locais do estoque</span><button class="btn-acao secundario" id="btnNovoLocalEstoque" style="font-size:12px;padding:5px 10px">+ Novo</button></div><div id="listaLocaisEstoque"></div><div id="inputNovoLocalEstoque" class="oculto" style="display:none;margin-top:10px;"><div style="display:flex;gap:8px;"><input id="nomeNovoLocalEstoque" type="text" placeholder="Ex.: Despensa" style="flex:1;padding:11px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><button class="btn-acao" id="btnSalvarNovoLocalEstoque" style="font-size:13px;padding:8px 12px">Salvar</button></div></div></div><div class="cartao"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Locais de compra</span><button class="btn-acao secundario" id="btnNovoLocalCompra" style="font-size:12px;padding:5px 10px">+ Novo</button></div><div id="listaLocaisCompra"></div><div id="inputNovoLocalCompra" class="oculto" style="display:none;margin-top:10px;"><div class="campo"><input id="nomeNovoLocalCompra" type="text" placeholder="Ex.: Padaria"/></div><div id="avisoNovoLocalCompra" class="aviso"></div></div></div><div class="cartao"><div style="margin-bottom:12px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Histórico de excluídos</div><div class="filtros-plantas" style="padding:0 0 12px;"><button class="filtro-btn ativo" data-modulo="todos">Todos</button><button class="filtro-btn" data-modulo="tarefas">Tarefas</button><button class="filtro-btn" data-modulo="contas">Contas</button><button class="filtro-btn" data-modulo="estoque">Estoque</button><button class="filtro-btn" data-modulo="lista_compras">Lista</button><button class="filtro-btn" data-modulo="rituais">Rituais</button></div><div id="listaHistorico"></div></div></div></div>
 
-    </div><!-- fim app-body -->
-
-    <!-- BARRA INFERIOR -->
-    <nav class="tab-bar" aria-label="Navegação principal">
-      <button class="tab-btn ativa" data-tab="hoje" onclick="trocarAba('hoje',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Hoje
-      </button>
-      <button class="tab-btn" data-tab="ritmo" onclick="abrirRitmoContextual()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h3l2-6 4 12 2-6h5"/></svg>
-        Ritmo
-      </button>
-      <button class="tab-btn" data-tab="financeiro" onclick="trocarAba('financeiro',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
-        Financeiro
-      </button>
-      <button class="tab-btn" data-tab="plantas" onclick="trocarAba('plantas',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>
-        Plantas
-      </button>
-      <button class="tab-btn" data-tab="mais" onclick="trocarAba('mais',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-        Mais
-      </button>
-    </nav>
-
-  </div><!-- fim telaApp -->
-
-</div><!-- fim appRoot -->
-
-<!-- MODAIS -->
-
-<!-- Editar tarefa -->
-<div id="modalEditarTarefa" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo">Editar tarefa</span><button class="modal-fechar" id="btnFecharEditarTarefa">&times;</button></div>
-    <div class="campo"><label>Título</label><input id="etTitulo" type="text"/></div>
-    <div class="lifeos-form-grid-2">
-      <div class="campo"><label>Responsável</label><select id="etResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div>
-      <div class="campo"><label>Data</label><input id="etData" type="date"/></div>
     </div>
-    <div class="campo"><label class="toggle-label"><input id="etRecorrente" type="checkbox"/>Repete</label></div>
-    <div id="etRecorrenciaBox" class="campo oculto" style="display:none;"><input id="etRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div>
-    <button class="btn-primario" id="btnSalvarEditarTarefa">Salvar alterações</button>
-    <div id="avisoEditarTarefa" class="aviso"></div>
+
+    <nav class="tab-bar" aria-label="Navegação principal"><button class="tab-btn ativa" data-tab="hoje" onclick="trocarAba('hoje',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Hoje</button><button class="tab-btn" data-tab="ritmo" onclick="abrirRitmoContextual()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h3l2-6 4 12 2-6h5"/></svg>Ritmo</button><button class="tab-btn" data-tab="financeiro" onclick="trocarAba('financeiro',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Financeiro</button><button class="tab-btn" data-tab="plantas" onclick="trocarAba('plantas',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14V8"/><path d="M12 10c-4 0-6-2-6-5 4 0 6 2 6 5Z"/><path d="M12 8c4 0 6-2 6-5-4 0-6 2-6 5Z"/><path d="M6 14h12l-1 7H7Z"/></svg>Plantas</button><button class="tab-btn" data-tab="mais" onclick="trocarAba('mais',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>Mais</button></nav>
   </div>
 </div>
 
-<!-- Editar conta -->
-<div id="modalEditarConta" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo">Editar conta</span><button class="modal-fechar" id="btnFecharEditarConta">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="ecNome" type="text"/></div>
-    <div class="lifeos-form-grid-2">
-      <div class="campo"><label>Valor (R$)</label><input id="ecValor" type="number" min="0" step="0.01"/></div>
-      <div class="campo"><label>Vencimento</label><input id="ecVenc" type="date"/></div>
-    </div>
-    <div class="campo"><label class="toggle-label"><input id="ecRecorrente" type="checkbox"/>Repete todo mês</label></div>
-    <button class="btn-primario" id="btnSalvarEditarConta">Salvar alterações</button>
-    <div id="avisoEditarConta" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Editar estoque -->
-<div id="modalEditarEstoque" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo">Editar item</span><button class="modal-fechar" id="btnFecharEditarEstoque">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="eeNome" type="text"/></div>
-    <div class="campo"><label>Local</label><select id="eeLocal" class="sel"><option value="">— Sem local —</option></select></div>
-    <div id="eeQtdBox">
-      <div style="display:flex;gap:10px;">
-        <div class="campo"><label>Mínimo</label><input id="eeMin" type="number" min="0" step="any"/></div>
-        <div class="campo" style="flex:1"><label>Unidade</label><input id="eeUnidade" type="text"/></div>
-      </div>
-    </div>
-    <div class="campo"><label>Consumo estimado</label>
-      <div style="display:flex;gap:8px;">
-        <input id="eeTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1;padding:12px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:15px;background:var(--bg);"/>
-        <select id="eeTaxaPeriodo" class="sel" style="flex:1;"><option value="">— por —</option><option value="dia">por dia</option><option value="semana">por semana</option><option value="mes">por mês</option></select>
-        <div style="flex:1;display:flex;align-items:center;gap:4px;"><input id="eeAlertaDias" type="number" min="1" style="width:50px;padding:12px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><span style="font-size:11px;color:var(--muted)">dias</span></div>
-      </div>
-    </div>
-    <div class="campo"><label class="toggle-label"><input id="eeCritico" type="checkbox"/>Item crítico</label></div>
-    <button class="btn-primario" id="btnSalvarEditarEstoque">Salvar alterações</button>
-    <div id="avisoEditarEstoque" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Editar item lista -->
-<div id="modalEditarLista" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo">Editar item</span><button class="modal-fechar" id="btnFecharEditarLista">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="elNome" type="text"/></div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:1"><label>Quantidade</label><input id="elQtd" type="number" min="0" step="any"/></div>
-      <div class="campo"><label>Unidade</label><input id="elUnidade" type="text" placeholder="Ex.: kg, un"/></div>
-    </div>
-    <div class="campo"><label>Lista</label>
-      <select id="elCicloCompra" class="sel">
-        <option value="semanal">Compra semanal</option>
-        <option value="mensal">Compra do mês</option>
-      </select>
-    </div>
-    <button class="btn-primario" id="btnSalvarEditarLista">Salvar alterações</button>
-    <div id="avisoEditarLista" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Editar planta -->
-<div id="modalEditarPlanta" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo" id="epTitulo">Editar planta</span><button class="modal-fechar" id="btnFecharEditarPlanta">&times;</button></div>
-    <div class="campo"><label>Nome personalizado</label><input id="epApelido" type="text" placeholder="Opcional"/></div>
-    <div class="lifeos-form-grid-2">
-      <div class="campo"><label>Cômodo</label><select id="epComodo" class="sel"><option value="Sala">Sala</option><option value="Cozinha">Cozinha</option><option value="Banheiro">Banheiro</option><option value="Escritório">Escritório</option><option value="Varanda">Varanda</option><option value="Quarto">Quarto</option></select></div>
-      <div class="campo"><label>Posição</label><input id="epPosicao" type="text" placeholder="Ex.: Mesa"/></div>
-    </div>
-    <div class="lifeos-form-grid-2">
-      <div class="campo"><label>Método</label><select id="epMetodo" class="sel"><option value="substrato">Substrato</option><option value="agua">Água</option><option value="kokedama">Kokedama</option></select></div>
-      <div class="campo"><label>Perfil hídrico</label><select id="epPerfil" class="sel"><option value="alto">Alto</option><option value="medio">Médio</option><option value="baixo">Baixo</option></select></div>
-    </div>
-    <div class="campo"><label>Observações</label><input id="epObs" type="text"/></div>
-    <button class="btn-primario" id="btnSalvarEditarPlanta">Salvar alterações</button>
-    <div id="avisoEditarPlanta" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Editar ritual -->
-<div id="modalEditarRitual" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><span class="modal-titulo">Editar ritual</span><button class="modal-fechar" id="btnFecharEditarRitual">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="erNome" type="text"/></div>
-    <div class="campo"><label>Frequência</label><select id="erFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select></div>
-    <div class="campo"><label>Pauta padrão</label><textarea id="erPauta"></textarea></div>
-    <div class="campo"><label class="toggle-label"><input id="erPrivado" type="checkbox"/>Conteúdo privado</label></div>
-    <button class="btn-primario" id="btnSalvarEditarRitual">Salvar alterações</button>
-    <div id="avisoEditarRitual" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Ficha da planta -->
-<div id="modalPlanta" class="modal-overlay modal-centro">
-  <div class="modal-caixa">
-    <div class="modal-header">
-      <div><div id="mpCodigo" style="font-size:11px;color:var(--muted)"></div><span class="modal-titulo" id="mpNome"></span></div>
-      <button class="modal-fechar" id="btnFecharPlanta">&times;</button>
-    </div>
-    <div id="mpAcoes" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap"></div>
-    <div id="mpDados" style="margin-bottom:16px"></div>
-    <div id="mpRotinas" style="margin-bottom:16px"></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <button class="btn-acao secundario" id="btnEditarPlanta" style="font-size:13px">Editar ficha</button>
-      <button class="btn-acao perigo" id="btnRemoverPlanta" style="font-size:13px">Remover planta</button>
-    </div>
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Linha do tempo</div>
-    <div id="mpEventos"></div>
-  </div>
-</div>
-
-<!-- Nova planta -->
-<div id="modalNovaPlanta" class="modal-overlay modal-centro">
-  <div class="modal-caixa">
-    <div class="modal-header"><span class="modal-titulo">Nova planta</span><button class="modal-fechar" id="btnFecharNovaPlanta">&times;</button></div>
-    <div id="npCodigoPreview" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
-    <div class="campo"><label>Espécie</label><select id="npEspecie" class="sel"></select></div>
-    <div class="campo" id="npNovaEspecieBox" style="display:none"><label>Nome da espécie nova</label><input id="npNovaEspecie" type="text" placeholder="Ex.: Maranta"/></div>
-    <div class="campo"><label>Apelido (opcional)</label><input id="npApelido" type="text" placeholder="Ex.: Jiboia da janela"/></div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:1"><label>Cômodo</label><select id="npComodo" class="sel"><option value="Sala">Sala</option><option value="Cozinha">Cozinha</option><option value="Banheiro">Banheiro</option><option value="Escritório">Escritório</option><option value="Varanda">Varanda</option><option value="Quarto">Quarto</option></select></div>
-      <div class="campo" style="flex:1"><label>Posição</label><input id="npPosicao" type="text" placeholder="Ex.: Mesa"/></div>
-    </div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:1"><label>Método</label><select id="npMetodo" class="sel"><option value="substrato">Substrato</option><option value="agua">Água</option><option value="kokedama">Kokedama</option></select></div>
-      <div class="campo" style="flex:1"><label>Perfil hídrico</label><select id="npPerfil" class="sel"><option value="alto">Alto</option><option value="medio" selected>Médio</option><option value="baixo">Baixo</option></select></div>
-    </div>
-    <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Rotina principal</div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:2"><label>Tipo</label><select id="npRotinaT" class="sel"><option>Verificar e regar</option><option>Trocar a água</option><option>Fazer imersão</option></select></div>
-      <div class="campo" style="flex:1"><label>A cada (dias)</label><input id="npRotinaI" type="number" min="1" value="7"/></div>
-    </div>
-    <div class="campo"><label>Observações</label><input id="npObs" type="text" placeholder="Opcional"/></div>
-    <button class="btn-primario" id="btnSalvarNovaPlanta">Salvar planta</button>
-    <div id="avisoNovaPlanta" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Modal ritual (sessão) -->
-<div id="modalRitual" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><strong id="modalRitNome" class="modal-titulo"></strong><button class="modal-fechar" id="btnFecharModalRitual">&times;</button></div>
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Pauta de hoje</div>
-    <div id="modalRitPauta" style="background:var(--bg);border-radius:var(--r-sm);padding:12px;font-size:14px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap"></div>
-    <div class="campo"><label>Decisões e anotações</label><textarea id="modalRitNotas" placeholder="O que foi decidido?"></textarea></div>
-    <div class="campo"><label>Próxima sessão</label><input id="modalRitProxima" type="date"/></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-acao" id="btnConcluirRitual">Concluir sessão</button>
-      <button class="btn-acao secundario" id="btnCriarTarefaRitual">+ Criar tarefa</button>
-    </div>
-    <div id="avisoSessao" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Modal refeição -->
-<div id="modalRefeicao" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><strong id="modalRefTitulo" class="modal-titulo">Escolha a refeição</strong><button class="modal-fechar" id="btnFecharModalRef">&times;</button></div>
-    <div class="campo"><input id="modalRefNomeAvulso" type="text" placeholder="Ou digite um nome avulso…"/></div>
-    <div class="lifeos-form-grid-3 lifeos-nutrition-grid">
-      <div class="campo"><label>Calorias</label><input id="modalRefKcal" type="number" min="0" step="1" placeholder="kcal"/></div>
-      <div class="campo"><label>Proteína</label><input id="modalRefProteina" type="number" min="0" step="0.1" placeholder="g"/></div>
-      <div class="campo"><label>Carboidratos</label><input id="modalRefCarbo" type="number" min="0" step="0.1" placeholder="g"/></div>
-    </div>
-    <div id="modalRefLista"></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn-acao" id="btnConfirmarRef">Confirmar</button>
-      <button class="btn-acao secundario" id="btnLimparSlot">Limpar slot</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal inventário -->
-<div id="modalInventario" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><strong class="modal-titulo">Inventário rotativo</strong><button class="modal-fechar" id="btnFecharInventario">&times;</button></div>
-    <div id="invPassoLocal">
-      <div class="campo"><label>Escolha o ambiente</label><select id="invLocal" class="sel"><option value="">— Selecione —</option></select></div>
-      <button class="btn-acao" id="btnIniciarInventario" style="width:100%">Iniciar inventário</button>
-      <div id="avisoInventario" class="aviso"></div>
-    </div>
-    <div id="invPassoItens" class="oculto" style="display:none;">
-      <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;" id="invSubtitulo"></div>
-      <div id="invItens"></div>
-      <div style="margin-top:16px;display:flex;gap:8px">
-        <button class="btn-acao" id="btnConcluirInventario">Concluir inventário</button>
-        <button class="btn-acao secundario" id="btnVoltarLocal">Voltar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal histórico de conta -->
-<div id="modalHistConta" class="modal-overlay modal-centro">
-  <div class="modal-caixa">
-    <div class="modal-header"><strong id="hcNome" class="modal-titulo"></strong><button class="modal-fechar" id="btnFecharHistConta">&times;</button></div>
-    <div id="hcResumo" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div>
-    <div class="cartao" style="margin-bottom:16px;padding:14px;">
-      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Adicionar mês retroativo</div>
-      <div style="display:flex;gap:10px;">
-        <div class="campo" style="flex:1"><label>Mês</label><input id="hcMes" type="month"/></div>
-        <div class="campo" style="flex:1"><label>Valor (R$)</label><input id="hcValorRetro" type="number" min="0" step="0.01" placeholder="opcional"/></div>
-      </div>
-      <button class="btn-acao" id="btnAddRetro" style="width:100%">Adicionar</button>
-      <div id="avisoRetro" class="aviso"></div>
-    </div>
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Histórico</div>
-    <div id="hcHistorico"></div>
-  </div>
-</div>
-
-<!-- Modal novo/editar projeto -->
-<div id="modalProjeto" class="modal-overlay">
-  <div class="modal-folha">
-    <div class="modal-header"><strong id="modalProjetoTitulo" class="modal-titulo">Novo projeto</strong><button class="modal-fechar" id="btnFecharModalProjeto">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="projNome" type="text" placeholder="Ex.: Projeto Verão 2027"/></div>
-    <div class="campo"><label>Descrição (opcional)</label><input id="projDesc" type="text" placeholder="Objetivo geral"/></div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:1"><label>Início</label><input id="projInicio" type="date"/></div>
-      <div class="campo" style="flex:1"><label>Término previsto</label><input id="projTermino" type="date"/></div>
-    </div>
-    <div style="display:flex;gap:10px;">
-      <div class="campo" style="flex:1"><label>Status</label><select id="projStatus" class="sel"><option value="nao_iniciado">Não iniciado</option><option value="em_andamento">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select></div>
-      <div class="campo" style="flex:1"><label>Acompanhamento</label><select id="projFreq" class="sel"><option value="diario">Diário</option><option value="semanal" selected>Semanal</option><option value="mensal">Mensal</option></select></div>
-    </div>
-    <button class="btn-primario" id="btnSalvarProjeto">Salvar projeto</button>
-    <div id="avisoProjeto" class="aviso"></div>
-  </div>
-</div>
-
-<!-- Modal editar local de compra -->
-<div id="modalEditarLocalCompra" class="modal-overlay modal-centro">
-  <div class="modal-caixa">
-    <div class="modal-header"><strong id="elcTitulo" class="modal-titulo">Local de compra</strong><button class="modal-fechar" id="btnFecharEditarLocalCompra">&times;</button></div>
-    <div class="campo"><label>Nome</label><input id="elcNome" type="text"/></div>
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Endereços</div>
-    <div id="elcEnderecos"></div>
-    <div style="margin-bottom:14px;">
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input id="elcNovoEnd" type="text" placeholder="Endereço" style="flex:2;padding:10px 12px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/>
-        <input id="elcNovoLat" type="number" step="any" placeholder="Lat" style="flex:1;padding:10px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/>
-        <input id="elcNovoLon" type="number" step="any" placeholder="Lon" style="flex:1;padding:10px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/>
-      </div>
-      <button class="btn-acao secundario" id="btnAddEndereco" style="font-size:12px;padding:6px 10px">+ Endereço</button>
-    </div>
-    <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Categorias</div>
-    <div id="elcCategorias"></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" id="elcBtnsCategorias"></div>
-    <div style="margin-top:16px;display:flex;gap:8px;">
-      <button class="btn-acao" id="btnSalvarEditarLocalCompra">Salvar</button>
-      <button class="btn-acao perigo" id="btnExcluirLocalCompra">Excluir local</button>
-    </div>
-    <div id="avisoEditarLocalCompra" class="aviso"></div>
-  </div>
-</div>
+<div id="modalEditarTarefa" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo">Editar tarefa</span><button class="modal-fechar" id="btnFecharEditarTarefa">&times;</button></div><div class="campo"><label>Título</label><input id="etTitulo" type="text"/></div><div class="lifeos-form-grid-2"><div class="campo"><label>Responsável</label><select id="etResp" class="sel"><option value="ambos">Ambos</option><option value="mateus">Mateus</option><option value="ghustavo">Ghustavo</option></select></div><div class="campo"><label>Data</label><input id="etData" type="date"/></div></div><div class="campo"><label class="toggle-label"><input id="etRecorrente" type="checkbox"/>Repete</label></div><div id="etRecorrenciaBox" class="campo oculto" style="display:none;"><input id="etRecorrencia" type="text" placeholder="Ex.: 2x/semana"/></div><button class="btn-primario" id="btnSalvarEditarTarefa">Salvar alterações</button><div id="avisoEditarTarefa" class="aviso"></div></div></div>
+<div id="modalEditarConta" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo">Editar conta</span><button class="modal-fechar" id="btnFecharEditarConta">&times;</button></div><div class="campo"><label>Nome</label><input id="ecNome" type="text"/></div><div class="lifeos-form-grid-2"><div class="campo"><label>Valor (R$)</label><input id="ecValor" type="number" min="0" step="0.01"/></div><div class="campo"><label>Vencimento</label><input id="ecVenc" type="date"/></div></div><div class="campo"><label class="toggle-label"><input id="ecRecorrente" type="checkbox"/>Repete todo mês</label></div><button class="btn-primario" id="btnSalvarEditarConta">Salvar alterações</button><div id="avisoEditarConta" class="aviso"></div></div></div>
+<div id="modalEditarEstoque" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo">Editar item</span><button class="modal-fechar" id="btnFecharEditarEstoque">&times;</button></div><div class="campo"><label>Nome</label><input id="eeNome" type="text"/></div><div class="campo"><label>Local</label><select id="eeLocal" class="sel"><option value="">— Sem local —</option></select></div><div id="eeQtdBox"><div style="display:flex;gap:10px;"><div class="campo"><label>Mínimo</label><input id="eeMin" type="number" min="0" step="any"/></div><div class="campo" style="flex:1"><label>Unidade</label><input id="eeUnidade" type="text"/></div></div></div><div class="campo"><label>Consumo estimado</label><div style="display:flex;gap:8px;"><input id="eeTaxaConsumo" type="number" min="0" step="any" placeholder="Ex.: 1" style="flex:1;padding:12px 14px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:15px;background:var(--bg);"/><select id="eeTaxaPeriodo" class="sel" style="flex:1;"><option value="">— por —</option><option value="dia">por dia</option><option value="semana">por semana</option><option value="mes">por mês</option></select><div style="flex:1;display:flex;align-items:center;gap:4px;"><input id="eeAlertaDias" type="number" min="1" style="width:50px;padding:12px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:14px;background:var(--bg);"/><span style="font-size:11px;color:var(--muted)">dias</span></div></div></div><div class="campo"><label class="toggle-label"><input id="eeCritico" type="checkbox"/>Item crítico</label></div><button class="btn-primario" id="btnSalvarEditarEstoque">Salvar alterações</button><div id="avisoEditarEstoque" class="aviso"></div></div></div>
+<div id="modalEditarLista" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo">Editar item</span><button class="modal-fechar" id="btnFecharEditarLista">&times;</button></div><div class="campo"><label>Nome</label><input id="elNome" type="text"/></div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Quantidade</label><input id="elQtd" type="number" min="0" step="any"/></div><div class="campo"><label>Unidade</label><input id="elUnidade" type="text" placeholder="Ex.: kg, un"/></div></div><div class="campo"><label>Lista</label><select id="elCicloCompra" class="sel"><option value="semanal">Compra semanal</option><option value="mensal">Compra do mês</option></select></div><button class="btn-primario" id="btnSalvarEditarLista">Salvar alterações</button><div id="avisoEditarLista" class="aviso"></div></div></div>
+<div id="modalEditarPlanta" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo" id="epTitulo">Editar planta</span><button class="modal-fechar" id="btnFecharEditarPlanta">&times;</button></div><div class="campo"><label>Nome personalizado</label><input id="epApelido" type="text" placeholder="Opcional"/></div><div class="lifeos-form-grid-2"><div class="campo"><label>Cômodo</label><select id="epComodo" class="sel"><option value="Sala">Sala</option><option value="Cozinha">Cozinha</option><option value="Banheiro">Banheiro</option><option value="Escritório">Escritório</option><option value="Varanda">Varanda</option><option value="Quarto">Quarto</option></select></div><div class="campo"><label>Posição</label><input id="epPosicao" type="text" placeholder="Ex.: Mesa"/></div></div><div class="lifeos-form-grid-2"><div class="campo"><label>Método</label><select id="epMetodo" class="sel"><option value="substrato">Substrato</option><option value="agua">Água</option><option value="kokedama">Kokedama</option></select></div><div class="campo"><label>Perfil hídrico</label><select id="epPerfil" class="sel"><option value="alto">Alto</option><option value="medio">Médio</option><option value="baixo">Baixo</option></select></div></div><div class="campo"><label>Observações</label><input id="epObs" type="text"/></div><button class="btn-primario" id="btnSalvarEditarPlanta">Salvar alterações</button><div id="avisoEditarPlanta" class="aviso"></div></div></div>
+<div id="modalEditarRitual" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><span class="modal-titulo">Editar ritual</span><button class="modal-fechar" id="btnFecharEditarRitual">&times;</button></div><div class="campo"><label>Nome</label><input id="erNome" type="text"/></div><div class="campo"><label>Frequência</label><select id="erFreq" class="sel"><option value="semanal">Semanal</option><option value="mensal">Mensal</option><option value="bimestral">Bimestral</option><option value="livre">Livre</option></select></div><div class="campo"><label>Pauta padrão</label><textarea id="erPauta"></textarea></div><div class="campo"><label class="toggle-label"><input id="erPrivado" type="checkbox"/>Conteúdo privado</label></div><button class="btn-primario" id="btnSalvarEditarRitual">Salvar alterações</button><div id="avisoEditarRitual" class="aviso"></div></div></div>
+<div id="modalPlanta" class="modal-overlay modal-centro"><div class="modal-caixa"><div class="modal-header"><div><div id="mpCodigo" style="font-size:11px;color:var(--muted)"></div><span class="modal-titulo" id="mpNome"></span></div><button class="modal-fechar" id="btnFecharPlanta">&times;</button></div><div id="mpAcoes" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap"></div><div id="mpDados" style="margin-bottom:16px"></div><div id="mpRotinas" style="margin-bottom:16px"></div><div style="display:flex;gap:8px;margin-bottom:16px;"><button class="btn-acao secundario" id="btnEditarPlanta" style="font-size:13px">Editar ficha</button><button class="btn-acao perigo" id="btnRemoverPlanta" style="font-size:13px">Remover planta</button></div><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Linha do tempo</div><div id="mpEventos"></div></div></div>
+<div id="modalNovaPlanta" class="modal-overlay modal-centro"><div class="modal-caixa"><div class="modal-header"><span class="modal-titulo">Nova planta</span><button class="modal-fechar" id="btnFecharNovaPlanta">&times;</button></div><div id="npCodigoPreview" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div><div class="campo"><label>Espécie</label><select id="npEspecie" class="sel"></select></div><div class="campo" id="npNovaEspecieBox" style="display:none"><label>Nome da espécie nova</label><input id="npNovaEspecie" type="text" placeholder="Ex.: Maranta"/></div><div class="campo"><label>Apelido (opcional)</label><input id="npApelido" type="text" placeholder="Ex.: Jiboia da janela"/></div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Cômodo</label><select id="npComodo" class="sel"><option value="Sala">Sala</option><option value="Cozinha">Cozinha</option><option value="Banheiro">Banheiro</option><option value="Escritório">Escritório</option><option value="Varanda">Varanda</option><option value="Quarto">Quarto</option></select></div><div class="campo" style="flex:1"><label>Posição</label><input id="npPosicao" type="text" placeholder="Ex.: Mesa"/></div></div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Método</label><select id="npMetodo" class="sel"><option value="substrato">Substrato</option><option value="agua">Água</option><option value="kokedama">Kokedama</option></select></div><div class="campo" style="flex:1"><label>Perfil hídrico</label><select id="npPerfil" class="sel"><option value="alto">Alto</option><option value="medio" selected>Médio</option><option value="baixo">Baixo</option></select></div></div><div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Rotina principal</div><div style="display:flex;gap:10px;"><div class="campo" style="flex:2"><label>Tipo</label><select id="npRotinaT" class="sel"><option>Verificar e regar</option><option>Trocar a água</option><option>Fazer imersão</option></select></div><div class="campo" style="flex:1"><label>A cada (dias)</label><input id="npRotinaI" type="number" min="1" value="7"/></div></div><div class="campo"><label>Observações</label><input id="npObs" type="text" placeholder="Opcional"/></div><button class="btn-primario" id="btnSalvarNovaPlanta">Salvar planta</button><div id="avisoNovaPlanta" class="aviso"></div></div></div>
+<div id="modalRitual" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><strong id="modalRitNome" class="modal-titulo"></strong><button class="modal-fechar" id="btnFecharModalRitual">&times;</button></div><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Pauta de hoje</div><div id="modalRitPauta" style="background:var(--bg);border-radius:var(--r-sm);padding:12px;font-size:14px;line-height:1.6;margin-bottom:16px;white-space:pre-wrap"></div><div class="campo"><label>Decisões e anotações</label><textarea id="modalRitNotas" placeholder="O que foi decidido?"></textarea></div><div class="campo"><label>Próxima sessão</label><input id="modalRitProxima" type="date"/></div><div style="display:flex;gap:8px"><button class="btn-acao" id="btnConcluirRitual">Concluir sessão</button><button class="btn-acao secundario" id="btnCriarTarefaRitual">+ Criar tarefa</button></div><div id="avisoSessao" class="aviso"></div></div></div>
+<div id="modalRefeicao" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><strong id="modalRefTitulo" class="modal-titulo">Escolha a refeição</strong><button class="modal-fechar" id="btnFecharModalRef">&times;</button></div><div class="campo"><input id="modalRefNomeAvulso" type="text" placeholder="Ou digite um nome avulso…"/></div><div class="lifeos-form-grid-3 lifeos-nutrition-grid"><div class="campo"><label>Calorias</label><input id="modalRefKcal" type="number" min="0" step="1" placeholder="kcal"/></div><div class="campo"><label>Proteína</label><input id="modalRefProteina" type="number" min="0" step="0.1" placeholder="g"/></div><div class="campo"><label>Carboidratos</label><input id="modalRefCarbo" type="number" min="0" step="0.1" placeholder="g"/></div></div><div id="modalRefLista"></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn-acao" id="btnConfirmarRef">Confirmar</button><button class="btn-acao secundario" id="btnLimparSlot">Limpar slot</button></div></div></div>
+<div id="modalInventario" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><strong class="modal-titulo">Inventário rotativo</strong><button class="modal-fechar" id="btnFecharInventario">&times;</button></div><div id="invPassoLocal"><div class="campo"><label>Escolha o ambiente</label><select id="invLocal" class="sel"><option value="">— Selecione —</option></select></div><button class="btn-acao" id="btnIniciarInventario" style="width:100%">Iniciar inventário</button><div id="avisoInventario" class="aviso"></div></div><div id="invPassoItens" class="oculto" style="display:none;"><div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px;" id="invSubtitulo"></div><div id="invItens"></div><div style="margin-top:16px;display:flex;gap:8px"><button class="btn-acao" id="btnConcluirInventario">Concluir inventário</button><button class="btn-acao secundario" id="btnVoltarLocal">Voltar</button></div></div></div></div>
+<div id="modalHistConta" class="modal-overlay modal-centro"><div class="modal-caixa"><div class="modal-header"><strong id="hcNome" class="modal-titulo"></strong><button class="modal-fechar" id="btnFecharHistConta">&times;</button></div><div id="hcResumo" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div><div class="cartao" style="margin-bottom:16px;padding:14px;"><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Adicionar mês retroativo</div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Mês</label><input id="hcMes" type="month"/></div><div class="campo" style="flex:1"><label>Valor (R$)</label><input id="hcValorRetro" type="number" min="0" step="0.01" placeholder="opcional"/></div></div><button class="btn-acao" id="btnAddRetro" style="width:100%">Adicionar</button><div id="avisoRetro" class="aviso"></div></div><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Histórico</div><div id="hcHistorico"></div></div></div>
+<div id="modalProjeto" class="modal-overlay"><div class="modal-folha"><div class="modal-header"><strong id="modalProjetoTitulo" class="modal-titulo">Novo projeto</strong><button class="modal-fechar" id="btnFecharModalProjeto">&times;</button></div><div class="campo"><label>Nome</label><input id="projNome" type="text" placeholder="Ex.: Projeto Verão 2027"/></div><div class="campo"><label>Descrição (opcional)</label><input id="projDesc" type="text" placeholder="Objetivo geral"/></div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Início</label><input id="projInicio" type="date"/></div><div class="campo" style="flex:1"><label>Término previsto</label><input id="projTermino" type="date"/></div></div><div style="display:flex;gap:10px;"><div class="campo" style="flex:1"><label>Status</label><select id="projStatus" class="sel"><option value="nao_iniciado">Não iniciado</option><option value="em_andamento">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select></div><div class="campo" style="flex:1"><label>Acompanhamento</label><select id="projFreq" class="sel"><option value="diario">Diário</option><option value="semanal" selected>Semanal</option><option value="mensal">Mensal</option></select></div></div><button class="btn-primario" id="btnSalvarProjeto">Salvar projeto</button><div id="avisoProjeto" class="aviso"></div></div></div>
+<div id="modalEditarLocalCompra" class="modal-overlay modal-centro"><div class="modal-caixa"><div class="modal-header"><strong id="elcTitulo" class="modal-titulo">Local de compra</strong><button class="modal-fechar" id="btnFecharEditarLocalCompra">&times;</button></div><div class="campo"><label>Nome</label><input id="elcNome" type="text"/></div><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Endereços</div><div id="elcEnderecos"></div><div style="margin-bottom:14px;"><div style="display:flex;gap:6px;margin-bottom:6px;"><input id="elcNovoEnd" type="text" placeholder="Endereço" style="flex:2;padding:10px 12px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/><input id="elcNovoLat" type="number" step="any" placeholder="Lat" style="flex:1;padding:10px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/><input id="elcNovoLon" type="number" step="any" placeholder="Lon" style="flex:1;padding:10px 8px;border:1.5px solid var(--linha);border-radius:var(--r-sm);font-size:13px;background:var(--bg);"/></div><button class="btn-acao secundario" id="btnAddEndereco" style="font-size:12px;padding:6px 10px">+ Endereço</button></div><div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Categorias</div><div id="elcCategorias"></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" id="elcBtnsCategorias"></div><div style="margin-top:16px;display:flex;gap:8px;"><button class="btn-acao" id="btnSalvarEditarLocalCompra">Salvar</button><button class="btn-acao perigo" id="btnExcluirLocalCompra">Excluir local</button></div><div id="avisoEditarLocalCompra" class="aviso"></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="/ritmo.js?v=5" defer></script>
-<script type="module" src="app.js?v=13"></script>
+<script src="/ritmo.js?v=6" defer></script>
+<script type="module" src="/app-bootstrap.js?v=1"></script>
 </body>
 </html>
