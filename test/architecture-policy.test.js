@@ -81,3 +81,16 @@ test('Hoje e Casa possuem owners reais fora do monólito', () => {
   assert.match(casa, /export function trocarSubCasa/);
   assert.match(casa, /export function subCasaAtiva/);
 });
+
+
+test('Plantas delega a lista para um owner visual dedicado', () => {
+  const app = read('public/app.js');
+  const view = read('public/plantas-view.js');
+
+  assert.match(app, /import \{ renderizarListaPlantas \} from '\.\/plantas-view\.js\?v=1';/);
+  assert.match(app, /renderizarListaPlantas\(\{/);
+  assert.doesNotMatch(app, /function renderizarPlantas\(\)|linha\.className='planta-card'/);
+  assert.match(view, /export function renderizarListaPlantas/);
+  assert.match(view, /className = 'planta-card'/);
+  assert.doesNotMatch(view, /supa\.|from\('/);
+});

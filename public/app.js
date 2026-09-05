@@ -6,6 +6,7 @@ import { excluirContaPorId } from './contas.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
 import { renderizarHoje } from './hoje-view.js?v=2';
 import { trocarSubCasa, subCasaAtiva } from './casa-view.js?v=1';
+import { renderizarListaPlantas } from './plantas-view.js?v=1';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
@@ -202,7 +203,7 @@ function trocarAba(qual,btn,opcoes={}){
   const body=el('appBody');if(body)body.scrollTop=0;
   if(qual==='hoje'&&usuario)carregarHoje();
   if(qual==='financeiro'&&usuario)window.dispatchEvent(new CustomEvent('lifeos:financeiro-abrir'));
-  if(qual==='plantas'&&usuario)renderizarPlantas();
+  if(qual==='plantas'&&usuario)renderizarPlantasAtuais();
 }
 
 function abrirRitmoContextual(){
@@ -552,68 +553,16 @@ async function atualizarPlantas(){
   _especies=esp;
   const contador=el('plantasContador');
   if(contador)contador.textContent=`${_plantasCache.length} plantas ativas`;
-  renderizarPlantas();
+  renderizarPlantasAtuais();
 }
 
-function renderizarPlantas(){
-  const area=el('listaPlantas');area.innerHTML='';
-  if(!_plantasCache.length){area.innerHTML='<div class="cartao"><div class="vazio">Nenhuma planta cadastrada.</div></div>';return;}
-
-  // Filtra
-  let filtradas=_plantasCache;
-  if(_filtroAtual==='vencida')filtradas=filtradas.filter(p=>urgenciaPlanta(p)==='vencida');
-  else if(_filtroAtual==='hoje')filtradas=filtradas.filter(p=>urgenciaPlanta(p)==='hoje');
-  else if(_filtroAtual==='breve')filtradas=filtradas.filter(p=>['vencida','hoje','breve'].includes(urgenciaPlanta(p)));
-  else if(_filtroAtual==='sala')filtradas=filtradas.filter(p=>p.comodo==='Sala');
-  else if(_filtroAtual==='outros')filtradas=filtradas.filter(p=>p.comodo!=='Sala');
-
-  if(!filtradas.length){area.innerHTML='<div class="cartao"><div class="vazio">Nenhuma planta neste filtro.</div></div>';return;}
-
-  // Agrupa por cômodo
-  const comodos={};
-  for(const p of filtradas){const c=p.comodo||'Sem local';if(!comodos[c])comodos[c]=[];comodos[c].push(p);}
-
-  for(const[comodo,plantas] of Object.entries(comodos)){
-    const cartao=document.createElement('div');cartao.className='cartao';
-    const titulo=document.createElement('div');titulo.className='comodo-titulo';titulo.textContent=`${comodo} (${plantas.length})`;cartao.appendChild(titulo);
-
-    for(const planta of plantas){
-      const urgencia=urgenciaPlanta(planta);
-      const infoUrg=COR_URGENCIA[urgencia];
-      const perfil=COR_PERFIL[planta.perfil_hidrico]||COR_PERFIL.medio;
-      const rotinaPrincipal=(planta.planta_rotinas||[]).find(r=>r.ativa);
-      const nomeEspecie=planta.especies?.nome_popular||'';
-
-      const linha=document.createElement('div');linha.className='planta-card';linha.onclick=()=>abrirFichaPlanta(planta);
-
-      const esq=document.createElement('div');
-      const cod=document.createElement('div');cod.className='planta-codigo';cod.textContent=`${planta.codigo} · Etiq. ${planta.numero_etiqueta}`;
-      const nome=document.createElement('div');nome.className='planta-nome';
-      nome.innerHTML=`<span class="dot-perfil" style="background:${perfil.cor}"></span>${escapeHtml(nomeEspecie)}`;
-      if(planta.nome_personalizado){const apelido=document.createElement('span');apelido.style.cssText='font-size:12px;color:var(--suave);margin-left:4px';apelido.textContent=`(${planta.nome_personalizado})`;nome.appendChild(apelido);}
-      const meta=document.createElement('div');meta.className='planta-meta';
-      if(rotinaPrincipal){
-        const prox=rotinaPrincipal.proxima_realizacao;
-        const hoje=new Date().toISOString().slice(0,10);
-        const dias=prox?Math.round((new Date(prox)-new Date(hoje))/86400000):null;
-        const quando=dias===null?'—':dias<0?`${Math.abs(dias)}d atrás`:dias===0?'hoje':`em ${dias}d`;
-        meta.textContent=`${rotinaPrincipal.tipo} · ${quando}`;
-      }
-      esq.appendChild(cod);esq.appendChild(nome);esq.appendChild(meta);
-
-      const dir=document.createElement('div');dir.style.display='flex';dir.style.alignItems='center';dir.style.gap='8px';
-      const badge=document.createElement('span');badge.className='badge';badge.style.background=infoUrg.cor;badge.textContent=infoUrg.texto;
-
-      if(urgencia==='vencida'||urgencia==='hoje'){
-        const btnCuidar=document.createElement('button');btnCuidar.textContent='Cuidar';btnCuidar.style.cssText='padding:7px 12px;font-size:13px';
-        btnCuidar.onclick=(e)=>{e.stopPropagation();cuidarPlanta(planta,btnCuidar);};
-        dir.appendChild(badge);dir.appendChild(btnCuidar);
-      }else{dir.appendChild(badge);}
-
-      linha.appendChild(esq);linha.appendChild(dir);cartao.appendChild(linha);
-    }
-    area.appendChild(cartao);
-  }
+function renderizarPlantasAtuais(){
+  renderizarListaPlantas({
+    plantas:_plantasCache,
+    filtroAtual:_filtroAtual,
+    onOpen:abrirFichaPlanta,
+    onCare:cuidarPlanta,
+  });
 }
 
 async function cuidarPlanta(planta,botao){
@@ -2202,7 +2151,7 @@ el('btnFecharHistConta').onclick=()=>{fecharModal('modalHistConta');_contaHistAt
 el('btnAddRetro').onclick=adicionarRetroativo;
 el('btnSair').onclick=sair;
 // Tab bar gerenciada pelo onclick inline no HTML
-document.querySelectorAll('.filtro-btn').forEach(b=>{b.onclick=()=>{_filtroAtual=b.dataset.filtro;document.querySelectorAll('.filtro-btn').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');renderizarPlantas();};});
+document.querySelectorAll('.filtro-btn').forEach(b=>{b.onclick=()=>{_filtroAtual=b.dataset.filtro;document.querySelectorAll('.filtro-btn').forEach(x=>x.classList.remove('ativo'));b.classList.add('ativo');renderizarPlantasAtuais();};});
 
 iniciar();
 
