@@ -18,9 +18,9 @@ test('Hoje é o único renderer do destaque contextual de refeição no mobile',
   assert.match(hoje, /renderCards\(dados, plantasUrgentes\)/);
 });
 
-test('destaque vazio nunca reserva uma barra na tela Hoje', () => {
+test('faixa contextual legada nunca ocupa espaço abaixo do Cardápio da Casa', () => {
   const css = ler('public/hoje.css');
-  assert.match(css, /#cardsHoje > #acMobileDestaque:empty[\s\S]*display:\s*none\s*!important/);
+  assert.match(css, /#cardsHoje > #acMobileDestaque\s*\{[\s\S]*display:\s*none\s*!important/);
 });
 
 test('ações da lista de compras permanecem estáveis mesmo antes da iconização', () => {

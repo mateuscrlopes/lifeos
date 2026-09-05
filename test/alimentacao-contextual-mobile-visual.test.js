@@ -5,19 +5,17 @@ import fs from 'node:fs';
 const ler = caminho =>
   fs.readFileSync(new URL(`../${caminho}`, import.meta.url), 'utf8');
 
-test('CSS oficial do Hoje limita os dois SVGs do destaque mobile', () => {
+test('faixa contextual duplicada não participa do layout do Hoje', () => {
   const css = ler('public/hoje.css');
-  assert.match(css, /#acMobileDestaque \.ac-mobile-icon svg/);
-  assert.match(css, /width:\s*21px\s*!important/);
-  assert.match(css, /#acMobileDestaque \.ac-mobile-chevron svg/);
-  assert.match(css, /width:\s*18px\s*!important/);
+  assert.match(css, /#cardsHoje > #acMobileDestaque\s*\{[\s\S]*display:\s*none\s*!important/);
 });
 
-test('destaque contextual do Hoje possui grid e largura limitada', () => {
-  const css = ler('public/hoje.css');
-  assert.match(css, /grid-template-columns:\s*44px minmax\(0,\s*1fr\) 20px/);
-  assert.match(css, /width:\s*calc\(100% - 40px\)/);
-  assert.match(css, /overflow:\s*hidden/);
+test('Cardápio da Casa permanece como destaque oficial de refeição no Hoje', () => {
+  const hoje = ler('public/hoje-view.js');
+  const phase3 = ler('public/phase3-polish.css');
+  assert.match(hoje, /metrica-cardapio/);
+  assert.match(hoje, /Cardápio da Casa/);
+  assert.match(phase3, /#metricasHoje \.metrica-cardapio/);
 });
 
 test('shim antigo não injeta mais CSS concorrente no mobile', () => {
