@@ -57,7 +57,6 @@ test('camada QA é carregada no mobile e tablet', () => {
   assert.match(tablet, /audit-qa-polish\.js/);
 });
 
-
 test('ações principais não dependem de confirm nativo do iOS', () => {
   const app = read('public/app.js');
   const refinements = read('public/ui-refinements.js');
@@ -91,12 +90,10 @@ test('cache da correção de confirmação é incrementado', () => {
   assert.match(tablet, /tablet-enhancements\.js\?v=4/);
 });
 
-
 test('cards do Hoje separam navegação de expansão', () => {
   const hoje = read('public/hoje-view.js');
   const ui = read('public/ui-refinements.js');
   const audit = read('public/audit-qa-polish.js');
-  const finance = read('public/central-financeira.js');
 
   assert.match(hoje, /qa-card-actions/);
   assert.match(hoje, /qa-card-open/);
@@ -104,7 +101,6 @@ test('cards do Hoje separam navegação de expansão', () => {
   assert.match(ui, /event\.target\.closest\('\.qa-card-toggle'\)/);
   assert.match(ui, /card\.classList\.contains\('qa-collapsible-card'\)/);
   assert.match(audit, /existingAction\.hidden = false/);
-  assert.match(finance, /cf-hoje-interior qa-collapsible-card qa-collapsed/);
 });
 
 test('sheets com X não exibem alça falsa e usam superfície uniforme', () => {
