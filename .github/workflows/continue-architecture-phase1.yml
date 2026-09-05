@@ -1,0 +1,52 @@
+name: Continue architecture phase 1
+
+on:
+  push:
+    branches:
+      - refactor/architectural-consolidation
+    paths:
+      - scripts/continue-architecture-phase1.mjs
+      - .github/workflows/continue-architecture-phase1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate-hoje-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/architectural-consolidation
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply deterministic consolidation
+        run: node scripts/continue-architecture-phase1.mjs
+
+      - name: Test
+        run: npm test
+
+      - name: Validate
+        run: npm run check
+
+      - name: Commit consolidated owner
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "refactor: finaliza ownership da tela Hoje"
+          git push origin HEAD:refactor/architectural-consolidation
