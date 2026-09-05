@@ -86,9 +86,10 @@ test('shell respeita safe area em navegação e modais', () => {
 test('Casa é área interna do Hoje e mantém retorno contextual', () => {
   const html = ler('public/index.html');
   const app = ler('public/app.js');
+  const casa = ler('public/casa-view.js');
   assert.match(html, /id="casaPageTitle"/);
   assert.match(html, /voltarCasaContextual\(\)/);
-  assert.match(app, /const CASA_TITULOS/);
+  assert.match(casa, /const TITULOS/);
   assert.match(app, /function voltarAbaContextual/);
   assert.match(app, /origemCasa/);
 });
@@ -101,14 +102,14 @@ test('barra inferior sobe acima do Home Indicator', () => {
 
 
 test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
-  const app = ler('public/app.js');
+  const hoje = ler('public/hoje-view.js');
   const css = ler('public/mobile-shell-v3.css');
   const polish = ler('public/product-polish-v4.css');
   const shell = ler('public/mobile-shell-v3.js');
 
-  assert.match(app, /metrica-cardapio/);
-  assert.match(app, /data-ui-destination="cardapio"/);
-  assert.match(app, /Almoço e jantar da semana/);
+  assert.match(hoje, /metrica-cardapio/);
+  assert.match(hoje, /data-ui-destination="cardapio"/);
+  assert.match(hoje, /Almoço e jantar da semana/);
   assert.match(css, /#metricasHoje \.metrica-cardapio[\s\S]*grid-column:\s*1 \/ -1/);
   assert.match(css, /#listaRefeicoes \.card-refeicao[\s\S]*max-width:\s*100%\s*!important/);
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.receita-row-actions[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px/);

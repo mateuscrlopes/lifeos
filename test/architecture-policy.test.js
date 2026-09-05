@@ -63,3 +63,21 @@ test('Hoje usa CSS declarativo e catálogo oficial de ícones', () => {
   assert.doesNotMatch(hoje, /document\.head\.appendChild\(link\)|function ensureStyle\(/);
   assert.match(icons, /chevronDown:/);
 });
+
+
+test('Hoje e Casa possuem owners reais fora do monólito', () => {
+  const app = read('public/app.js');
+  const hoje = read('public/hoje-view.js');
+  const casa = read('public/casa-view.js');
+
+  assert.match(app, /import \{ renderizarHoje \} from '\.\/hoje-view\.js\?v=2';/);
+  assert.match(app, /renderizarHoje\(\{dados,plantasUrgentes:urgentes\}\)/);
+  assert.doesNotMatch(app, /function criarCartaoHoje\(|const mg=el\('metricasHoje'\)/);
+  assert.match(hoje, /export function renderizarHoje/);
+
+  assert.match(app, /import \{ trocarSubCasa, subCasaAtiva \} from '\.\/casa-view\.js\?v=1';/);
+  assert.match(app, /window\.trocarSub = trocarSubCasa/);
+  assert.doesNotMatch(app, /const CASA_TITULOS|function trocarSub\(/);
+  assert.match(casa, /export function trocarSubCasa/);
+  assert.match(casa, /export function subCasaAtiva/);
+});

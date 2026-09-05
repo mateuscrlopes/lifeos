@@ -4,6 +4,8 @@ import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
 import { excluirContaPorId } from './contas.js';
 import { saudacao, montarHoje, inicioSemana, formatarDataISO } from './hoje.js';
+import { renderizarHoje } from './hoje-view.js?v=2';
+import { trocarSubCasa, subCasaAtiva } from './casa-view.js?v=1';
 import { selecionarItensInventario, confirmarItemInventario, concluirSessaoInventario } from './inventario.js';
 import { diasRestantes, statusConsumo, labelConsumo, gerarSugestoesConsumo } from './consumo-estoque.js';
 import { carregarPlantas, carregarEspecies, cadastrarPlanta, editarRotina, urgenciaPlanta, COR_URGENCIA, COR_PERFIL, registrarCuidado, registrarCuidadoManual, removerPlanta, contarUrgentes } from './plantas.js';
@@ -122,14 +124,6 @@ const ABAS_PRINCIPAIS=['abaHoje','abaCasa','abaFinanceiro','abaPlantas','abaMais
 const SECOES_MAIS=['secaoRitmo','secaoProjetos','secaoRituais','secaoConfig','abaPainelProjeto'];
 const _origensAba = new Map();
 
-const CASA_TITULOS = {
-  compras: ['Compras', 'Lista e compras da Casa.'],
-  estoque: ['Estoque', 'O que tem em casa, níveis e reposição.'],
-  tarefas: ['Tarefas', 'Tarefas e responsabilidades da Casa.'],
-  contas: ['Contas', 'Contas recorrentes e próximos vencimentos.'],
-  cardapio: ['Cardápio', 'Receitas e planejamento das refeições.'],
-};
-
 // ---- DATA, HORA e CLIMA ----
 function atualizarDataHoje(){
   const agora=new Date();
@@ -219,7 +213,7 @@ function abrirRitmoContextual(){
 function voltarParaLocalizacao(origem){
   if(origem?.tipo==='casa'){
     trocarAba('casa',null,{registrarOrigem:false});
-    requestAnimationFrame(()=>trocarSub(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
+    requestAnimationFrame(()=>trocarSubCasa(origem.sub,document.querySelector(`.sub-aba[data-sub="${origem.sub}"]`)));
     return;
   }
   if(origem?.tipo==='tab'){
@@ -241,16 +235,6 @@ function voltarCasaContextual(){
   voltarAbaContextual('casa');
 }
 
-function trocarSub(qual,btn){
-  document.querySelectorAll('.sub-conteudo').forEach(s=>{s.style.display='none';s.classList.add('oculto');});
-  const alvo=el('sub'+qual.charAt(0).toUpperCase()+qual.slice(1));
-  if(alvo){alvo.style.display='block';alvo.classList.remove('oculto');}
-  document.querySelectorAll('.sub-aba').forEach(b=>b.classList.toggle('ativa',b.dataset.sub===qual));
-  const [titulo,descricao]=CASA_TITULOS[qual]||['Casa','Organização da Casa'];
-  if(el('casaPageTitle'))el('casaPageTitle').textContent=titulo;
-  if(el('casaPageDescription'))el('casaPageDescription').textContent=descricao;
-}
-
 const _origensSecao = new Map();
 
 function localizacaoAtual(){
@@ -266,7 +250,7 @@ function localizacaoAtual(){
     if(node && node.style.display!=='none' && !node.classList.contains('oculto')){
       const tab=id.replace(/^aba/,'').toLowerCase();
       if(tab==='casa'){
-        const sub=[...document.querySelectorAll('.sub-aba[data-sub]')].find(b=>b.classList.contains('ativa'))?.dataset.sub || 'compras';
+        const sub=subCasaAtiva();
         return {tipo:'casa',sub};
       }
       return {tipo:'tab',tab};
@@ -1203,7 +1187,7 @@ async function concluirRitual(){
   setTimeout(()=>{fecharModal('modalRitual');_ritualAtual=null;carregarRituais();},1200);
 }
 
-function criarTarefaDoRitual(){fecharModal('modalRitual');trocarAba('casa');trocarSub('tarefas',null);el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
+function criarTarefaDoRitual(){fecharModal('modalRitual');trocarAba('casa');trocarSubCasa('tarefas',null);el('tfTitulo').value=(_ritualAtual?`[${_ritualAtual.nome}] `:'');el('tfTitulo').focus();}
 
 function abrirEditarConta(conta){
   _contaEditando=conta;
@@ -1731,89 +1715,9 @@ async function removerTarefa(t){
 async function carregarHoje(){
   atualizarDataHoje();
   const dados=await montarHoje(supa,usuario);
-  // Hero destaque
   const urgentes=contarUrgentes(_plantasCache);
-  const heroTit=el('heroTitulo');const heroSub=el('heroSub');
-  if(dados.tarefasAtencao&&dados.tarefasAtencao.length>0){
-    if(heroTit)heroTit.textContent=dados.tarefasAtencao[0].titulo;
-    if(heroSub)heroSub.textContent=`${dados.tarefasAtencao.length} tarefa${dados.tarefasAtencao.length>1?'s':''} pendente${dados.tarefasAtencao.length>1?'s':''} hoje`;
-  }else if(dados.cardapioHoje){
-    if(heroTit)heroTit.textContent=dados.cardapioHoje.almoco||dados.cardapioHoje.janta||'Cardápio do dia';
-    if(heroSub)heroSub.textContent='Cardápio planejado para hoje';
-  }else if(urgentes>0){
-    if(heroTit)heroTit.textContent=`${urgentes} planta${urgentes>1?'s precisam':' precisa'} de cuidado`;
-    if(heroSub)heroSub.textContent='Confira a aba Plantas';
-  }else{
-    if(heroTit)heroTit.textContent='Tudo em dia!';
-    if(heroSub)heroSub.textContent='Nenhuma pendência para hoje';
-  }
-  // Métricas rápidas
-  const mg=el('metricasHoje');
-  if(mg){
-    const tarefasN=dados.tarefasAtencao?.length||0;
-    const contasN=dados.contasAtencao?.length||0;
-    const comprasN=dados.compras?.total||0;
-    const estN=dados.estoqueAtencao?.length||0;
-    mg.innerHTML=`
-      <div class="metrica mi-sage clicavel" role="button" tabindex="0" data-ui-destination="tarefas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="metrica-num">${tarefasN}</div><div class="metrica-label">Tarefas</div></div>
-      <div class="metrica mi-clay clicavel" role="button" tabindex="0" data-ui-destination="contas"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div class="metrica-num">${contasN}</div><div class="metrica-label">Contas</div></div>
-      <div class="metrica mi-sky clicavel" role="button" tabindex="0" data-ui-destination="compras"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.93-1.46l1.38-5.53H6"/></svg></div><div class="metrica-num">${comprasN}</div><div class="metrica-label">Lista</div></div>
-      <div class="metrica mi-sun clicavel" role="button" tabindex="0" data-ui-destination="estoque"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div><div class="metrica-num">${estN}</div><div class="metrica-label">Estoque</div></div>
-      <div class="metrica mi-sage clicavel metrica-cardapio" role="button" tabindex="0" data-ui-destination="cardapio" aria-label="Abrir Cardápio"><div class="metrica-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 3v7M4 3v4a3 3 0 006 0V3M7 10v11M15 3v18M15 3c3 0 5 2.7 5 6s-2 5-5 5"/></svg></div><div class="metrica-cardapio-copy"><div class="metrica-cardapio-titulo">Cardápio da Casa</div><div class="metrica-label">Almoço e jantar da semana</div></div><span class="metrica-cardapio-acao">Abrir</span></div>
-    `;
-  }
-  const area=el('cardsHoje');area.innerHTML='';
-
-  // Card plantas (se houver urgentes)
-  const urgentesCards=contarUrgentes(_plantasCache);
-  if(urgentesCards>0){
-    const card=criarCartaoHoje('Plantas','plantas');
-    card.corpo.appendChild(miniItem(`${urgentesCards} ${urgentesCards===1?'planta precisa':'plantas precisam'} de cuidado`,'',''));
-    area.appendChild(card.cartao);
-  }
-
-  {
-    const card=criarCartaoHoje('Cardápio de hoje','cardapio');const ch=dados.cardapioHoje;
-    if(ch){
-      if(ch.itens?.length){
-        ch.itens.slice(0,4).forEach(item=>{
-          const resp=item.responsavel==='ambos'?'Ambos':item.responsavel.charAt(0).toUpperCase()+item.responsavel.slice(1);
-          card.corpo.appendChild(miniItem(`${labelTipoCardapio(item.tipo)} · ${resp}`,item.nome,item.calorias!=null?`${Number(item.calorias)} kcal`:''));
-        });
-      }else{
-        if(ch.almoco)card.corpo.appendChild(miniItem('Almoço',ch.almoco,''));
-        if(ch.janta)card.corpo.appendChild(miniItem('Jantar',ch.janta,''));
-        if(ch.responsavel)card.corpo.appendChild(miniItem('Responsável',ch.responsavel==='ambos'?'Ambos':ch.responsavel.charAt(0).toUpperCase()+ch.responsavel.slice(1),''));
-      }
-    }else{
-      card.corpo.appendChild(miniItem('Sem refeições planejadas','Toque para montar a semana',''));
-    }
-    area.appendChild(card.cartao);
-  }
-
-  if(dados.tudoEmDia&&urgentesCards===0){const w=document.createElement('div');w.className='card-hoje';const c=document.createElement('div');c.className='cartao';c.innerHTML='<div class="tudo-em-dia">Tudo em dia por aqui.</div>';w.appendChild(c);area.appendChild(w);}
-if(dados.tarefasAtencao&&dados.tarefasAtencao.length){const card=criarCartaoHoje('Tarefas da Casa','tarefas');for(const t of dados.tarefasAtencao){const q=t.responsavel==='ambos'?'Ambos':t.responsavel.charAt(0).toUpperCase()+t.responsavel.slice(1);card.corpo.appendChild(miniItem(t.titulo,q,''));}area.appendChild(card.cartao);}
-  if(dados.estoqueAtencao.length){const card=criarCartaoHoje('Estoque em atenção','estoque');for(const i of dados.estoqueAtencao)card.corpo.appendChild(miniItem(i.nome,`${i.quantidade} · ${i.status==='acabou'?'acabou':'baixo'}`,''));area.appendChild(card.cartao);}
-  if(dados.compras.total){const card=criarCartaoHoje('Compras','compras');for(const n of dados.compras.primeiros)card.corpo.appendChild(miniItem(n,'',''));if(dados.compras.total>dados.compras.primeiros.length){const r=document.createElement('div');r.className='mini-item';r.style.color='var(--suave)';r.textContent=`+ mais ${dados.compras.total-dados.compras.primeiros.length} na lista`;card.corpo.appendChild(r);}area.appendChild(card.cartao);}
+  renderizarHoje({dados,plantasUrgentes:urgentes});
 }
-
-function criarCartaoHoje(titulo,dest){
-  const wrap=document.createElement('div');wrap.className='card-hoje';
-  const c=document.createElement('div');c.className='cartao qa-collapsible-card qa-collapsed';c.dataset.qaDestination=dest;
-  const cab=document.createElement('div');cab.className='card-hoje-head';
-  const grupo=document.createElement('div');grupo.className='card-hoje-title-row';
-  const iconMap={tarefas:'prancheta',plantas:'broto',estoque:'caixa',compras:'carrinho',cardapio:'refeicao',contas:'cartao'};
-  if(iconMap[dest]){const ico=document.createElement('span');ico.className='card-hoje-head-icon';ico.innerHTML=iconeSvg(iconMap[dest],17);grupo.appendChild(ico);}
-  const t=document.createElement('div');t.className='card-hoje-titulo-txt';t.textContent=titulo;grupo.appendChild(t);
-  const acoes=document.createElement('div');acoes.className='qa-card-actions';
-  const abrir=document.createElement('button');abrir.type='button';abrir.className='card-hoje-abrir qa-card-open';abrir.textContent='Abrir';abrir.dataset.uiDestination=dest;
-  const toggle=document.createElement('button');toggle.type='button';toggle.className='qa-card-toggle';toggle.setAttribute('aria-label','Expandir '+titulo);toggle.setAttribute('aria-expanded','false');toggle.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-  toggle.onclick=event=>{event.preventDefault();event.stopPropagation();const recolhido=c.classList.toggle('qa-collapsed');toggle.setAttribute('aria-expanded',recolhido?'false':'true');toggle.setAttribute('aria-label',(recolhido?'Expandir ':'Recolher ')+titulo);};
-  acoes.appendChild(abrir);acoes.appendChild(toggle);cab.appendChild(grupo);cab.appendChild(acoes);
-  const corpo=document.createElement('div');corpo.className='qa-card-body';c.appendChild(cab);c.appendChild(corpo);
-  wrap.appendChild(c);return{cartao:wrap,corpo};
-}
-function miniItem(nome,meta,valor){const l=document.createElement('div');l.className='mini-item';const e=document.createElement('span');e.textContent=nome;const d=document.createElement('span');d.className='mini-meta';d.textContent=[meta,valor].filter(Boolean).join(' · ');l.appendChild(e);l.appendChild(d);return l;}
 
 // --- EVENTOS DA LINHA DO TEMPO ---
 const TIPO_LABEL_EV={cadastro:{icone:'prancheta',texto:'Cadastro'},rega:{icone:'gota',texto:'Rega'},troca_agua:{icone:'atualizar',texto:'Troca de água'},imersao:{icone:'balde',texto:'Imersão'},adubacao:{icone:'broto',texto:'Adubação'},poda:{icone:'tesoura',texto:'Poda'},observacao:{icone:'anotacao',texto:'Obs.'},alteracao_status:{icone:'repetir',texto:'Status'},muda_retirada:{icone:'broto',texto:'Muda'}};
@@ -2304,7 +2208,7 @@ iniciar();
 
 // Expor funções globais para onclick inline no HTML
 window.trocarAba = trocarAba;
-window.trocarSub = trocarSub;
+window.trocarSub = trocarSubCasa;
 window.abrirSecao = abrirSecao;
 window.voltarMais = voltarMais;
 window.voltarContexto = voltarContexto;

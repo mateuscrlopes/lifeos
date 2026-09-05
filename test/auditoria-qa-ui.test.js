@@ -93,14 +93,14 @@ test('cache da correção de confirmação é incrementado', () => {
 
 
 test('cards do Hoje separam navegação de expansão', () => {
-  const app = read('public/app.js');
+  const hoje = read('public/hoje-view.js');
   const ui = read('public/ui-refinements.js');
   const audit = read('public/audit-qa-polish.js');
   const finance = read('public/central-financeira.js');
 
-  assert.match(app, /qa-card-actions/);
-  assert.match(app, /qa-card-open/);
-  assert.match(app, /qa-collapsible-card qa-collapsed/);
+  assert.match(hoje, /qa-card-actions/);
+  assert.match(hoje, /qa-card-open/);
+  assert.match(hoje, /qa-collapsible-card qa-collapsed/);
   assert.match(ui, /event\.target\.closest\('\.qa-card-toggle'\)/);
   assert.match(ui, /card\.classList\.contains\('qa-collapsible-card'\)/);
   assert.match(audit, /existingAction\.hidden = false/);
