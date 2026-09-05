@@ -1,5 +1,10 @@
 /* LifeOS — estilos que pertencem à tela Hoje. */
 
+/* Um destaque sem conteúdo nunca deve reservar espaço na Home. */
+#cardsHoje > #acMobileDestaque:empty {
+  display: none !important;
+}
+
 #acMobileDestaque.ac-mobile-highlight {
   box-sizing: border-box !important;
   width: calc(100% - 40px) !important;
