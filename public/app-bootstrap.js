@@ -5,7 +5,6 @@ const LEGACY_MODULES = Object.freeze([
   './design-system.js?v=1',
   './theme.js?v=1',
   './ui-refinements.js?v=8',
-  './nfce.js?v=1',
   './central-financeira.js?v=7',
   './central-financeira-email.js?v=5',
   './acertos.js?v=5',
@@ -57,6 +56,9 @@ async function bootstrap() {
   // A UI oficial entra depois da compatibilidade para ser a dona final dos globais
   // compartilhados (confirm, toast, modal, ícones).
   await import('./ui/index.js?v=1');
+
+  // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
+  await import('./nfce.js?v=1');
 
   // O app é sempre a última unidade funcional a iniciar.
   await import('./app.js?v=14');
