@@ -5,6 +5,7 @@ const LEGACY_MODULES = Object.freeze([
   './design-system.js?v=1',
   './theme.js?v=1',
   './ui-refinements.js?v=8',
+  './nfce.js?v=1',
   './central-financeira.js?v=7',
   './central-financeira-email.js?v=5',
   './acertos.js?v=5',
