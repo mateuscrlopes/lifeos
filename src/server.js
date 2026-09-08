@@ -1,4 +1,4 @@
-// server.js — LifeOS v0.36.0 + Gumate Lab
+// server.js — LifeOS v0.36.1 + Gumate Lab
 import express from 'express';
 import { config } from './config.js';
 import { testarConexao } from './supabase.js';
@@ -9,6 +9,7 @@ import { registrarRotasAcertos } from './acertos.js';
 import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
 import { registrarRotasRitmo } from './ritmo.js';
 import { registrarRotasExerciciosMidia } from './exercicios-midia.js';
+import { registrarRotasNfce } from './nfce.js';
 import { buscarClima } from './clima.js';
 
 const app = express();
@@ -18,7 +19,7 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
   next();
 });
 
@@ -45,7 +46,7 @@ app.get('/saude', async (req, res) => {
     banco: banco.conectado ? 'conectado' : 'desconectado',
     detalhe: banco.conectado ? undefined : banco.motivo,
     horario: new Date().toISOString(),
-    versao: '0.36.0',
+    versao: '0.36.1',
   });
 });
 
@@ -75,6 +76,9 @@ registrarRotasIntegracaoNordestrip(app);
 // Modulo pessoal Ritmo: importacao de planos e recursos privados.
 registrarRotasRitmo(app);
 
+// Consulta autenticada das NFC-e lidas no modo Mercado.
+registrarRotasNfce(app);
+
 // Catálogo público de demonstrações de exercícios, com cache no servidor.
 registrarRotasExerciciosMidia(app);
 
@@ -82,6 +86,6 @@ registrarRotasExerciciosMidia(app);
 registrarRotasGumate(app);
 
 app.listen(config.porta, '0.0.0.0', () => {
-  console.log(`\nLifeOS v0.36.0 — porta ${config.porta}`);
+  console.log(`\nLifeOS v0.36.1 — porta ${config.porta}`);
   console.log(`Gumate: ${config.gumateEnabled ? 'habilitado' : 'desabilitado'}\n`);
 });
