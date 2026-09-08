@@ -29,6 +29,23 @@ function textoProximoCuidado(rotina) {
   return `${rotina.tipo} · ${quando}`;
 }
 
+function prepararFichaPlanta(planta) {
+  const modal = el('modalPlanta');
+  if (modal) {
+    modal.dataset.plantaId = planta.id || '';
+    modal.dataset.plantaCodigo = planta.codigo || '';
+  }
+
+  // A exclusão da ficha já pertence ao app.js, que usa o objeto _plantaAberta
+  // e removerPlanta(). A camada genérica de ui-refinements deve apenas respeitar
+  // esse owner, em vez de tentar redescobrir a planta pelo texto do código.
+  const remover = el('btnRemoverPlanta');
+  if (remover) {
+    remover.dataset.lifeosDeleteFlow = 'app';
+    remover.dataset.plantaId = planta.id || '';
+  }
+}
+
 function criarLinhaPlanta(planta, { onOpen, onCare }) {
   const urgencia = urgenciaPlanta(planta);
   const infoUrgencia = COR_URGENCIA[urgencia];
@@ -38,7 +55,10 @@ function criarLinhaPlanta(planta, { onOpen, onCare }) {
 
   const linha = document.createElement('div');
   linha.className = 'planta-card';
-  linha.onclick = () => onOpen(planta);
+  linha.onclick = () => {
+    prepararFichaPlanta(planta);
+    onOpen(planta);
+  };
 
   const esquerda = document.createElement('div');
   const codigo = document.createElement('div');
@@ -100,6 +120,11 @@ export function renderizarListaPlantas({
 } = {}) {
   const area = el('listaPlantas');
   if (!area) return;
+
+  // Garante o owner correto mesmo antes de abrir uma ficha específica.
+  const remover = el('btnRemoverPlanta');
+  if (remover) remover.dataset.lifeosDeleteFlow = 'app';
+
   area.innerHTML = '';
 
   if (!plantas.length) {
