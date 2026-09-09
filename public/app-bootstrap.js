@@ -61,6 +61,7 @@ async function bootstrap() {
 
   // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
   await import('./nfce.js?v=1');
+  await import('./nfce-browser-fallback.js?v=1');
 
   // O app é sempre a última unidade funcional a iniciar.
   await import('./app.js?v=14');
