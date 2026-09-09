@@ -45,3 +45,12 @@ test('frontend da NFC-e mantém câmera, foto e consulta autenticada', () => {
   assert.match(js, /Authorization: `Bearer \$\{token\}`/);
   assert.match(js, /Ler QR da nota fiscal/);
 });
+
+test('backend tenta rota alternativa quando a SEFAZ bloqueia o servidor principal', () => {
+  const backend = fs.readFileSync(new URL('../src/nfce.js', import.meta.url), 'utf8');
+  assert.match(backend, /nfce-rj-proxy/);
+  assert.match(backend, /baixarNfceAlternativa/);
+  assert.match(backend, /erroPrincipal\?\.codigo === 'SEFAZ_BLOQUEIO'/);
+  assert.match(backend, /rota: 'supabase'/);
+  assert.match(backend, /apikey: config\.supabaseAnonKey/);
+});
