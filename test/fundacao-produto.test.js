@@ -156,10 +156,10 @@ test('interceptador destrutivo não usa X como regra de negócio', () => {
   xButtonLines.forEach(line => assert.match(line, /dataset\.uiAction='delete'/));
 });
 
-test('servidor envia cabeçalhos de segurança básicos sem quebrar scripts inline', () => {
+test('servidor envia cabeçalhos de segurança básicos e câmera só para a própria origem', () => {
   const server = read('../src/server.js');
   assert.match(server, /X-Content-Type-Options', 'nosniff'/);
   assert.match(server, /X-Frame-Options', 'DENY'/);
   assert.match(server, /Referrer-Policy', 'strict-origin-when-cross-origin'/);
-  assert.match(server, /Permissions-Policy', 'camera=\(\), microphone=\(\), geolocation=\(\)'/);
+  assert.match(server, /Permissions-Policy', 'camera=\(self\), microphone=\(\), geolocation=\(\)'/);
 });
