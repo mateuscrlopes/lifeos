@@ -21,7 +21,6 @@ function precisaRepor(item) {
 //  - se nao precisa mais e existe sugestao pendente -> remove sugestao
 // Retorna { criou } / { removeu } para eventual feedback (opcional).
 export async function sincronizarItem(supa, usuario, item) {
-  // Ja existe uma sugestao pendente para este item de estoque?
   const { data: existentes } = await supa
     .from('lista_compras')
     .select('id')
@@ -32,7 +31,6 @@ export async function sincronizarItem(supa, usuario, item) {
 
   if (precisaRepor(item)) {
     if (!temSugestao) {
-      // Cria a sugestao na lista, claramente marcada.
       const { data } = await supa
         .from('lista_compras')
         .insert({
@@ -58,56 +56,75 @@ export async function sincronizarItem(supa, usuario, item) {
       }
       return { criou: true };
     }
-  } else {
-    // Nao precisa mais repor: remove sugestao pendente se houver.
-    // (So remove sugestoes automaticas ainda pendentes; nao mexe em item
-    //  que ja foi comprado nem em item adicionado manualmente.)
-    if (temSugestao) {
-      await supa
-        .from('lista_compras')
-        .delete()
-        .eq('estoque_id', item.id)
-        .eq('status', 'pendente')
-        .eq('origem', 'sugestao_estoque');
-      return { removeu: true };
-    }
+  } else if (temSugestao) {
+    await supa
+      .from('lista_compras')
+      .delete()
+      .eq('estoque_id', item.id)
+      .eq('status', 'pendente')
+      .eq('origem', 'sugestao_estoque');
+    return { removeu: true };
   }
 
   return {};
 }
 
 // Ponte 2: repor o estoque quando um item ligado e comprado.
-// Soma a quantidade realmente comprada ao saldo atual do estoque.
+// Cada tipo de controle tem uma semantica diferente:
+// - contavel/peso_volume: soma a quantidade comprada;
+// - presenca: comprar significa que o item passa a existir (0/1, nunca 2, 3...);
+// - nivel_visual: uma reposicao direta volta o item para "Cheio".
 export async function reporEstoque(supa, usuario, estoqueId, quantidadeComprada) {
   const qtd = Number(quantidadeComprada);
-  if (!isFinite(qtd) || qtd < 0) {
+  if (!Number.isFinite(qtd) || qtd < 0) {
     return { ok: false, motivo: 'Quantidade invalida.' };
   }
 
-  // Le o saldo atual.
   const { data: item, error } = await supa
     .from('estoque')
-    .select('id, nome, quantidade, tipo, nivel, minimo_nivel')
+    .select('id,nome,categoria,quantidade,unidade,minimo,tipo,nivel,minimo_nivel')
     .eq('id', estoqueId)
+    .eq('casa_id', usuario.casa_id)
     .single();
 
   if (error || !item) {
     return { ok: false, motivo: 'Item de estoque nao encontrado.' };
   }
 
-  const novoSaldo = Number(item.quantidade) + qtd;
+  const atualizadoEm = new Date().toISOString();
+  let payload;
+  let valorAnterior;
+  let valorNovo;
 
-  const { error: erroUpd } = await supa
+  if (item.tipo === 'presenca') {
+    payload = { quantidade: qtd > 0 ? 1 : 0, atualizado_por: usuario.id, atualizado_em: atualizadoEm };
+    valorAnterior = { quantidade: item.quantidade };
+    valorNovo = { quantidade: payload.quantidade };
+  } else if (item.tipo === 'nivel_visual') {
+    payload = { nivel: 'cheio', atualizado_por: usuario.id, atualizado_em: atualizadoEm };
+    valorAnterior = { nivel: item.nivel };
+    valorNovo = { nivel: 'cheio' };
+  } else {
+    const saldoAtual = Number(item.quantidade);
+    if (!Number.isFinite(saldoAtual)) {
+      return { ok: false, motivo: 'Saldo atual do estoque e invalido.' };
+    }
+    const novoSaldo = Math.max(0, saldoAtual + qtd);
+    payload = { quantidade: novoSaldo, atualizado_por: usuario.id, atualizado_em: atualizadoEm };
+    valorAnterior = { quantidade: item.quantidade };
+    valorNovo = { quantidade: novoSaldo };
+  }
+
+  const { data: atualizado, error: erroUpd } = await supa
     .from('estoque')
-    .update({
-      quantidade: novoSaldo,
-      atualizado_por: usuario.id,
-      atualizado_em: new Date().toISOString(),
-    })
-    .eq('id', estoqueId);
+    .update(payload)
+    .eq('id', estoqueId)
+    .eq('casa_id', usuario.casa_id)
+    .select('id,nome,categoria,quantidade,unidade,minimo,tipo,nivel,minimo_nivel')
+    .single();
 
-  if (erroUpd) {
-    return { ok: false, motivo: erroUpd.message };
+  if (erroUpd || !atualizado) {
+    return { ok: false, motivo: erroUpd?.message || 'Nao foi possivel atualizar o estoque.' };
   }
 
   supa.from('eventos').insert({
@@ -115,10 +132,15 @@ export async function reporEstoque(supa, usuario, estoqueId, quantidadeComprada)
     entidade: 'estoque',
     entidade_id: estoqueId,
     usuario_id: usuario.id,
-    valor_anterior: { quantidade: item.quantidade },
-    valor_novo: { quantidade: novoSaldo },
-    detalhe: `${usuario.nome} repos ${qtd} de ${item.nome} (compra)`,
+    valor_anterior: valorAnterior,
+    valor_novo: valorNovo,
+    detalhe: `${usuario.nome} repôs ${item.nome} após uma compra`,
   });
 
-  return { ok: true, novoSaldo };
+  return {
+    ok: true,
+    item: atualizado,
+    novoSaldo: atualizado.quantidade,
+    novoNivel: atualizado.nivel,
+  };
 }
