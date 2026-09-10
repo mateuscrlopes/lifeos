@@ -432,21 +432,30 @@
     document.head.appendChild(style);
   }
 
+  // Não reinicia o relógio a cada mutação global. O comportamento anterior podia
+  // ser adiado indefinidamente em telas com muitos MutationObservers (especialmente
+  // no iOS), deixando o histórico destruído após um rerender da Central Financeira.
   function scheduleMount() {
-    window.clearTimeout(H.mountTimer);
-    H.mountTimer = window.setTimeout(() => {
+    if (H.mountTimer) return;
+    H.mountTimer = window.requestAnimationFrame(() => {
+      H.mountTimer = null;
       installStyles();
       const host = document.getElementById('acertosCentral');
       if (!host) return;
       if (!document.getElementById('acertosHistoryModule')) load();
-    }, 80);
+    });
+  }
+
+  function refreshHistory() {
+    scheduleMount();
+    if (document.getElementById('acertosHistoryModule')) load();
   }
 
   const observer = new MutationObserver(scheduleMount);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener('lifeos:bootstrap-ready', scheduleMount);
-  window.addEventListener('focus', () => {
-    if (document.getElementById('acertosHistoryModule')) load();
-  });
+  window.addEventListener('lifeos:financeiro-atualizar', refreshHistory);
+  window.addEventListener('pageshow', refreshHistory);
+  window.addEventListener('focus', refreshHistory);
   scheduleMount();
 })();
