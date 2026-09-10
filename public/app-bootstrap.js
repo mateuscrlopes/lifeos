@@ -63,6 +63,10 @@ async function bootstrap() {
   await import('./nfce.js?v=1');
   await import('./nfce-browser-fallback.js?v=1');
 
+  // Integridade do estoque registra os guards de interação antes do app criar
+  // os controles legados. O app continua sendo a última unidade funcional.
+  await import('./stock-integrity.js?v=1');
+
   // O app é sempre a última unidade funcional a iniciar.
   await import('./app.js?v=14');
 
