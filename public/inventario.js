@@ -14,6 +14,21 @@ function diasDesde(dataStr) {
   return Math.round((Date.now() - new Date(dataStr).getTime()) / umDia);
 }
 
+export function passoQuantidadeEstoque(item) {
+  if (item?.tipo !== 'peso_volume') return 1;
+  const unidade = String(item?.unidade || '').trim().toLowerCase();
+  if (['g', 'grama', 'gramas', 'ml', 'mililitro', 'mililitros'].includes(unidade)) return 100;
+  if (['kg', 'quilo', 'quilos', 'quilograma', 'quilogramas', 'l', 'litro', 'litros'].includes(unidade)) return 1;
+  return 1;
+}
+
+export function normalizarQuantidadeEstoque(item, valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero < 0) return null;
+  if (item?.tipo === 'presenca') return numero > 0 ? 1 : 0;
+  return Math.round(numero * 1000) / 1000;
+}
+
 // Seleciona os itens de um local que precisam de conferencia.
 // Retorna { itens, local } com os itens ordenados por urgencia.
 export async function selecionarItensInventario(supa, usuario, local) {
@@ -25,8 +40,6 @@ export async function selecionarItensInventario(supa, usuario, local) {
 
   if (error || !todos) return { itens: [], local };
 
-  const agora = new Date();
-
   const itens = todos
     .filter((item) => {
       const status = calcularStatus(item.quantidade, item.minimo, item.tipo, item.nivel, item.minimo_nivel);
@@ -35,7 +48,6 @@ export async function selecionarItensInventario(supa, usuario, local) {
       return item.critico || antigo || baixo;
     })
     .sort((a, b) => {
-      // Criticos e baixos primeiro.
       const pa = (a.critico ? 0 : 1) + (calcularStatus(a.quantidade, a.minimo, a.tipo, a.nivel, a.minimo_nivel) === 'acabou' ? 0 : 1);
       const pb = (b.critico ? 0 : 1) + (calcularStatus(b.quantidade, b.minimo, b.tipo, b.nivel, b.minimo_nivel) === 'acabou' ? 0 : 1);
       return pa - pb;
@@ -46,11 +58,24 @@ export async function selecionarItensInventario(supa, usuario, local) {
 
 // Grava o resultado do inventario: atualiza o item e registra o evento.
 export async function confirmarItemInventario(supa, usuario, item, novoValor) {
-  const payload = item.tipo === 'nivel_visual'
-    ? { nivel: novoValor, atualizado_por: usuario.id, atualizado_em: new Date().toISOString() }
-    : { quantidade: Number(novoValor), atualizado_por: usuario.id, atualizado_em: new Date().toISOString() };
+  let payload;
+  let valorNovo;
 
-  const { error } = await supa.from('estoque').update(payload).eq('id', item.id);
+  if (item.tipo === 'nivel_visual') {
+    payload = { nivel: novoValor, atualizado_por: usuario.id, atualizado_em: new Date().toISOString() };
+    valorNovo = { nivel: novoValor };
+  } else {
+    const quantidade = normalizarQuantidadeEstoque(item, novoValor);
+    if (quantidade === null) return false;
+    payload = { quantidade, atualizado_por: usuario.id, atualizado_em: new Date().toISOString() };
+    valorNovo = { quantidade };
+  }
+
+  const { error } = await supa
+    .from('estoque')
+    .update(payload)
+    .eq('id', item.id)
+    .eq('casa_id', usuario.casa_id);
 
   if (!error) {
     supa.from('eventos').insert({
@@ -59,7 +84,7 @@ export async function confirmarItemInventario(supa, usuario, item, novoValor) {
       entidade_id: item.id,
       usuario_id: usuario.id,
       valor_anterior: item.tipo === 'nivel_visual' ? { nivel: item.nivel } : { quantidade: item.quantidade },
-      valor_novo: payload,
+      valor_novo: valorNovo,
       detalhe: `Inventário: ${usuario.nome} conferiu ${item.nome}`,
     });
   }
