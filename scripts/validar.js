@@ -19,6 +19,7 @@ const arquivos = [
   'public/ponte-estoque.js',
   'public/inventario.js',
   'public/stock-integrity.js',
+  'public/shopping-flow-v3.js',
   'public/plantas.js',
   'public/tablet-enhancements.js',
   'public/tablet-house-v4.js',
