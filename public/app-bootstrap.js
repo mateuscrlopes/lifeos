@@ -46,6 +46,11 @@ async function bootstrap() {
   window.__LIFEOS_BOOTSTRAP_STARTED__ = true;
   document.documentElement.dataset.lifeosBoot = 'loading';
 
+  // Compras v3 é a dona da regra estoque → planejamento → comprado. Ela entra
+  // antes das camadas de compatibilidade para capturar os caminhos antigos sem
+  // duplicar ações enquanto a migração é concluída.
+  await import('./shopping-flow-v3.js?v=1');
+
   // Importação sequencial torna a precedência temporária das camadas legadas explícita.
   for (const modulePath of LEGACY_MODULES) {
     await import(modulePath);
@@ -63,8 +68,8 @@ async function bootstrap() {
   await import('./nfce.js?v=1');
   await import('./nfce-browser-fallback.js?v=1');
 
-  // Integridade do estoque registra os guards de interação antes do app criar
-  // os controles legados. O app continua sendo a última unidade funcional.
+  // Integridade do estoque mantém exclusão segura e conferência atômica como
+  // fallback. Os ajustes rápidos já pertencem ao fluxo de compras v3.
   await import('./stock-integrity.js?v=1');
 
   // O app é sempre a última unidade funcional a iniciar.
