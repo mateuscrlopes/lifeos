@@ -9,7 +9,6 @@ const LEGACY_MODULES = Object.freeze([
   './central-financeira-email.js?v=5',
   './acertos.js?v=5',
   './acertos-history.js?v=1',
-  './market-purchase-v2.js?v=1',
   './purchase-destination-create.js?v=2',
   './mobile-shell-v3.js?v=4',
   './product-polish-v4.js?v=4',
@@ -46,6 +45,10 @@ async function bootstrap() {
   window.__LIFEOS_BOOTSTRAP_STARTED__ = true;
   document.documentElement.dataset.lifeosBoot = 'loading';
 
+  // Mercado live captura o toque "peguei" antes das camadas antigas e mantém
+  // a tela sincronizada sem um observer que rerenderiza a si próprio.
+  await import('./market-live-v3.js?v=1');
+
   // Compras v3 é a dona da regra estoque → planejamento → comprado. Ela entra
   // antes das camadas de compatibilidade para capturar os caminhos antigos sem
   // duplicar ações enquanto a migração é concluída.
@@ -67,6 +70,7 @@ async function bootstrap() {
   // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
   await import('./nfce.js?v=1');
   await import('./nfce-browser-fallback.js?v=1');
+  await import('./nfce-file-import-v2.js?v=1');
 
   // Integridade do estoque mantém exclusão segura e conferência atômica como
   // fallback. Os ajustes rápidos já pertencem ao fluxo de compras v3.
