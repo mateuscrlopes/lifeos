@@ -10,6 +10,7 @@ import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
 import { registrarRotasRitmo } from './ritmo.js';
 import { registrarRotasExerciciosMidia } from './exercicios-midia.js';
 import { registrarRotasNfce } from './nfce.js';
+import { registrarRotasNfcePdf } from './nfce-pdf.js';
 import { buscarClima } from './clima.js';
 
 const app = express();
@@ -76,8 +77,9 @@ registrarRotasIntegracaoNordestrip(app);
 // Modulo pessoal Ritmo: importacao de planos e recursos privados.
 registrarRotasRitmo(app);
 
-// Consulta autenticada das NFC-e lidas no modo Mercado.
+// Consulta autenticada das NFC-e lidas no modo Mercado e fallback por PDF textual.
 registrarRotasNfce(app);
+registrarRotasNfcePdf(app);
 
 // Catálogo público de demonstrações de exercícios, com cache no servidor.
 registrarRotasExerciciosMidia(app);
