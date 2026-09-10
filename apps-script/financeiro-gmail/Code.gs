@@ -14,6 +14,12 @@ var LIFEOS_REGRAS = [
   {
     fornecedor: 'Naturgy',
     query: 'newer_than:180d has:attachment from:conta.inteligente@naturgy.com'
+  },
+  {
+    // Entrada manual simples: compartilhe o PDF recebido no WhatsApp por e-mail
+    // para a própria conta usando um assunto que contenha LifeOS + Condomínio.
+    fornecedor: 'Condomínio',
+    query: 'newer_than:180d has:attachment subject:LifeOS {subject:Condomínio subject:Condominio}'
   }
 ];
 

@@ -13,7 +13,7 @@ import {
   extrairDadosTexto,
 } from './financeiro-extracao.js';
 
-const FORNECEDORES = new Set(['Enel', 'EI Fiber', 'QuintoAndar', 'Naturgy']);
+const FORNECEDORES = new Set(['Enel', 'EI Fiber', 'QuintoAndar', 'Naturgy', 'Condomínio']);
 const BUCKET_CONTAS = 'contas-email';
 const LIMITE_PDF_BYTES = 12 * 1024 * 1024;
 

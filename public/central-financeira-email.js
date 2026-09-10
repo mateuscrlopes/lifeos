@@ -36,12 +36,13 @@ function cfeNomePadrao(item) {
     'EI Fiber': 'Internet',
     QuintoAndar: 'Aluguel',
     Naturgy: 'Gás',
+    'Condomínio': 'Condomínio',
   };
   return mapa[item.fornecedor] || item.fornecedor;
 }
 
 function cfeCategoriaPadrao(item) {
-  return item.fornecedor === 'QuintoAndar' ? 'moradia' : 'utilidades';
+  return ['QuintoAndar', 'Condomínio'].includes(item.fornecedor) ? 'moradia' : 'utilidades';
 }
 
 function cfeDataInput(valor) {
