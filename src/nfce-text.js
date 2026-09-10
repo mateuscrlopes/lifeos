@@ -48,6 +48,21 @@ function valorAposRotulo(linhas, regex) {
   return null;
 }
 
+// O "Imprimir / Salvar em PDF" do Safari pode extrair as quatro cifras do
+// resumo antes dos respectivos rótulos. A SEFAZ-RJ imprime, nessa ordem:
+// quantidade de itens, valor bruto, desconto e valor a pagar; logo depois vem
+// "Valor pago R$". Reconhecemos esse arranjo sem depender da posição visual.
+function resumoDeslocado(texto) {
+  const match = limpar(texto).match(/(?:^|\n)\s*(\d{1,4})\s*\n\s*([\d.]+,\d{2})\s*\n\s*([\d.]+,\d{2})\s*\n\s*([\d.]+,\d{2})\s*\n\s*Valor\s+pago\s*R\$\s*:/im);
+  if (!match) return null;
+  return {
+    quantidade: Number(match[1]),
+    bruto: numeroPt(match[2]),
+    desconto: numeroPt(match[3]),
+    pagar: numeroPt(match[4]),
+  };
+}
+
 function chaveDoTexto(texto) {
   const linhas = limpar(texto).split('\n').map(textoLinha);
   for (let i = 0; i < linhas.length; i += 1) {
@@ -103,8 +118,7 @@ function itemDoBloco(nome, codigo, detalhes, valorTotal) {
 
 export function interpretarNfceTexto(textoRecebido, url = '') {
   const texto = limpar(textoRecebido);
-  const linhasOriginais = texto.split('\n');
-  const linhas = linhasOriginais.map(textoLinha);
+  const linhas = texto.split('\n').map(textoLinha);
   const itens = [];
 
   for (let i = 0; i < linhas.length; i += 1) {
@@ -138,8 +152,6 @@ export function interpretarNfceTexto(textoRecebido, url = '') {
     if (item) itens.push(item);
   }
 
-  // Compatibilidade com PDFs/extrações que colocam tudo no mesmo fluxo e não
-  // preservam a quebra antes de "Vl. Total".
   if (!itens.length) {
     const regex = /(?:^|\n)([^\n]{2,180}?)\s*\(\s*C[oó]digo\s*:\s*([^)]{1,50})\s*\)\s*(?:\n|\s)+Qtde\.?\s*:\s*([\d.,]+)\s+UN\s*:\s*([^\s]+)\s+Vl\.?\s*Unit\.?\s*:\s*([\d.,]+)\s*(?:\n|\s)+(?:Vl\.?\s*Total\s*:?\s*)?(?:\n|\s)*([\d.,]+)/gim;
     let match;
@@ -149,6 +161,7 @@ export function interpretarNfceTexto(textoRecebido, url = '') {
     }
   }
 
+  const deslocado = resumoDeslocado(texto);
   const valorAPagar = valorAposRotulo(linhas, /Valor\s+a\s+pagar\s*R\$?/i);
   const valorTotal = valorAposRotulo(linhas, /Valor\s+total\s*R\$?/i);
   const totalItens = itens.reduce((soma, item) => soma + (Number(item.valor_total) || 0), 0);
@@ -159,10 +172,11 @@ export function interpretarNfceTexto(textoRecebido, url = '') {
     cnpj: cnpjDoTexto(texto),
     chave: chaveDoTexto(texto),
     emissao: emissaoDoTexto(texto),
-    total: valorAPagar ?? valorTotal ?? (totalItens || null),
-    total_itens_bruto: valorTotal ?? (totalItens || null),
+    total: deslocado?.pagar ?? valorAPagar ?? valorTotal ?? (totalItens || null),
+    total_itens_bruto: deslocado?.bruto ?? valorTotal ?? (totalItens || null),
+    desconto: deslocado?.desconto ?? null,
     quantidade_itens: itens.length,
-    quantidade_itens_declarada: qtdDeclarada == null ? null : Number(qtdDeclarada),
+    quantidade_itens_declarada: deslocado?.quantidade ?? (qtdDeclarada == null ? null : Number(qtdDeclarada)),
     itens,
     url: url || null,
   };
