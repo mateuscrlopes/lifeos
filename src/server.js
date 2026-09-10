@@ -6,6 +6,7 @@ import { registrarRotasAtalhos } from './atalhos.js';
 import { registrarRotasFinanceiroEmail } from './financeiro-email.js';
 import { registrarRotasGumate } from './gumate/index.js';
 import { registrarRotasAcertos } from './acertos.js';
+import { registrarRotasDespesaComprovante } from './despesa-comprovante-routes.js';
 import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
 import { registrarRotasRitmo } from './ritmo.js';
 import { registrarRotasExerciciosMidia } from './exercicios-midia.js';
@@ -69,6 +70,7 @@ registrarRotasFinanceiroEmail(app);
 
 // Acertos financeiros entre moradores.
 registrarRotasAcertos(app);
+registrarRotasDespesaComprovante(app);
 
 // Ponte financeira com o Nordestrip.
 registrarRotasIntegracaoNordestrip(app);
