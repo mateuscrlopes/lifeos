@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
+import { classificarItensChegada } from './atalhos-chegada.js';
 
 async function autenticarToken(token) {
   if (!token) return null;
@@ -228,29 +229,20 @@ export function registrarRotasAtalhos(app) {
         .eq('casa_id', usuario.casa_id)
         .eq('status', 'pendente'),
       supa.from('estoque')
-        .select('id,nome,local,critico')
+        .select('id,nome,categoria,local,critico,tipo,quantidade,minimo,nivel,minimo_nivel')
         .eq('casa_id', usuario.casa_id),
     ]);
 
     if (itensError || estoqueError) return res.status(500).send('Não foi possível consultar a lista de compras.');
 
-    const estoquePorId = new Map((itensEstoque || []).map(item => [item.id, item]));
-    const estoquePorNome = new Map((itensEstoque || []).map(item => [normalizarTexto(item.nome), item]));
-
-    const classificados = (itensLista || []).map(item => {
-      const estoque = estoquePorId.get(item.estoque_id)
-        || estoquePorNome.get(normalizarTexto(item.nome))
-        || null;
-      const critico = Boolean(estoque?.critico);
-      const destinoMercado = !item.compra_destinos || item.compra_destinos.entra_lista_mercado !== false;
-      return { ...item, estoque, critico, compativel: destinoMercado };
+    const { criticos, reposicao, outros } = classificarItensChegada({
+      itensLista: itensLista || [],
+      itensEstoque: itensEstoque || [],
+      categoriasAceitas: categorias,
     });
 
-    const criticos = classificados.filter(item => item.critico);
-    const outros = classificados.filter(item => !item.critico && item.compativel);
-
-    if (!criticos.length && !outros.length) {
-      const base = `Você está no ${localDetectado.nome}. Nenhum item da lista é daqui.`;
+    if (!criticos.length && !reposicao.length && !outros.length) {
+      const base = `Você está no ${localDetectado.nome}. Nenhum item necessário é daqui.`;
       return res.send(diagnostico ? `${base} Detecção: ${origemDeteccao}.` : base);
     }
 
@@ -258,8 +250,11 @@ export function registrarRotasAtalhos(app) {
     if (criticos.length) {
       partes.push(`${criticos.length} ${criticos.length === 1 ? 'item crítico' : 'itens críticos'} — ${criticos.map(item => item.nome).join(', ')}`);
     }
+    if (reposicao.length) {
+      partes.push(`${reposicao.length} ${reposicao.length === 1 ? 'item para repor' : 'itens para repor'} — ${reposicao.map(item => item.nome).join(', ')}`);
+    }
     if (outros.length) {
-      partes.push(`${outros.length} ${outros.length === 1 ? 'outro item' : 'outros itens'} — ${outros.map(item => item.nome).join(', ')}`);
+      partes.push(`${outros.length} ${outros.length === 1 ? 'outro item da lista' : 'outros itens da lista'} — ${outros.map(item => item.nome).join(', ')}`);
     }
     if (diagnostico) partes.push(`Detecção: ${origemDeteccao}.`);
     return res.send(partes.join('\n'));
