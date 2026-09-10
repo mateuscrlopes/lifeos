@@ -4,17 +4,22 @@ import fs from 'node:fs';
 
 const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('compras v3 carrega antes do mercado legado para ser dona dos cliques rápidos', () => {
+test('compras v3 carrega antes dos módulos legados para ser dona dos cliques rápidos', () => {
   const bootstrap = read('public/app-bootstrap.js');
+  const ownerImport = "await import('./shopping-flow-v3.js?v=1');";
+  const legacyLoop = 'for (const modulePath of LEGACY_MODULES)';
   assert.match(bootstrap, /shopping-flow-v3\.js\?v=1/);
-  assert.ok(bootstrap.indexOf('shopping-flow-v3.js') < bootstrap.indexOf('market-purchase-v2.js'));
+  assert.ok(bootstrap.indexOf(ownerImport) >= 0);
+  assert.ok(bootstrap.indexOf(legacyLoop) >= 0);
+  assert.ok(bootstrap.indexOf(ownerImport) < bootstrap.indexOf(legacyLoop));
 });
 
-test('estoque usa saldo real e passo explícito, sem inferir 100 g ou 100 ml', () => {
+test('estoque usa saldo real e passo explícito sem inferir incremento oculto pela unidade', () => {
   const flow = read('public/shopping-flow-v3.js');
   assert.match(flow, /Number\(stock\.passo_ajuste\) > 0 \? Number\(stock\.passo_ajuste\) : 1/);
   assert.match(flow, /current \+ direction \* step/);
-  assert.doesNotMatch(flow, /return 100/);
+  assert.doesNotMatch(flow, /unit\s*===\s*['\"]g['\"][\s\S]{0,120}?100/);
+  assert.doesNotMatch(flow, /unit\s*===\s*['\"]ml['\"][\s\S]{0,120}?100/);
   assert.match(flow, /sincronizarItem/);
 });
 
