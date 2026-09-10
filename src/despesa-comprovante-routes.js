@@ -1,7 +1,7 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
-import { extrairSugestoesDespesaPdf } from './despesa-comprovante.js';
+import { extrairSugestoesDespesaPdf, extrairSugestoesDespesaTexto } from './despesa-comprovante.js';
 
 const BUCKET = 'comprovantes-acertos';
 const LIMITE = 12 * 1024 * 1024;
@@ -76,6 +76,14 @@ async function carregarDespesa(admin, id, casaId) {
 }
 
 export function registrarRotasDespesaComprovante(app) {
+  app.post('/api/acertos/despesas/analisar-texto', async (req, res) => {
+    const ctx = await contextoAutenticado(req);
+    if (!ctx.ok) return res.status(ctx.status).json({ ok: false, erro: ctx.erro });
+    const text = String(req.body?.texto || '').slice(0, 100000);
+    if (!text.trim()) return res.status(400).json({ ok: false, erro: 'Texto do comprovante vazio.' });
+    return res.json({ ok: true, sugestoes: extrairSugestoesDespesaTexto(text) });
+  });
+
   const receberPdf = express.raw({ type: ['application/pdf', 'application/octet-stream'], limit: LIMITE });
   app.post('/api/acertos/despesas/analisar-pdf', receberPdf, async (req, res) => {
     const ctx = await contextoAutenticado(req);
