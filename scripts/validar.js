@@ -37,6 +37,8 @@ const arquivos = [
   'public/tablet-product-shell-v2.js',
   'public/tablet-app-shell-v3.js',
   'src/acertos.js',
+  'src/atalhos.js',
+  'src/atalhos-chegada.js',
   'src/financeiro-extracao.js',
   'src/integracao-nordestrip.js',
   'src/ritmo.js',
