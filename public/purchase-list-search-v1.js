@@ -4,13 +4,31 @@
 (() => {
   'use strict';
 
+  let listObserver = null;
+  let discoveryObserver = null;
+
   function normalize(value = '') {
     return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  function bindList(list) {
+    if (!list || list.dataset.plsObserved === '1') return;
+    list.dataset.plsObserved = '1';
+    listObserver?.disconnect();
+    listObserver = new MutationObserver(() => {
+      const value = document.querySelector('#purchaseListSearch input')?.value || '';
+      window.requestAnimationFrame(() => { ensure(); filter(value); });
+    });
+    listObserver.observe(list, { childList: true });
+    discoveryObserver?.disconnect();
+    discoveryObserver = null;
+  }
+
   function ensure() {
     const list = document.getElementById('itens');
-    if (!list || document.getElementById('purchaseListSearch')) return;
+    if (!list) return false;
+    bindList(list);
+    if (document.getElementById('purchaseListSearch')) return true;
     const holder = document.createElement('div');
     holder.id = 'purchaseListSearch';
     holder.className = 'pls-search';
@@ -21,6 +39,7 @@
     input.addEventListener('input', () => { clear.hidden = !input.value; filter(input.value); });
     clear.addEventListener('click', () => { input.value = ''; clear.hidden = true; filter(''); input.focus(); });
     filter(input.value);
+    return true;
   }
 
   function filter(value = '') {
@@ -60,12 +79,12 @@
     document.head.appendChild(style);
   }
 
-  installStyles(); ensure();
-  const list = document.getElementById('itens');
-  if (list) new MutationObserver(() => {
-    const value = document.querySelector('#purchaseListSearch input')?.value || '';
-    window.requestAnimationFrame(() => { ensure(); filter(value); });
-  }).observe(list, { childList:true });
-  else new MutationObserver(() => ensure()).observe(document.documentElement, { childList:true, subtree:true });
+  installStyles();
+  if (!ensure()) {
+    discoveryObserver = new MutationObserver(() => {
+      if (ensure()) discoveryObserver?.disconnect();
+    });
+    discoveryObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
   window.addEventListener('lifeos:ready', () => window.setTimeout(ensure, 0));
 })();
