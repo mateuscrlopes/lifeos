@@ -57,19 +57,27 @@ test('Preço do mercado continua usando entrada em centavos no fluxo v3', () => 
   assert.match(shopping, /inputmode="numeric"/);
 });
 
-test('NFC-e bloqueada mantém print local e ganha caminho dedicado para PDF textual', () => {
+test('NFC-e textual é reconhecida por biblioteca e registrada como compra concluída', () => {
   const fallback = read('public/nfce-browser-fallback.js');
-  const pdfClient = read('public/nfce-file-import-v2.js');
+  const smart = read('public/nfce-smart-import-v3.js');
   const pdfServer = read('src/nfce-pdf.js');
+  const migration = read('db/059_nfce_biblioteca_compra_final.sql');
   const bootstrap = read('public/app-bootstrap.js');
 
   assert.match(bootstrap, /nfce-browser-fallback\.js\?v=1/);
-  assert.match(bootstrap, /nfce-file-import-v2\.js\?v=1/);
+  assert.match(bootstrap, /nfce-smart-import-v3\.js\?v=1/);
+  assert.doesNotMatch(bootstrap, /nfce-file-import-v2\.js/);
   assert.match(fallback, /mode: 'cors'/);
   assert.match(fallback, /tesseract\.js/);
-  assert.match(pdfClient, /\/api\/nfce\/analisar-pdf/);
-  assert.match(pdfClient, /preco_unitario_compra/);
-  assert.match(pdfClient, /quantidade_comprada/);
+  assert.match(smart, /\/api\/nfce\/analisar-pdf/);
+  assert.match(smart, /nfce_produto_mapeamentos/);
+  assert.match(smart, /registrar_compra_nfce_v3/);
+  assert.match(smart, /Registrar compra/);
+  assert.match(smart, /quantidade_itens_declarada/);
+  assert.doesNotMatch(smart, /status:\s*'pendente',[\s\S]{0,120}origem:\s*'nfce'/);
+  assert.match(migration, /origem = 'nfce'/);
+  assert.match(migration, /status = 'comprado'/);
+  assert.match(migration, /aguardando_conferencia/);
   assert.match(pdfServer, /PDFParse/);
   assert.match(pdfServer, /interpretarNfceTexto/);
   assert.doesNotMatch(pdfServer, /storage\.from\(/);

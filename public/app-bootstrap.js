@@ -45,6 +45,11 @@ async function bootstrap() {
   window.__LIFEOS_BOOTSTRAP_STARTED__ = true;
   document.documentElement.dataset.lifeosBoot = 'loading';
 
+  // Notificações v2 entra antes de Acertos para ser a dona do sino desde o
+  // primeiro render. Acertos continua gerando suas notificações financeiras,
+  // mas não disputa a interação do botão.
+  await import('./notifications-v2.js?v=1');
+
   // Mercado live captura o toque "peguei" antes das camadas antigas e mantém
   // a tela sincronizada sem um observer que rerenderiza a si próprio.
   await import('./market-live-v3.js?v=1');
@@ -53,6 +58,7 @@ async function bootstrap() {
   // antes das camadas de compatibilidade para capturar os caminhos antigos sem
   // duplicar ações enquanto a migração é concluída.
   await import('./shopping-flow-v3.js?v=1');
+  await import('./purchase-list-search-v1.js?v=1');
 
   // Importação sequencial torna a precedência temporária das camadas legadas explícita.
   for (const modulePath of LEGACY_MODULES) {
@@ -70,7 +76,7 @@ async function bootstrap() {
   // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
   await import('./nfce.js?v=1');
   await import('./nfce-browser-fallback.js?v=1');
-  await import('./nfce-file-import-v2.js?v=1');
+  await import('./nfce-smart-import-v3.js?v=1');
 
   // Integridade do estoque mantém exclusão segura e conferência atômica como
   // fallback. Os ajustes rápidos já pertencem ao fluxo de compras v3.
