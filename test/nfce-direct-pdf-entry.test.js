@@ -30,7 +30,7 @@ test('bootstrap carrega a entrada depois do importador inteligente', () => {
   assert.ok(direct > smart, 'entrada visual deve reutilizar o contrato já instalado pelo smart importer');
 });
 
-test('copy inicial reflete que NFC-e representa compra já realizada', () => {
-  assert.match(entry, /NFC-e é registrada como compra já realizada/);
-  assert.doesNotMatch(entry, /jogar tudo para o carrinho/);
+test('copy inicial substitui a mensagem legada por compra já realizada', () => {
+  assert.match(entry, /jogar tudo para o carrinho/i);
+  assert.match(entry, /status\.textContent = 'PDF e QR entram no mesmo fluxo de conferência\. A NFC-e é registrada como compra já realizada\.'/);
 });
