@@ -77,6 +77,7 @@ async function bootstrap() {
   await import('./nfce.js?v=1');
   await import('./nfce-browser-fallback.js?v=1');
   await import('./nfce-smart-import-v3.js?v=1');
+  await import('./nfce-entry-v4.js?v=1');
 
   // Integridade do estoque mantém exclusão segura e conferência atômica como
   // fallback. Os ajustes rápidos já pertencem ao fluxo de compras v3.
