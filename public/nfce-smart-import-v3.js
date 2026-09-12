@@ -196,7 +196,8 @@
 
       const qFiscal = Number(row.quantidade) > 0 ? Number(row.quantidade) : 1;
       const uFiscal = fiscalUnit(row.unidade);
-      const factor = Number(mapping?.fator_quantidade || 1) > 0 ? Number(mapping.fator_quantidade) : 1;
+      const rawFactor = Number(mapping?.fator_quantidade ?? 1);
+      const factor = Number.isFinite(rawFactor) && rawFactor > 0 ? rawFactor : 1;
       const qStock = round(qFiscal * factor);
       const uStock = mapping?.unidade_estoque || stock?.unidade || uFiscal;
       const resolved = Boolean(canonical && (mapping?.confirmado !== false || learnedFrom));
