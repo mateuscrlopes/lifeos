@@ -35,7 +35,7 @@ test('Fundos permitem aporte, retirada e dinheiro fisicamente separado', () => {
   assert.match(financeiro, /lifeos_movimentar_fundo_pessoal/);
   assert.match(financeiro, /segregado/);
   assert.match(sql, /financeiro_fundos_pessoais/);
-  assert.match(sql, /p_tipo in \('aporte','retirada','ajuste'\)/);
+  assert.match(sql, /p_tipo not in \('aporte','retirada','ajuste'\)/);
   assert.match(sql, /Saldo insuficiente no fundo/);
 });
 
