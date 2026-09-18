@@ -261,35 +261,30 @@ function criarDestaqueRefeicao(cardapio) {
 
 function criarResumoFinanceiro() {
   if (!financeiroResumo) return null;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'card-hoje';
+
   const card = document.createElement('button');
   card.type = 'button';
-  card.className = 'hoje-finance-card';
+  card.className = 'cartao hoje-finance-card';
   card.setAttribute('aria-label', 'Abrir minhas finanças');
 
-  const topo = document.createElement('span');
-  topo.className = 'hoje-finance-card-top';
-  topo.innerHTML = `<span><small>Disponível real</small><strong>Você pode gastar hoje</strong></span><span class="hoje-finance-card-arrow">${svg('chevron', 18)}</span>`;
+  card.innerHTML = `
+    <span class="hoje-finance-icon">${svg('bill', 18)}</span>
+    <span class="hoje-finance-copy">
+      <span class="hoje-finance-title">Finanças</span>
+      <strong>${dinheiro(financeiroResumo.pix || 0)}</strong>
+      <small>disponível hoje · cartão ${dinheiro(financeiroResumo.cartao || 0)} · VR ${dinheiro(financeiroResumo.vr || 0)}</small>
+    </span>
+    <span class="hoje-finance-action">Abrir ${svg('chevron', 15)}</span>`;
 
-  const valor = document.createElement('strong');
-  valor.className = 'hoje-finance-card-value';
-  valor.textContent = dinheiro(financeiroResumo.pix || 0);
-
-  const meios = document.createElement('span');
-  meios.className = 'hoje-finance-card-meios';
-  meios.innerHTML = `
-    <span><small>Cartão</small><b>${dinheiro(financeiroResumo.cartao || 0)}</b></span>
-    <span><small>VR</small><b>${dinheiro(financeiroResumo.vr || 0)}</b></span>
-    <span><small>Protegido</small><b>${dinheiro(financeiroResumo.protegido || 0)}</b></span>`;
-
-  const rodape = document.createElement('span');
-  rodape.className = 'hoje-finance-card-footer';
-  rodape.textContent = 'Simular um gasto';
-
-  card.append(topo, valor, meios, rodape);
   card.addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('lifeos:financeiro-pessoal-ir', { detail: { tab: 'visao', simular: 'pix' } }));
+    window.dispatchEvent(new CustomEvent('lifeos:financeiro-pessoal-ir', { detail: { tab: 'visao' } }));
   });
-  return card;
+
+  wrap.appendChild(card);
+  return wrap;
 }
 
 function renderCards(dados, plantasUrgentes) {
