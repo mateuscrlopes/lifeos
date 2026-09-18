@@ -70,3 +70,15 @@ test('CSS financeiro é mobile-first e respeita safe area e tema por tokens', ()
   assert.match(css, /@media \(min-width: 560px\)/);
   assert.doesNotMatch(css, /#painelCasa|tablet/i);
 });
+
+
+test('Hoje consome resumo financeiro pelo owner da própria tela', () => {
+  const hoje = ler('public/hoje-view.js');
+  const financeiro = ler('public/financeiro-pessoal.js');
+
+  assert.match(financeiro, /lifeos:financeiro-resumo/);
+  assert.match(hoje, /lifeos:financeiro-resumo/);
+  assert.match(hoje, /hoje-finance-card/);
+  assert.match(hoje, /lifeos:financeiro-pessoal-ir/);
+  assert.doesNotMatch(financeiro, /cardsHoje/);
+});

@@ -37,3 +37,83 @@
   font-weight: 750;
 }
 .hoje-card-vazio { padding: 12px 0; }
+
+
+/* Resumo financeiro pessoal — Hoje é o único owner desta superfície. */
+.hoje-finance-card {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--linha);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 95% 0%, color-mix(in srgb, var(--sage) 11%, transparent) 0 26%, transparent 27%),
+    var(--paper);
+  color: var(--texto);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+}
+.hoje-finance-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hoje-finance-card-top > span:first-child {
+  display: grid;
+  gap: 3px;
+}
+.hoje-finance-card-top small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.hoje-finance-card-top strong {
+  font-size: 14px;
+}
+.hoje-finance-card-arrow {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--muted);
+}
+.hoje-finance-card-value {
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+.hoje-finance-card-meios {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.hoje-finance-card-meios > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border-radius: 11px;
+  background: var(--paper-2);
+}
+.hoje-finance-card-meios small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+.hoje-finance-card-meios b {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hoje-finance-card-footer {
+  color: var(--sage);
+  font-size: 11px;
+  font-weight: 800;
+}
