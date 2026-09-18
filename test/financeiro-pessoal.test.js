@@ -4,15 +4,22 @@ import fs from 'node:fs';
 
 const ler = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('Financeiro pessoal é carregado pelo bootstrap e tem owner próprio', () => {
+test('Financeiro usa mounts estáveis e owners separados', () => {
+  const html = ler('public/index.html');
   const bootstrap = ler('public/app-bootstrap.js');
-  const loader = ler('public/financeiro-pessoal-loader.js');
+  const shell = ler('public/financeiro-shell.js');
   const financeiro = ler('public/financeiro-pessoal.js');
 
-  assert.match(bootstrap, /financeiro-pessoal-loader\.js\?v=1/);
-  assert.match(loader, /lifeosFinanceiroPessoal/);
-  assert.match(loader, /Contas e acertos da Casa/);
-  assert.match(financeiro, /#?lifeosFinanceiroPessoal|lifeosFinanceiroPessoal/);
+  assert.match(html, /id="lifeosFinanceiroNav"/);
+  assert.match(html, /id="lifeosFinanceiroPessoal"/);
+  assert.match(html, /id="lifeosFinanceiroContas"/);
+  assert.match(html, /id="lifeosFinanceiroAcertos"/);
+  assert.match(bootstrap, /financeiro-shell\.js\?v=1/);
+  assert.match(bootstrap, /financeiro-pessoal\.js\?v=2/);
+  assert.doesNotMatch(bootstrap, /financeiro-pessoal-loader/);
+  assert.match(shell, /Pessoal/);
+  assert.match(shell, /Contas/);
+  assert.match(shell, /Acertos/);
   assert.doesNotMatch(financeiro, /MutationObserver/);
   assert.doesNotMatch(financeiro, /cardsHoje/);
 });
@@ -49,14 +56,14 @@ test('Dados financeiros pessoais ficam isolados pelo usuário autenticado', () =
   assert.doesNotMatch(sql, /lifeos_usuario_na_casa/);
 });
 
-test('Financeiro pessoal preserva contas e acertos da Casa como área secundária', () => {
-  const loader = ler('public/financeiro-pessoal-loader.js');
+test('Contas e Acertos são áreas de primeiro nível, sem details ou reparenting', () => {
+  const html = ler('public/index.html');
+  const shell = ler('public/financeiro-shell.js');
 
-  assert.match(loader, /lifeosFinanceiroContas/);
-  assert.match(loader, /lifeosFinanceiroAcertos/);
-  assert.match(loader, /createElement\('details'\)/);
-  assert.match(loader, /appendChild\(contas\)/);
-  assert.match(loader, /appendChild\(acertos\)/);
+  assert.match(html, /lifeosFinanceiroContasPanel/);
+  assert.match(html, /lifeosFinanceiroAcertosPanel/);
+  assert.doesNotMatch(html, /lifeosFinanceiroCasaLegado/);
+  assert.doesNotMatch(shell, /appendChild\(contas\)|appendChild\(acertos\)|createElement\('details'\)/);
 });
 
 test('CSS financeiro é mobile-first e respeita safe area e tema por tokens', () => {
@@ -81,4 +88,29 @@ test('Hoje consome resumo financeiro pelo owner da própria tela', () => {
   assert.match(hoje, /hoje-finance-card/);
   assert.match(hoje, /lifeos:financeiro-pessoal-ir/);
   assert.doesNotMatch(financeiro, /cardsHoje/);
+});
+
+
+test('Financeiro usa apenas o catálogo oficial de ícones', () => {
+  const financeiro = ler('public/financeiro-pessoal.js');
+  const shell = ler('public/financeiro-shell.js');
+  const icons = ler('public/ui/icons.js');
+
+  assert.match(financeiro, /icon\('settings'/);
+  assert.match(financeiro, /creditCard/);
+  assert.match(shell, /icon\(secao\.icon/);
+  assert.match(icons, /wallet:/);
+  assert.match(icons, /swap:/);
+  assert.doesNotMatch(financeiro, /⚙|▣|◫|●/);
+});
+
+test('Acertos em aberto impactam o disponível sem duplicar a regra de pagamento', () => {
+  const financeiro = ler('public/financeiro-pessoal.js');
+  const acertos = ler('public/acertos.js');
+
+  assert.match(financeiro, /fpAcertosAPagarHorizonte/);
+  assert.match(financeiro, /acertosAPagar/);
+  assert.match(financeiro, /lifeos:financeiro-shell-ir/);
+  assert.match(acertos, /lifeos:acertos-atualizados/);
+  assert.doesNotMatch(financeiro, /data-ac-pay|revisar_pagamento|acerto_pagamentos/);
 });
