@@ -118,9 +118,10 @@ test('Hoje mantém Cardápio visível e receitas contidas no mobile', () => {
   assert.match(polish, /#metricasHoje\.metricas-grid[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
 });
 
-test('cabeçalhos e ações de página usam uma régua consistente', () => {
+test('cabeçalhos mantêm o título alinhado mesmo com botão de voltar', () => {
   const css = ler('public/mobile-shell-v3.css');
-  assert.match(css, /\.lifeos-page-head--with-back[\s\S]*grid-template-columns:\s*42px minmax\(0, 1fr\)/);
-  assert.match(css, /\.lifeos-page-head--with-back > \.lifeos-icon-action[\s\S]*align-self:\s*center/);
+  assert.match(css, /\.lifeos-page-head--with-back[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(css, /\.lifeos-page-head--with-back > \.lifeos-icon-action[\s\S]*width:\s*32px/);
+  assert.match(css, /\.lifeos-page-head--with-back > \.lifeos-icon-action[\s\S]*align-self:\s*start/);
   assert.match(css, /#abaPlantas > \.lifeos-page-head \+ div[\s\S]*align-items:\s*center/);
 });

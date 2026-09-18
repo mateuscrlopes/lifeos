@@ -73,9 +73,10 @@ async function bootstrap() {
   // compartilhados (confirm, toast, modal, ícones).
   await import('./ui/index.js?v=1');
 
-  // Financeiro pessoal é privado por usuário e mobile-first. O loader apenas
-  // compõe a superfície; o módulo financeiro é o único owner do novo mount.
-  await import('./financeiro-pessoal-loader.js?v=1');
+  // Finanças usa mounts estáveis no HTML: o shell controla somente a navegação
+  // de primeiro nível e o módulo pessoal controla apenas seu próprio conteúdo.
+  await import('./financeiro-shell.js?v=1');
+  await import('./financeiro-pessoal.js?v=2');
 
   // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
   await import('./nfce.js?v=1');

@@ -1488,6 +1488,7 @@
       bell();
       renderCentral();
       renderConfig();
+      window.dispatchEvent(new CustomEvent('lifeos:acertos-atualizados'));
     } catch (error) {
       console.error('[Acertos Financeiros]', error);
     } finally {
@@ -1502,6 +1503,7 @@
 
     window.addEventListener('lifeos:ready', load);
     window.addEventListener('lifeos:financeiro-abrir', load);
+    window.addEventListener('lifeos:financeiro-acertos-abrir', load);
     window.addEventListener('lifeos:contas-atualizadas', () => window.setTimeout(load, 80));
 
     window.setInterval(() => {
