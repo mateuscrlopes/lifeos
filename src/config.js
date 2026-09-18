@@ -28,6 +28,9 @@ export const config = {
   gmailImportToken: process.env.GMAIL_IMPORT_TOKEN || '',
   lifeosCasaId: process.env.LIFEOS_CASA_ID || '',
 
+  // Ponte com o Nordestrip. O token continua guardado no banco do LifeOS.
+  nordestripBaseUrl: (process.env.NORDESTRIP_BASE_URL || 'https://nordestrip.vercel.app').replace(/\/$/, ''),
+
   // Senha usada somente no backend para abrir PDFs protegidos da Enel.
   // Configure ENEL_PDF_PASSWORD diretamente no Render. Nunca envie ao navegador.
   enelPdfPassword: process.env.ENEL_PDF_PASSWORD || '',
