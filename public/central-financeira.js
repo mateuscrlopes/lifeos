@@ -83,6 +83,7 @@ async function cfCarregar() {
 function cfAbrirCentral() {
   if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
   else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+  window.dispatchEvent(new CustomEvent('lifeos:financeiro-shell-ir', { detail: { secao: 'contas' } }));
   window.setTimeout(() => document.getElementById('cfCentral')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
 }
 
@@ -445,6 +446,7 @@ function cfIniciar() {
 window.addEventListener('lifeos:ready', cfAtualizar);
 window.addEventListener('lifeos:contas-atualizadas', cfAtualizar);
 window.addEventListener('lifeos:financeiro-abrir', cfAtualizar);
+window.addEventListener('lifeos:financeiro-contas-abrir', cfAtualizar);
 window.addEventListener('lifeos:hoje-abrir-conta', evento => cfAbrirContaDoHoje(evento.detail?.contaId));
 window.addEventListener('lifeos:financeiro-ir', cfAbrirCentral);
 
