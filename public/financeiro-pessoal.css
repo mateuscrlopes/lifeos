@@ -591,29 +591,6 @@
 .fp-sim-result--ok { border-color: color-mix(in srgb, var(--sage) 40%, var(--linha)); background: var(--sage-soft); }
 .fp-sim-result--warn { border-color: color-mix(in srgb, var(--sun) 45%, var(--linha)); background: var(--sun-soft); }
 
-#lifeosFinanceiroCasaLegado {
-  margin: 4px 16px 30px;
-  border-top: 1px solid var(--linha);
-}
-#lifeosFinanceiroCasaLegado > summary {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 750;
-  cursor: pointer;
-  list-style: none;
-}
-#lifeosFinanceiroCasaLegado > summary::-webkit-details-marker { display: none; }
-#lifeosFinanceiroCasaLegado > summary::after {
-  content: '⌄';
-  margin-left: auto;
-  transition: transform .15s ease;
-}
-#lifeosFinanceiroCasaLegado[open] > summary::after { transform: rotate(180deg); }
-
 @media (min-width: 560px) {
   #lifeosFinanceiroPessoal { max-width: 540px; margin-inline: auto; }
   .fp-modal { max-width: 520px; border-bottom: 1px solid var(--linha); border-radius: 25px; margin-bottom: 20px; }
