@@ -1,3 +1,5 @@
+import { icon } from './ui/icons.js';
+
 // LifeOS — Financeiro pessoal (iPhone)
 // Owner de #lifeosFinanceiroPessoal. Dados privados do usuario autenticado.
 // Nao renderiza nem altera a tela Hoje; publica apenas um resumo por evento.
@@ -208,7 +210,7 @@ function fpHero(resumo) {
           <span class="fp-kicker">Disponível real</span>
           <h2>Você pode gastar hoje</h2>
         </div>
-        <button type="button" class="fp-icon-btn" data-fp-config aria-label="Configurar cálculo">⚙</button>
+        <button type="button" class="fp-icon-btn" data-fp-config aria-label="Configurar cálculo">${icon('settings', 17)}</button>
       </div>
       <strong class="fp-hero-value">${fpMoney(resumo.pix)}</strong>
       <p>sem mexer nas contas e nos seus planos</p>
@@ -275,7 +277,7 @@ function fpCarteiras() {
         ? `${fpMoney(c.saldo_reservado)} reservado`
         : (c.instituicao || tipos[c.tipo] || '');
     return `<button type="button" class="fp-wallet" data-fp-carteira="${c.id}">
-      <span class="fp-wallet-icon">${c.tipo === 'cartao' ? '▣' : c.tipo === 'vr' ? '◫' : '●'}</span>
+      <span class="fp-wallet-icon">${icon(c.tipo === 'cartao' ? 'creditCard' : c.tipo === 'conta' ? 'bank' : 'wallet', 17)}</span>
       <span class="fp-wallet-copy"><strong>${fpEscape(c.nome)}</strong><small>${fpEscape(meta)}</small></span>
       <span class="fp-wallet-value"><strong>${fpMoney(disponivel)}</strong><small>${c.tipo === 'cartao' ? 'limite restante' : 'disponível'}</small></span>
     </button>`;
@@ -749,6 +751,7 @@ function fpIr({ tab = 'visao', simular = null } = {}) {
   FP.tab = tab;
   if (typeof window.trocarAba === 'function') window.trocarAba('financeiro');
   else document.querySelector('.tab-btn[data-tab="financeiro"]')?.click();
+  window.dispatchEvent(new CustomEvent('lifeos:financeiro-shell-ir', { detail: { secao: 'pessoal' } }));
   window.setTimeout(() => {
     fpRender();
     fpEl('lifeosFinanceiroPessoal')?.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -758,6 +761,7 @@ function fpIr({ tab = 'visao', simular = null } = {}) {
 
 window.addEventListener('lifeos:ready', fpCarregar);
 window.addEventListener('lifeos:financeiro-abrir', fpCarregar);
+window.addEventListener('lifeos:financeiro-pessoal-abrir', fpCarregar);
 window.addEventListener('lifeos:financeiro-pessoal-ir', e => fpIr(e.detail || {}));
 
 if (window.lifeosContext) fpCarregar();
