@@ -13,6 +13,8 @@ const arquivos = [
   'public/navigation.js',
   'public/plantas-view.js',
   'public/central-financeira.js',
+  'public/financeiro-pessoal-loader.js',
+  'public/financeiro-pessoal.js',
   'public/app.js',
   'public/contas.js',
   'public/status-estoque.js',
