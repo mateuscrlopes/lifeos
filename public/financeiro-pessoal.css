@@ -604,3 +604,52 @@
   .fp-breakdown { grid-template-columns: 1fr; }
   .fp-form-grid { grid-template-columns: 1fr; }
 }
+
+
+.fp-transactions { display: grid; }
+
+.fp-transaction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+}
+
+.fp-transaction + .fp-transaction { border-top: 1px solid var(--linha); }
+
+.fp-transaction > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.fp-transaction strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-transaction small {
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.fp-transaction > b {
+  flex: none;
+  color: var(--texto);
+  font-size: 11px;
+}
+
+.fp-transaction > b.is-credit { color: var(--sage); }
+
+.fp-fund-actions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.fp-section-head .lifeos-btn svg,
+.fp-fund-actions .lifeos-btn svg {
+  flex: none;
+}
