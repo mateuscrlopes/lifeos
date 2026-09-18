@@ -635,7 +635,7 @@ function fpModal(html, initialSelector = null) {
 
 function fpModalBase(kicker, titulo, subtitulo, body) {
   return `<section class="fp-modal" role="dialog" aria-modal="true" aria-label="${fpEscape(titulo)}">
-    <header><div><span class="fp-kicker">${fpEscape(kicker)}</span><h2>${fpEscape(titulo)}</h2>${subtitulo ? `<p>${fpEscape(subtitulo)}</p>` : ''}</div><button type="button" class="fp-modal-close" data-fp-close aria-label="Fechar">×</button></header>
+    <header><div><span class="fp-kicker">${fpEscape(kicker)}</span><h2>${fpEscape(titulo)}</h2>${subtitulo ? `<p>${fpEscape(subtitulo)}</p>` : ''}</div><button type="button" class="fp-modal-close" data-fp-close aria-label="Fechar">${icon('close', 17)}</button></header>
     ${body}
   </section>`;
 }
