@@ -3,7 +3,7 @@
 
 import { icon } from './ui/icons.js';
 
-const FC = { client: null, profile: null, config: null, contas: [], loading: false };
+const FC = { client: null, profile: null, config: null, contas: [], usuarios: [], regrasCasa: [], contribuicoesCasa: [], loading: false };
 
 const el = id => document.getElementById(id);
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -33,12 +33,16 @@ async function load() {
   FC.loading = true;
   try {
     const uid = FC.profile.id;
-    const [configR, contasR] = await Promise.all([
+    const [configR, contasR, usuariosR, regrasR, contribuicoesR] = await Promise.all([
       FC.client.from('financeiro_pessoal_config').select('*').eq('usuario_id', uid).maybeSingle(),
       FC.client.from('financeiro_open_finance_contas').select('*').eq('usuario_id', uid).order('nome'),
+      FC.client.from('usuarios').select('id,nome,casa_id').eq('casa_id', FC.profile.casa_id).order('nome'),
+      FC.client.from('financeiro_casa_contribuicao_regras').select('*').eq('casa_id', FC.profile.casa_id).order('inicio', { ascending: false }),
+      FC.client.rpc('lifeos_contribuicoes_casa_mes', { p_competencia: new Date().toISOString().slice(0, 10) }),
     ]);
-    if (configR.error) throw configR.error;
-    if (contasR.error) throw contasR.error;
+    for (const result of [configR, contasR, usuariosR, regrasR, contribuicoesR]) {
+      if (result.error) throw result.error;
+    }
     FC.config = configR.data || {
       usuario_id: uid,
       renda_mensal_referencia: null,
@@ -48,6 +52,9 @@ async function load() {
       vr_reservado_terceiros: 0,
     };
     FC.contas = contasR.data || [];
+    FC.usuarios = (usuariosR.data || []).filter(u => String(u.nome || '').trim().toLocaleLowerCase('pt-BR') !== 'casa');
+    FC.regrasCasa = regrasR.data || [];
+    FC.contribuicoesCasa = contribuicoesR.data || [];
     render();
   } catch (error) {
     console.error('[Config Financeiro]', error);
@@ -85,6 +92,78 @@ function renderAccounts() {
   }).join('') + '</div>';
 }
 
+function firstDayOfMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function contributionLabel(item) {
+  if (!item?.regra_id) return 'Sem regra';
+  if (item.tipo === 'fixa') return `Fixo · ${money(item.valor_regra)}`;
+  if (item.tipo === 'percentual') return `${Number(item.percentual_regra || 0).toLocaleString('pt-BR')}% das contas`;
+  return 'Restante das contas';
+}
+
+function renderHouseContributions() {
+  if (!FC.usuarios.length) {
+    return '<div class="fc-empty"><strong>Nenhum morador disponível.</strong></div>';
+  }
+
+  return `<div class="fc-house-list">${FC.usuarios.map(usuario => {
+    const atual = FC.contribuicoesCasa.find(item => item.usuario_id === usuario.id) || {};
+    const regra = FC.regrasCasa.find(item => item.id === atual.regra_id) || {};
+    const tipo = atual.tipo || regra.tipo || 'fixa';
+    const valor = tipo === 'fixa' ? (atual.valor_regra ?? regra.valor ?? '') : '';
+    const percentual = tipo === 'percentual' ? (atual.percentual_regra ?? regra.percentual ?? '') : '';
+    return `<form class="fc-house-member" data-fc-house-form data-user-id="${usuario.id}">
+      <div class="fc-house-member-head">
+        <div><strong>${esc(usuario.nome)}</strong><small>${esc(contributionLabel(atual))} · previsto ${money(atual.contribuicao_prevista || 0)}</small></div>
+        <span class="fc-house-base">Base ${money(atual.base_contas || 0)}</span>
+      </div>
+      <div class="fc-house-fields">
+        <label><span>Regra</span><select name="tipo">
+          <option value="fixa" ${tipo === 'fixa' ? 'selected' : ''}>Valor fixo</option>
+          <option value="percentual" ${tipo === 'percentual' ? 'selected' : ''}>Percentual das contas</option>
+          <option value="restante" ${tipo === 'restante' ? 'selected' : ''}>Restante depois das outras contribuições</option>
+        </select></label>
+        <label data-fc-fixed><span>Valor mensal</span><input name="valor" inputmode="decimal" value="${valor}" placeholder="0,00"></label>
+        <label data-fc-percent><span>Percentual</span><input name="percentual" inputmode="decimal" value="${percentual}" placeholder="50"></label>
+        <label><span>Válido a partir de</span><input name="inicio" type="date" value="${firstDayOfMonth()}"></label>
+      </div>
+      <p class="fc-note">Ao salvar uma nova regra, a anterior é encerrada e continua no histórico.</p>
+      <button type="submit" class="lifeos-btn lifeos-btn--secondary">Salvar contribuição</button>
+    </form>`;
+  }).join('')}</div>`;
+}
+
+function syncContributionFields(form) {
+  const tipo = form.querySelector('[name="tipo"]')?.value;
+  const fixed = form.querySelector('[data-fc-fixed]');
+  const percent = form.querySelector('[data-fc-percent]');
+  if (fixed) fixed.hidden = tipo !== 'fixa';
+  if (percent) percent.hidden = tipo !== 'percentual';
+}
+
+async function saveHouseContribution(form) {
+  const data = new FormData(form);
+  const tipo = String(data.get('tipo') || '');
+  const userId = form.dataset.userId;
+  const payload = {
+    p_usuario_id: userId,
+    p_tipo: tipo,
+    p_valor: tipo === 'fixa' ? numeric(data.get('valor')) : null,
+    p_percentual: tipo === 'percentual' ? numeric(data.get('percentual')) : null,
+    p_inicio: data.get('inicio') || firstDayOfMonth(),
+    p_observacoes: null,
+  };
+
+  const result = await FC.client.rpc('lifeos_definir_contribuicao_casa', payload);
+  if (result.error) throw result.error;
+  toast('Contribuição da Casa atualizada.');
+  window.dispatchEvent(new CustomEvent('lifeos:contribuicoes-casa-atualizadas'));
+  await load();
+}
+
 function render() {
   const mount = el('lifeosFinanceiroConfig');
   if (!mount) return;
@@ -100,6 +179,15 @@ function render() {
         <label><span>VR destinado a terceiros</span><input name="vr_reservado" inputmode="decimal" value="${c.vr_reservado_terceiros ?? 0}"></label>
         <button type="submit" class="lifeos-btn lifeos-btn--primary">Salvar finanças</button>
       </form>
+    </section>
+
+    <section class="fc-card">
+      <header class="fc-head">
+        <span class="fc-icon">${icon('house', 18)}</span>
+        <div><strong>Contribuição da Casa</strong><small>Define quanto cada pessoa assume das contas compartilhadas, sem criar Acerto pessoal.</small></div>
+      </header>
+      ${renderHouseContributions()}
+      <p class="fc-note">Alimentação pode ficar fora dessa base. Nas Contas, cada cobrança pode ser marcada como participante ou não da contribuição da Casa.</p>
     </section>
 
     <section class="fc-card">
@@ -211,6 +299,22 @@ function bind(mount) {
   });
 
   mount.querySelector('[data-fc-sync]')?.addEventListener('click', event => syncOpenFinance(event.currentTarget));
+  mount.querySelectorAll('[data-fc-house-form]').forEach(form => {
+    syncContributionFields(form);
+    form.querySelector('[name="tipo"]')?.addEventListener('change', () => syncContributionFields(form));
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('[type="submit"]');
+      button.disabled = true;
+      try { await saveHouseContribution(form); }
+      catch (error) {
+        console.error('[Config Financeiro][Contribuição]', error);
+        toast(error.message || 'Não foi possível salvar a contribuição.', 'erro');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
   mount.querySelectorAll('.fc-account').forEach(article => {
     article.querySelectorAll('input[type="checkbox"]').forEach(input => {
       input.addEventListener('change', () => updateAccount(article, input));
@@ -221,5 +325,6 @@ function bind(mount) {
 window.addEventListener('lifeos:ready', load);
 window.addEventListener('lifeos:open-finance-atualizado', () => window.setTimeout(load, 50));
 window.addEventListener('lifeos:financeiro-config-atualizada', () => window.setTimeout(load, 50));
+window.addEventListener('lifeos:contribuicoes-casa-atualizadas', () => window.setTimeout(load, 50));
 
 if (window.lifeosContext) load();
