@@ -755,47 +755,88 @@ function fpAbrirCarteira(carteira) {
 
 function fpAbrirFundo(fundo) {
   const f = fundo || {};
-  const html = fpModalBase('Fundo', fundo ? f.nome : 'Novo fundo', 'Um plano pode continuar vivo mesmo com outros objetivos acontecendo ao mesmo tempo.', `
+  const usadas = new Set(FP.fundos
+    .filter(item => item.ativo && item.id !== f.id && item.conta_open_finance_id)
+    .map(item => item.conta_open_finance_id));
+  const contasDisponiveis = FP.openFinanceContas
+    .filter(conta => conta.tipo === 'checking' && (!usadas.has(conta.id) || conta.id === f.conta_open_finance_id));
+  const opcoes = contasDisponiveis.map(conta =>
+    `<option value="${conta.id}" ${f.conta_open_finance_id === conta.id ? 'selected' : ''}>${fpEscape(conta.nome)} · ${fpMoney(conta.saldo_atual)}</option>`
+  ).join('');
+
+  const html = fpModalBase('Fundo', fundo ? f.nome : 'Novo fundo', 'Você pode usar uma conta dedicada do Open Finance ou controlar o saldo manualmente.', `
     <form class="fp-form" data-fp-form>
       ${fpField('Nome', `<input name="nome" required maxlength="80" value="${fpEscape(f.nome || '')}" placeholder="Ex.: Reserva">`)}
       <div class="fp-form-grid">
         ${fpField('Meta', `<input name="meta" inputmode="decimal" value="${f.meta_valor ?? ''}" placeholder="Opcional">`)}
         ${fpField('Aporte mínimo mensal', `<input name="minimo" inputmode="decimal" value="${f.aporte_minimo ?? 0}">`)}
       </div>
-      <label class="fp-check"><input name="segregado" type="checkbox" ${f.segregado ? 'checked' : ''}><span>Este dinheiro já está fisicamente separado da conta do dia a dia</span></label>
+      ${fpField('Conta dedicada', `<select name="conta_open_finance_id"><option value="">Controle manual</option>${opcoes}</select>`)}
+      <p class="fp-helper">Uma conta dedicada só pode pertencer a um fundo ativo. Quando vinculada, saldo e entradas passam a vir do Open Finance automaticamente.</p>
+      <label class="fp-check"><input name="segregado" type="checkbox" ${f.segregado ? 'checked' : ''}><span>Este dinheiro está separado da conta do dia a dia</span></label>
       ${fpField('Observação', `<textarea name="observacoes" rows="3">${fpEscape(f.observacoes || '')}</textarea>`)}
       ${fpActions()}
     </form>`);
+
   const { overlay, fechar } = fpModal(html, '[name="nome"]');
   const form = overlay.querySelector('[data-fp-form]');
+
+  form?.addEventListener('change', e => {
+    if (e.target?.name !== 'conta_open_finance_id') return;
+    const segregado = form.querySelector('[name="segregado"]');
+    if (segregado && e.target.value) segregado.checked = true;
+  });
+
   form?.addEventListener('submit', async e => {
     e.preventDefault();
     const d = new FormData(form);
     const nome = String(d.get('nome') || '').trim();
+    const contaId = String(d.get('conta_open_finance_id') || '').trim() || null;
     const payload = {
       usuario_id: FP.profile.id,
       nome,
       slug: f.slug || fpSlug(nome),
       meta_valor: d.get('meta') ? fpNum(d.get('meta')) : null,
       aporte_minimo: fpNum(d.get('minimo')),
-      segregado: d.get('segregado') === 'on',
+      conta_open_finance_id: contaId,
+      segregado: contaId ? true : d.get('segregado') === 'on',
       observacoes: String(d.get('observacoes') || '').trim() || null,
       atualizado_em: new Date().toISOString(),
     };
+
     try {
       const q = fundo
         ? FP.client.from('financeiro_fundos_pessoais').update(payload).eq('id', fundo.id)
         : FP.client.from('financeiro_fundos_pessoais').insert(payload);
       const r = await q;
       if (r.error) throw r.error;
-      fechar(); await fpCarregar(); fpToast('Fundo salvo.');
-    } catch (erro) { console.error(erro); fpToast('Não foi possível salvar o fundo.', 'erro'); }
+
+      if (contaId) {
+        const contaUpdate = await FP.client
+          .from('financeiro_open_finance_contas')
+          .update({ visivel: true, considerar_disponivel: false, atualizado_em: new Date().toISOString() })
+          .eq('id', contaId)
+          .eq('usuario_id', FP.profile.id);
+        if (contaUpdate.error) throw contaUpdate.error;
+      }
+
+      fechar();
+      await fpCarregar();
+      fpToast(contaId ? 'Fundo vinculado à conta conectada.' : 'Fundo salvo.');
+    } catch (erro) {
+      console.error(erro);
+      fpToast('Não foi possível salvar o fundo.', 'erro');
+    }
   });
 }
 
 function fpAbrirMovimento(fundoId, tipo = 'aporte') {
   const fundo = FP.fundos.find(f => f.id === fundoId);
   if (!fundo) return;
+  if (fundo.conta_open_finance_id) {
+    fpToast('Este fundo é atualizado automaticamente pela conta conectada.');
+    return;
+  }
   const retirada = tipo === 'retirada';
   const html = fpModalBase(retirada ? 'Retirada' : 'Aporte', fundo.nome, retirada ? `Saldo atual: ${fpMoney(fundo.saldo_atual)}` : 'Todo valor conta como progresso.', `
     <form class="fp-form" data-fp-form>
