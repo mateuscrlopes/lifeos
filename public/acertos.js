@@ -384,7 +384,7 @@
     root.innerHTML =
       '<div class="ac-hero">' +
         '<p class="ac-eyebrow">Central Financeira</p>' +
-        '<div class="ac-hero-line"><div><h2>Acertos da Casa</h2>' +
+        '<div class="ac-hero-line"><div><h2>Acertos pessoais</h2>' +
           '<p>Quem deve quanto para quem, com parcelas, comprovantes e confirmação do recebedor.</p></div>' +
           '<button type="button" class="ac-add" id="acNewExpense">+ Despesa</button></div>' +
       '</div>' +
