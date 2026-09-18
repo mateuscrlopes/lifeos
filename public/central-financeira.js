@@ -4,6 +4,7 @@
 let cfClient = null;
 let cfProfile = null;
 let cfContas = [];
+let cfContribuicoesCasa = [];
 let cfFiltro = 'pendentes';
 let cfCarregando = false;
 let cfBwipPromise = null;
@@ -62,18 +63,24 @@ async function cfCarregar() {
   if (!cfObterContexto()) return cfContas;
   cfCarregando = true;
   try {
-    const resultado = await cfClient
-      .from('contas')
-      .select([
-        'id', 'nome', 'categoria', 'valor', 'vencimento', 'paga', 'paga_em',
-        'recorrente', 'dia_vencimento', 'origem', 'fornecedor', 'descricao_pagamento',
-        'linha_digitavel', 'pix_copia_cola', 'qr_code_url', 'documento_url',
-      ].join(','))
-      .eq('casa_id', cfProfile.casa_id)
-      .order('paga')
-      .order('vencimento');
+    const [resultado, contribuicoes] = await Promise.all([
+      cfClient
+        .from('contas')
+        .select([
+          'id', 'nome', 'categoria', 'valor', 'vencimento', 'paga', 'paga_em',
+          'recorrente', 'dia_vencimento', 'origem', 'fornecedor', 'descricao_pagamento',
+          'linha_digitavel', 'pix_copia_cola', 'qr_code_url', 'documento_url',
+          'entra_contribuicao_casa',
+        ].join(','))
+        .eq('casa_id', cfProfile.casa_id)
+        .order('paga')
+        .order('vencimento'),
+      cfClient.rpc('lifeos_contribuicoes_casa_mes', { p_competencia: new Date().toISOString().slice(0, 10) }),
+    ]);
     if (resultado.error) throw resultado.error;
+    if (contribuicoes.error) throw contribuicoes.error;
     cfContas = resultado.data || [];
+    cfContribuicoesCasa = contribuicoes.data || [];
     return cfContas;
   } finally {
     cfCarregando = false;
@@ -299,6 +306,7 @@ function cfAbrirConta(conta) {
     <section class="cf-modal-conteudo cf-modal-pagamento" role="dialog" aria-modal="true" aria-label="${cfEscapar(conta.nome)}">
       <header class="cf-modal-cabecalho"><div><span class="cf-modal-kicker">${conta.paga ? 'Conta paga' : 'Pagamento'}</span><h3>${cfEscapar(conta.nome)}</h3>${conta.fornecedor ? `<p>${cfEscapar(conta.fornecedor)}</p>` : ''}</div><button type="button" class="cf-modal-fechar" data-lifeos-close aria-label="Fechar">×</button></header>
       <div class="cf-modal-resumo"><div><span>Valor</span><strong>${cfDinheiro(conta.valor)}</strong></div><div><span>Vencimento</span><strong>${cfData(conta.vencimento)}</strong></div></div>
+      <label class="cf-contribuicao-toggle"><input type="checkbox" data-cf-contribuicao ${conta.entra_contribuicao_casa !== false ? 'checked' : ''}><span><strong>Participa da contribuição da Casa</strong><small>Desative para alimentação ou outra cobrança que não deva entrar na base mensal.</small></span></label>
       ${cfPagamentoVisualHtml(conta)}
       ${conta.pix_copia_cola ? `<div class="cf-pagamento-bloco"><span>Pix copia e cola</span><code>${cfEscapar(conta.pix_copia_cola)}</code><button type="button" data-cf-copiar="${cfEscapar(conta.pix_copia_cola)}">Copiar código Pix</button></div>` : ''}
       ${conta.linha_digitavel ? `<div class="cf-pagamento-bloco"><span>Linha digitável</span><code>${cfEscapar(conta.linha_digitavel)}</code><button type="button" data-cf-copiar="${cfEscapar(conta.linha_digitavel)}">Copiar linha digitável</button></div>` : ''}
@@ -309,6 +317,28 @@ function cfAbrirConta(conta) {
 
   const { overlay, fechar } = cfCriarOverlay(html);
   overlay.querySelector('[data-cf-editar-pagamento]')?.addEventListener('click', () => { fechar(); cfAbrirEditorPagamento(conta); });
+  overlay.querySelector('[data-cf-contribuicao]')?.addEventListener('change', async evento => {
+    const input = evento.currentTarget;
+    input.disabled = true;
+    try {
+      const resultado = await cfClient
+        .from('contas')
+        .update({ entra_contribuicao_casa: input.checked, atualizado_em: new Date().toISOString() })
+        .eq('id', conta.id)
+        .eq('casa_id', cfProfile.casa_id);
+      if (resultado.error) throw resultado.error;
+      conta.entra_contribuicao_casa = input.checked;
+      await cfAtualizar();
+      window.dispatchEvent(new CustomEvent('lifeos:contribuicoes-casa-atualizadas'));
+      cfToast(input.checked ? 'Conta incluída na contribuição da Casa.' : 'Conta fora da contribuição da Casa.');
+    } catch (erro) {
+      console.error('[Central Financeira]', erro);
+      input.checked = !input.checked;
+      cfToast('Não foi possível alterar a participação desta conta.', 'erro');
+    } finally {
+      input.disabled = false;
+    }
+  });
   overlay.querySelectorAll('[data-cf-copiar]').forEach(botao => botao.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(botao.dataset.cfCopiar);
@@ -346,9 +376,29 @@ function cfLinha(conta) {
   const acao = conta.paga ? 'Ver' : 'Pagar';
   return `
     <article class="cf-conta-item">
-      <button type="button" class="cf-conta-conteudo" data-cf-abrir="${conta.id}"><span class="cf-conta-nome">${cfEscapar(conta.nome)}</span><span class="cf-conta-meta">${cfEscapar(situacao.texto)}${conta.fornecedor ? ` · ${cfEscapar(conta.fornecedor)}` : ''}${cfMeiosPagamento(conta).length ? ` · ${cfEscapar(cfMeiosPagamento(conta).join(' + '))}` : ''}</span></button>
+      <button type="button" class="cf-conta-conteudo" data-cf-abrir="${conta.id}"><span class="cf-conta-nome">${cfEscapar(conta.nome)}</span><span class="cf-conta-meta">${cfEscapar(situacao.texto)}${conta.fornecedor ? ` · ${cfEscapar(conta.fornecedor)}` : ''}${conta.entra_contribuicao_casa === false ? ' · fora da contribuição' : ''}${cfMeiosPagamento(conta).length ? ` · ${cfEscapar(cfMeiosPagamento(conta).join(' + '))}` : ''}</span></button>
       <div class="cf-conta-lateral"><strong>${cfDinheiro(conta.valor)}</strong><button type="button" data-cf-abrir="${conta.id}">${acao}</button></div>
     </article>`;
+}
+
+function cfContribuicoesHtml() {
+  if (!cfContribuicoesCasa.length) return '';
+  const base = Number(cfContribuicoesCasa[0]?.base_contas || 0);
+  return `<section class="cf-contribuicoes">
+    <div class="cf-contribuicoes-head"><div><span>Contribuições do mês</span><strong>Base ${cfDinheiro(base)}</strong></div><small>Separadas dos Acertos pessoais</small></div>
+    <div class="cf-contribuicoes-list">
+      ${cfContribuicoesCasa.map(item => {
+        const regra = item.tipo === 'fixa'
+          ? `fixo ${cfDinheiro(item.valor_regra)}`
+          : item.tipo === 'percentual'
+            ? `${Number(item.percentual_regra || 0).toLocaleString('pt-BR')}%`
+            : item.tipo === 'restante'
+              ? 'restante'
+              : 'sem regra';
+        return `<div><span><strong>${cfEscapar(item.nome)}</strong><small>${cfEscapar(regra)}</small></span><b>${cfDinheiro(item.contribuicao_prevista || 0)}</b></div>`;
+      }).join('')}
+    </div>
+  </section>`;
 }
 
 function cfListaFiltrada() {
@@ -394,6 +444,7 @@ function cfRenderizarCentral() {
   central.innerHTML = `
     <header class="cf-central-cabecalho"><div><span class="cf-central-kicker">Casa</span><h2>Central Financeira</h2><p>Acompanhe vencimentos e acesse os meios de pagamento.</p></div><div class="cf-central-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h4M15 15h2"/><circle cx="12" cy="12" r="2"/></svg></div></header>
     <div class="cf-resumo"><div class="cf-resumo-item"><strong>${vencidas.length}</strong><span>Vencidas</span></div><div class="cf-resumo-item"><strong>${proximas.length}</strong><span>Próximos 7 dias</span></div><div class="cf-resumo-item cf-resumo-valor"><strong>${cfDinheiro(total)}</strong><span>Total em aberto</span></div></div>
+    ${cfContribuicoesHtml()}
     <nav class="cf-filtros" aria-label="Filtros da Central Financeira"><button type="button" class="${cfFiltro === 'pendentes' ? 'ativo' : ''}" data-cf-filtro="pendentes">Pendentes</button><button type="button" class="${cfFiltro === 'mes' ? 'ativo' : ''}" data-cf-filtro="mes">Este mês</button><button type="button" class="${cfFiltro === 'pagas' ? 'ativo' : ''}" data-cf-filtro="pagas">Pagas</button></nav>
     <div class="cf-contas-lista">${lista.length ? lista.map(cfLinha).join('') : '<div class="cf-lista-vazia">Nenhuma conta neste filtro.</div>'}</div>`;
   cfVincularCentral(central);
@@ -447,6 +498,7 @@ window.addEventListener('lifeos:ready', cfAtualizar);
 window.addEventListener('lifeos:contas-atualizadas', cfAtualizar);
 window.addEventListener('lifeos:financeiro-abrir', cfAtualizar);
 window.addEventListener('lifeos:financeiro-contas-abrir', cfAtualizar);
+window.addEventListener('lifeos:contribuicoes-casa-atualizadas', () => window.setTimeout(cfAtualizar, 60));
 window.addEventListener('lifeos:hoje-abrir-conta', evento => cfAbrirContaDoHoje(evento.detail?.contaId));
 window.addEventListener('lifeos:financeiro-ir', cfAbrirCentral);
 
