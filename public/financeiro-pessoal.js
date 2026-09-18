@@ -13,6 +13,7 @@ const FP = {
   movimentos: [],
   dividas: [],
   compromissos: [],
+  acertos: [],
   tab: 'visao',
   loading: false,
 };
@@ -88,6 +89,25 @@ function fpCompromissosHorizonte() {
   });
 }
 
+function fpSaldoAcerto(acerto) {
+  return Math.max(0, fpNum(acerto.valor_devido) - fpNum(acerto.valor_pago));
+}
+
+function fpAcertosAbertos() {
+  return FP.acertos.filter(a => !['pago', 'cancelado'].includes(a.status) && fpSaldoAcerto(a) > 0.005);
+}
+
+function fpAcertosAPagarHorizonte() {
+  const horizonte = fpHorizon();
+  return fpAcertosAbertos().filter(a =>
+    a.devedor_id === FP.profile?.id && (!a.vencimento || a.vencimento <= horizonte)
+  );
+}
+
+function fpAcertosAReceber() {
+  return fpAcertosAbertos().filter(a => a.credor_id === FP.profile?.id);
+}
+
 function fpResumo() {
   const carteirasAtivas = FP.carteiras.filter(c => c.ativo);
   const dinheiroBruto = carteirasAtivas
@@ -105,6 +125,7 @@ function fpResumo() {
 
   const fundosTotal = fundosAtivos.reduce((s, f) => s + fpNum(f.saldo_atual), 0);
   const compromissos = fpCompromissosHorizonte().reduce((s, c) => s + fpNum(c.valor), 0);
+  const acertosAPagar = fpAcertosAPagarHorizonte().reduce((s, a) => s + fpSaldoAcerto(a), 0);
   const aportes = fpAportesMes();
   const aportesPendentes = fundosAtivos.reduce((s, f) => {
     const falta = Math.max(0, fpNum(f.aporte_minimo) - (aportes.get(f.id) || 0));
@@ -112,14 +133,14 @@ function fpResumo() {
   }, 0);
   const margem = fpNum(FP.config?.margem_seguranca);
 
-  const pix = Math.max(0, dinheiroBruto - fundosDentroDoCaixa - compromissos - aportesPendentes - margem);
+  const pix = Math.max(0, dinheiroBruto - fundosDentroDoCaixa - compromissos - acertosAPagar - aportesPendentes - margem);
   const limiteCartoes = carteirasAtivas
     .filter(c => c.tipo === 'cartao')
     .reduce((s, c) => s + Math.max(0, fpNum(c.limite_credito) - fpNum(c.fatura_atual)), 0);
   const cartao = Math.max(0, Math.min(limiteCartoes, pix));
-  const protegido = fundosTotal + compromissos + aportesPendentes + margem;
+  const protegido = fundosTotal + compromissos + acertosAPagar + aportesPendentes + margem;
 
-  return { pix, cartao, vr, protegido, fundosTotal, compromissos, aportesPendentes, margem, dinheiroBruto, limiteCartoes };
+  return { pix, cartao, vr, protegido, fundosTotal, compromissos, acertosAPagar, aportesPendentes, margem, dinheiroBruto, limiteCartoes };
 }
 
 function fpPublicarResumo() {
@@ -130,6 +151,7 @@ function fpPublicarResumo() {
       cartao: resumo.cartao,
       vr: resumo.vr,
       protegido: resumo.protegido,
+      acertosAPagar: resumo.acertosAPagar,
       fundos: FP.fundos.filter(f => f.ativo).map(f => ({ nome: f.nome, saldo: fpNum(f.saldo_atual), meta: f.meta_valor == null ? null : fpNum(f.meta_valor) })),
     },
   }));
@@ -144,7 +166,7 @@ async function fpCarregar() {
     const inicio = fpInicioMesISO();
     const fim = fpFimMesISO();
     const [
-      configR, carteirasR, fundosR, movR, dividasR, compromissosR,
+      configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR,
     ] = await Promise.all([
       FP.client.from('financeiro_pessoal_config').select('*').eq('usuario_id', uid).maybeSingle(),
       FP.client.from('financeiro_carteiras_pessoais').select('*').eq('usuario_id', uid).order('ordem').order('criado_em'),
@@ -152,8 +174,9 @@ async function fpCarregar() {
       FP.client.from('financeiro_fundo_movimentos').select('*').eq('usuario_id', uid).gte('data', inicio).lte('data', fim).order('data', { ascending: false }),
       FP.client.from('financeiro_dividas_pessoais').select('*').eq('usuario_id', uid).order('negativada', { ascending: false }).order('criado_em'),
       FP.client.from('financeiro_compromissos_pessoais').select('*').eq('usuario_id', uid).order('ativo', { ascending: false }).order('vencimento', { nullsFirst: false }),
+      FP.client.from('acertos').select('id,titulo,devedor_id,credor_id,valor_devido,valor_pago,vencimento,status,origem').eq('casa_id', FP.profile.casa_id).neq('status', 'cancelado').order('vencimento'),
     ]);
-    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR].find(r => r.error);
+    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR].find(r => r.error);
     if (falha?.error) throw falha.error;
 
     FP.config = configR.data || {
@@ -169,6 +192,7 @@ async function fpCarregar() {
     FP.movimentos = movR.data || [];
     FP.dividas = dividasR.data || [];
     FP.compromissos = compromissosR.data || [];
+    FP.acertos = acertosR.data || [];
     fpRender();
     fpPublicarResumo();
   } catch (erro) {
@@ -235,6 +259,7 @@ function fpVisao() {
       <div class="fp-breakdown">
         <div><span>Fundos</span><strong>${fpMoney(r.fundosTotal)}</strong></div>
         <div><span>Compromissos</span><strong>${fpMoney(r.compromissos)}</strong></div>
+        <div><span>Acertos da Casa</span><strong>${fpMoney(r.acertosAPagar)}</strong></div>
         <div><span>Aportes mínimos pendentes</span><strong>${fpMoney(r.aportesPendentes)}</strong></div>
         <div><span>Margem de segurança</span><strong>${fpMoney(r.margem)}</strong></div>
       </div>
@@ -320,6 +345,9 @@ function fpFundCard(f, aporteMes = 0) {
 
 function fpPlanejamento() {
   const ativos = FP.compromissos.filter(c => c.ativo);
+  const acertosAbertos = fpAcertosAbertos();
+  const acertosPagar = acertosAbertos.filter(a => a.devedor_id === FP.profile?.id);
+  const acertosReceber = fpAcertosAReceber();
   const dividas = FP.dividas.filter(d => d.status !== 'resolvida');
   const negativadas = dividas.filter(d => d.negativada);
   const liberacoes = ativos
@@ -334,6 +362,14 @@ function fpPlanejamento() {
       <div class="fp-simple-list">
         ${ativos.length ? ativos.map(c => `<button type="button" data-fp-compromisso="${c.id}"><span><strong>${fpEscape(c.titulo)}</strong><small>${c.recorrente ? `mensal${c.parcelas_restantes != null ? ` · ${c.parcelas_restantes} restantes` : ''}` : fpDate(c.vencimento)}</small></span><b>${fpMoney(c.valor)}</b></button>`).join('') : '<p class="fp-empty">Nenhum compromisso pessoal cadastrado.</p>'}
       </div>
+    </section>
+    <section class="fp-card">
+      <header class="fp-card-head"><div><span class="fp-kicker">Acertos da Casa</span><h3>${fpMoney(acertosPagar.reduce((s,a)=>s+fpSaldoAcerto(a),0))} a pagar</h3></div><button type="button" class="fp-link" data-fp-ir-acertos>Ver acertos</button></header>
+      <p class="fp-helper">O Pessoal apenas considera o impacto no seu caixa. Pagamento, comprovante e confirmação continuam sendo controlados em Acertos.</p>
+      <div class="fp-simple-list">
+        ${acertosAbertos.length ? acertosAbertos.slice(0,6).map(a => `<div><span><strong>${fpEscape(a.titulo)}</strong><small>${a.devedor_id === FP.profile?.id ? 'Você deve' : 'Você recebe'} · ${fpDate(a.vencimento)}</small></span><b>${fpMoney(fpSaldoAcerto(a))}</b></div>`).join('') : '<p class="fp-empty">Nenhum acerto em aberto.</p>'}
+      </div>
+      ${acertosReceber.length ? `<p class="fp-helper">A receber: ${fpMoney(acertosReceber.reduce((s,a)=>s+fpSaldoAcerto(a),0))}. Esse valor só entra no disponível depois de recebido.</p>` : ''}
     </section>
     <section class="fp-card">
       <header class="fp-card-head"><div><span class="fp-kicker">Regularização</span><h3>${negativadas.length} ${negativadas.length === 1 ? 'núcleo negativado' : 'núcleos negativados'}</h3></div><button type="button" class="fp-link" data-fp-nova-divida>+ Adicionar</button></header>
@@ -389,6 +425,9 @@ function fpBind(root) {
   root.querySelectorAll('[data-fp-movimentar]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); fpAbrirMovimento(b.dataset.fpMovimentar, b.dataset.fpMovTipo); }));
   root.querySelector('[data-fp-novo-compromisso]')?.addEventListener('click', () => fpAbrirCompromisso(null));
   root.querySelectorAll('[data-fp-compromisso]').forEach(b => b.addEventListener('click', () => fpAbrirCompromisso(FP.compromissos.find(c => c.id === b.dataset.fpCompromisso))));
+  root.querySelector('[data-fp-ir-acertos]')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('lifeos:financeiro-shell-ir', { detail: { secao: 'acertos' } }));
+  });
   root.querySelector('[data-fp-nova-divida]')?.addEventListener('click', () => fpAbrirDivida(null));
   root.querySelectorAll('[data-fp-divida]').forEach(b => b.addEventListener('click', () => fpAbrirDivida(FP.dividas.find(d => d.id === b.dataset.fpDivida))));
 }
@@ -762,6 +801,7 @@ function fpIr({ tab = 'visao', simular = null } = {}) {
 window.addEventListener('lifeos:ready', fpCarregar);
 window.addEventListener('lifeos:financeiro-abrir', fpCarregar);
 window.addEventListener('lifeos:financeiro-pessoal-abrir', fpCarregar);
+window.addEventListener('lifeos:acertos-atualizados', fpCarregar);
 window.addEventListener('lifeos:financeiro-pessoal-ir', e => fpIr(e.detail || {}));
 
 if (window.lifeosContext) fpCarregar();
