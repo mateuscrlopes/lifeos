@@ -208,6 +208,42 @@ function fpPublicarResumo() {
   }));
 }
 
+async function fpSincronizarOpenFinance({ silencioso = false } = {}) {
+  if (!fpContexto()) return false;
+
+  try {
+    const session = await FP.client.auth.getSession();
+    const accessToken = session.data?.session?.access_token;
+    if (!accessToken) throw new Error('Sessão indisponível.');
+
+    const response = await fetch('/api/financeiro/open-finance/sincronizar', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.erro || 'Não foi possível sincronizar.');
+    }
+
+    if (!silencioso) {
+      fpToast(data.contas
+        ? `${data.contas} conta${data.contas === 1 ? '' : 's'} sincronizada${data.contas === 1 ? '' : 's'}.`
+        : 'Open Finance atualizado.');
+    }
+    window.dispatchEvent(new CustomEvent('lifeos:open-finance-atualizado', { detail: data }));
+    return true;
+  } catch (erro) {
+    console.error('[Financeiro pessoal][Open Finance]', erro);
+    if (!silencioso) fpToast(erro.message || 'Não foi possível sincronizar o Open Finance.', 'erro');
+    return false;
+  }
+}
+
 async function fpCarregar() {
   if (FP.loading || !fpContexto()) return;
   FP.loading = true;
@@ -217,7 +253,7 @@ async function fpCarregar() {
     const inicio = fpInicioMesISO();
     const fim = fpFimMesISO();
     const [
-      configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR,
+      configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR,
     ] = await Promise.all([
       FP.client.from('financeiro_pessoal_config').select('*').eq('usuario_id', uid).maybeSingle(),
       FP.client.from('financeiro_carteiras_pessoais').select('*').eq('usuario_id', uid).order('ordem').order('criado_em'),
@@ -226,8 +262,10 @@ async function fpCarregar() {
       FP.client.from('financeiro_dividas_pessoais').select('*').eq('usuario_id', uid).order('negativada', { ascending: false }).order('criado_em'),
       FP.client.from('financeiro_compromissos_pessoais').select('*').eq('usuario_id', uid).order('ativo', { ascending: false }).order('vencimento', { nullsFirst: false }),
       FP.client.from('acertos').select('id,titulo,devedor_id,credor_id,valor_devido,valor_pago,vencimento,status,origem').eq('casa_id', FP.profile.casa_id).neq('status', 'cancelado').order('vencimento'),
+      FP.client.from('financeiro_open_finance_contas').select('*').eq('usuario_id', uid).order('nome'),
+      FP.client.from('financeiro_open_finance_transacoes').select('*').eq('usuario_id', uid).gte('ocorrido_em', new Date(Date.now() - 180 * 86400000).toISOString()).order('ocorrido_em', { ascending: false }).limit(1000),
     ]);
-    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR].find(r => r.error);
+    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR].find(r => r.error);
     if (falha?.error) throw falha.error;
 
     FP.config = configR.data || {
@@ -244,6 +282,8 @@ async function fpCarregar() {
     FP.dividas = dividasR.data || [];
     FP.compromissos = compromissosR.data || [];
     FP.acertos = acertosR.data || [];
+    FP.openFinanceContas = openContasR.data || [];
+    FP.openFinanceTransacoes = openTransacoesR.data || [];
     fpRender();
     fpPublicarResumo();
   } catch (erro) {
@@ -251,6 +291,14 @@ async function fpCarregar() {
     fpRenderErro();
   } finally {
     FP.loading = false;
+  }
+
+  if (!FP.openFinanceSyncTentada && fpSincronizacaoOpenFinanceVencida()) {
+    FP.openFinanceSyncTentada = true;
+    window.setTimeout(async () => {
+      const ok = await fpSincronizarOpenFinance({ silencioso: true });
+      if (ok) await fpCarregar();
+    }, 60);
   }
 }
 
