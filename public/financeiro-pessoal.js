@@ -319,6 +319,7 @@ function fpTabs() {
     ['visao', 'Visão geral'],
     ['carteiras', 'Carteiras'],
     ['fundos', 'Fundos'],
+    ['movimentos', 'Movimentações'],
     ['planejamento', 'Planejamento'],
   ];
   return `<nav class="fp-tabs" aria-label="Áreas das finanças pessoais">${tabs.map(([id, label]) => `
@@ -379,7 +380,7 @@ function fpVisao() {
 
 function fpFundMini(f, aporteMes = 0) {
   const meta = f.meta_valor == null ? null : fpNum(f.meta_valor);
-  const saldo = fpNum(f.saldo_atual);
+  const saldo = fpSaldoFundo(f);
   const pct = meta && meta > 0 ? Math.min(100, Math.round((saldo / meta) * 100)) : 0;
   const faltaAporte = Math.max(0, fpNum(f.aporte_minimo) - aporteMes);
   return `<button type="button" class="fp-fund-mini" data-fp-fundo="${f.id}">
@@ -391,26 +392,44 @@ function fpFundMini(f, aporteMes = 0) {
 
 function fpCarteiras() {
   const tipos = { conta: 'Conta', cartao: 'Cartão', vr: 'VR', dinheiro: 'Dinheiro', outro: 'Outra' };
-  const cards = FP.carteiras.filter(c => c.ativo).map(c => {
+  const manuais = FP.carteiras.filter(c => c.ativo).map(c => {
     const disponivel = c.tipo === 'cartao'
       ? Math.max(0, fpNum(c.limite_credito) - fpNum(c.fatura_atual))
       : Math.max(0, fpNum(c.saldo_atual) - fpNum(c.saldo_reservado));
     const meta = c.tipo === 'cartao'
-      ? `Fatura ${fpMoney(c.fatura_atual)} · limite do banco ${fpMoney(c.limite_credito)}`
+      ? `Fatura ${fpMoney(c.fatura_atual)} · limite ${fpMoney(c.limite_credito)}`
       : c.saldo_reservado > 0
         ? `${fpMoney(c.saldo_reservado)} reservado`
         : (c.instituicao || tipos[c.tipo] || '');
     return `<button type="button" class="fp-wallet" data-fp-carteira="${c.id}">
       <span class="fp-wallet-icon">${icon(c.tipo === 'cartao' ? 'creditCard' : c.tipo === 'conta' ? 'bank' : 'wallet', 17)}</span>
-      <span class="fp-wallet-copy"><strong>${fpEscape(c.nome)}</strong><small>${fpEscape(meta)}</small></span>
+      <span class="fp-wallet-copy"><strong>${fpEscape(c.nome)}</strong><small>${fpEscape(meta)} · manual</small></span>
       <span class="fp-wallet-value"><strong>${fpMoney(disponivel)}</strong><small>${c.tipo === 'cartao' ? 'limite restante' : 'disponível'}</small></span>
     </button>`;
   }).join('');
 
+  const conectadas = fpContasOpenFinanceVisiveis().map(conta => {
+    const disponivel = conta.tipo === 'credit_card'
+      ? Math.max(0, conta.limite_disponivel != null
+        ? fpNum(conta.limite_disponivel)
+        : fpNum(conta.limite_credito) - fpNum(conta.saldo_atual))
+      : Math.max(0, fpNum(conta.saldo_atual));
+    const fundo = FP.fundos.find(f => f.ativo && f.conta_open_finance_id === conta.id);
+    const detalhe = fundo
+      ? `vinculada a ${fundo.nome}`
+      : conta.considerar_disponivel ? 'entra no disponível' : 'somente acompanhamento';
+    return `<div class="fp-wallet">
+      <span class="fp-wallet-icon">${icon(conta.tipo === 'credit_card' ? 'creditCard' : 'bank', 17)}</span>
+      <span class="fp-wallet-copy"><strong>${fpEscape(conta.nome)}</strong><small>Open Finance · ${fpEscape(detalhe)}</small></span>
+      <span class="fp-wallet-value"><strong>${fpMoney(disponivel)}</strong><small>${conta.tipo === 'credit_card' ? 'limite disponível' : 'saldo'}</small></span>
+    </div>`;
+  }).join('');
+
   return `
-    <section class="fp-section-head"><div><span class="fp-kicker">Onde o dinheiro está</span><h2>Carteiras</h2><p>Saldo do banco não é a mesma coisa que dinheiro livre.</p></div><button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-nova-carteira>+ Carteira</button></section>
-    <div class="fp-wallet-list">${cards || '<div class="fp-card fp-empty-card"><strong>Cadastre suas contas e cartões</strong><p>Comece pela conta que você usa no dia a dia e pelo Santander.</p></div>'}</div>
-    ${FP.config?.vr_mensal_referencia > 0 ? `<section class="fp-card fp-vr-reference"><span class="fp-kicker">Referência mensal de VR</span><h3>${fpMoney(FP.config.vr_mensal_referencia)}</h3><p>${fpMoney(FP.config.vr_reservado_terceiros)} já são tratados como destinados a outra pessoa antes do cálculo.</p></section>` : ''}`;
+    <section class="fp-section-head"><div><span class="fp-kicker">Onde o dinheiro está</span><h2>Carteiras</h2><p>Contas conectadas atualizam saldo e cartão sem digitação manual.</p></div><button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-sync-open-finance>${icon('swap', 14)} Sincronizar</button></section>
+    ${conectadas ? `<section class="fp-card"><header class="fp-card-head"><div><span class="fp-kicker">Open Finance</span><h3>Contas visíveis</h3></div></header><div class="fp-wallet-list">${conectadas}</div></section>` : `<section class="fp-card fp-empty-card"><strong>Nenhuma conta conectada visível</strong><p>Sincronize o Meu Pluggy e escolha nas Configurações quais contas devem aparecer aqui.</p></section>`}
+    <section class="fp-card"><header class="fp-card-head"><div><span class="fp-kicker">Manual</span><h3>Carteiras complementares</h3></div><button type="button" class="fp-link" data-fp-nova-carteira>+ Adicionar</button></header><div class="fp-wallet-list">${manuais || '<p class="fp-empty">Nenhuma carteira manual cadastrada.</p>'}</div></section>
+    ${FP.config?.vr_mensal_referencia > 0 ? `<section class="fp-card fp-vr-reference"><span class="fp-kicker">Referência mensal de VR</span><h3>${fpMoney(FP.config.vr_mensal_referencia)}</h3><p>${fpMoney(FP.config.vr_reservado_terceiros)} estão destinados a terceiros. Esses valores são editáveis nas Configurações.</p></section>` : ''}`;
 }
 
 function fpFundos() {
@@ -424,7 +443,7 @@ function fpFundos() {
 }
 
 function fpFundCard(f, aporteMes = 0) {
-  const saldo = fpNum(f.saldo_atual);
+  const saldo = fpSaldoFundo(f);
   const meta = f.meta_valor == null ? null : fpNum(f.meta_valor);
   const pct = meta && meta > 0 ? Math.min(100, Math.round((saldo / meta) * 100)) : null;
   const minimo = fpNum(f.aporte_minimo);
@@ -436,10 +455,59 @@ function fpFundCard(f, aporteMes = 0) {
       ${minimo > 0 ? `<span class="fp-fund-aporte">${falta > 0 ? `Faltam ${fpMoney(falta)} para o mínimo deste mês` : 'Aporte mínimo do mês concluído'}</span>` : ''}
     </button>
     <div class="fp-fund-actions">
-      <button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-movimentar="${f.id}" data-fp-mov-tipo="aporte">Adicionar</button>
-      <button type="button" class="lifeos-btn lifeos-btn--ghost" data-fp-movimentar="${f.id}" data-fp-mov-tipo="retirada">Retirar</button>
+      ${f.conta_open_finance_id
+        ? `<button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-ver-movimentos="${f.conta_open_finance_id}">${icon('swap', 14)} Ver movimentações</button>`
+        : `<button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-movimentar="${f.id}" data-fp-mov-tipo="aporte">Adicionar</button>
+           <button type="button" class="lifeos-btn lifeos-btn--ghost" data-fp-movimentar="${f.id}" data-fp-mov-tipo="retirada">Retirar</button>`}
     </div>
   </article>`;
+}
+
+
+function fpMovimentosOpenFinance() {
+  const contasVisiveis = fpContasOpenFinanceVisiveis();
+  const ids = new Set(contasVisiveis.map(conta => conta.id));
+  const inicio = fpInicioMesISO();
+  const transacoes = FP.openFinanceTransacoes.filter(tx => ids.has(tx.conta_id));
+  const debitosMes = transacoes.filter(tx => tx.direcao === 'debit' && String(tx.ocorrido_em || '').slice(0, 10) >= inicio);
+  const pixMes = debitosMes.filter(tx => Boolean(tx.metadata?.pix));
+  const cartoes = new Set(contasVisiveis.filter(c => c.tipo === 'credit_card').map(c => c.id));
+  const cartaoMes = debitosMes.filter(tx => cartoes.has(tx.conta_id));
+
+  const categorias = new Map();
+  for (const tx of debitosMes) {
+    const categoria = tx.categoria_usuario || tx.categoria_provider || 'Outros';
+    categorias.set(categoria, (categorias.get(categoria) || 0) + Math.abs(fpNum(tx.valor)));
+  }
+  const topCategorias = [...categorias.entries()].sort((a,b) => b[1] - a[1]).slice(0, 6);
+
+  const contaNome = id => fpContaOpenFinance(id)?.nome || 'Conta conectada';
+
+  return `
+    <section class="fp-section-head"><div><span class="fp-kicker">Open Finance</span><h2>Movimentações</h2><p>Pix, cartão e gastos por categoria a partir das contas que você escolheu mostrar.</p></div><button type="button" class="lifeos-btn lifeos-btn--secondary" data-fp-sync-open-finance>${icon('swap', 14)} Sincronizar</button></section>
+    <section class="fp-card">
+      <div class="fp-breakdown">
+        <div><span>Gastos no mês</span><strong>${fpMoney(debitosMes.reduce((s,tx)=>s+Math.abs(fpNum(tx.valor)),0))}</strong></div>
+        <div><span>Cartões no mês</span><strong>${fpMoney(cartaoMes.reduce((s,tx)=>s+Math.abs(fpNum(tx.valor)),0))}</strong></div>
+        <div><span>Pix enviados</span><strong>${fpMoney(pixMes.reduce((s,tx)=>s+Math.abs(fpNum(tx.valor)),0))}</strong></div>
+        <div><span>Transações visíveis</span><strong>${transacoes.length}</strong></div>
+      </div>
+    </section>
+    <section class="fp-card">
+      <header class="fp-card-head"><div><span class="fp-kicker">Categorias</span><h3>Para onde o dinheiro foi</h3></div></header>
+      <div class="fp-simple-list">
+        ${topCategorias.length ? topCategorias.map(([categoria,valor]) => `<div><span><strong>${fpEscape(categoria)}</strong></span><b>${fpMoney(valor)}</b></div>`).join('') : '<p class="fp-empty">Ainda não há gastos sincronizados neste mês.</p>'}
+      </div>
+    </section>
+    <section class="fp-card">
+      <header class="fp-card-head"><div><span class="fp-kicker">Extrato</span><h3>Movimentações recentes</h3></div></header>
+      <div class="fp-transactions">
+        ${transacoes.length ? transacoes.slice(0, 40).map(tx => `<div class="fp-transaction">
+          <span><strong>${fpEscape(tx.merchant || tx.descricao)}</strong><small>${fpEscape(contaNome(tx.conta_id))} · ${fpEscape(tx.categoria_usuario || tx.categoria_provider || 'Sem categoria')} · ${fpDate(tx.ocorrido_em)}</small></span>
+          <b class="${tx.direcao === 'credit' ? 'is-credit' : ''}">${tx.direcao === 'credit' ? '+' : '−'}${fpMoney(Math.abs(fpNum(tx.valor)))}</b>
+        </div>`).join('') : '<p class="fp-empty">Nenhuma movimentação disponível. Sincronize suas contas para começar.</p>'}
+      </div>
+    </section>`;
 }
 
 function fpPlanejamento() {
@@ -506,8 +574,9 @@ function fpRender() {
   if (!mount) return;
   const conteudo = FP.tab === 'carteiras' ? fpCarteiras()
     : FP.tab === 'fundos' ? fpFundos()
-      : FP.tab === 'planejamento' ? fpPlanejamento()
-        : fpVisao();
+      : FP.tab === 'movimentos' ? fpMovimentosOpenFinance()
+        : FP.tab === 'planejamento' ? fpPlanejamento()
+          : fpVisao();
   mount.innerHTML = `<div class="fp-shell">${fpTabs()}<div class="fp-content">${conteudo}</div></div>`;
   fpBind(mount);
 }
@@ -517,6 +586,16 @@ function fpBind(root) {
   root.querySelectorAll('[data-fp-go]').forEach(b => b.addEventListener('click', () => { FP.tab = b.dataset.fpGo; fpRender(); }));
   root.querySelectorAll('[data-fp-simular]').forEach(b => b.addEventListener('click', () => fpAbrirSimulador(b.dataset.fpSimular)));
   root.querySelector('[data-fp-config]')?.addEventListener('click', fpAbrirConfig);
+  root.querySelectorAll('[data-fp-sync-open-finance]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true;
+    const ok = await fpSincronizarOpenFinance();
+    b.disabled = false;
+    if (ok) await fpCarregar();
+  }));
+  root.querySelectorAll('[data-fp-ver-movimentos]').forEach(b => b.addEventListener('click', () => {
+    FP.tab = 'movimentos';
+    fpRender();
+  }));
   root.querySelector('[data-fp-nova-carteira]')?.addEventListener('click', () => fpAbrirCarteira(null));
   root.querySelectorAll('[data-fp-carteira]').forEach(b => b.addEventListener('click', () => fpAbrirCarteira(FP.carteiras.find(c => c.id === b.dataset.fpCarteira))));
   root.querySelector('[data-fp-novo-fundo]')?.addEventListener('click', () => fpAbrirFundo(null));
