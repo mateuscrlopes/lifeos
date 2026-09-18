@@ -14,6 +14,9 @@ const FP = {
   dividas: [],
   compromissos: [],
   acertos: [],
+  openFinanceContas: [],
+  openFinanceTransacoes: [],
+  openFinanceSyncTentada: false,
   tab: 'visao',
   loading: false,
 };
@@ -68,13 +71,49 @@ function fpHorizon() {
   return proxima && proxima >= hoje ? proxima : fpFimMesISO();
 }
 
+function fpContaOpenFinance(id) {
+  return FP.openFinanceContas.find(conta => conta.id === id) || null;
+}
+
+function fpSaldoFundo(fundo) {
+  if (fundo?.conta_open_finance_id) {
+    const conta = fpContaOpenFinance(fundo.conta_open_finance_id);
+    if (conta && conta.saldo_atual != null) return Math.max(0, fpNum(conta.saldo_atual));
+  }
+  return Math.max(0, fpNum(fundo?.saldo_atual));
+}
+
+function fpContasOpenFinanceVisiveis() {
+  return FP.openFinanceContas.filter(conta => conta.visivel);
+}
+
+function fpSincronizacaoOpenFinanceVencida() {
+  if (!FP.openFinanceContas.length) return true;
+  const ultima = FP.openFinanceContas
+    .map(conta => conta.sincronizado_em ? new Date(conta.sincronizado_em).getTime() : 0)
+    .reduce((max, valor) => Math.max(max, valor), 0);
+  return !ultima || Date.now() - ultima > 30 * 60 * 1000;
+}
+
 function fpAportesMes() {
   const inicio = fpInicioMesISO();
   const fim = fpFimMesISO();
   const mapa = new Map();
+
   FP.movimentos
     .filter(m => m.tipo === 'aporte' && m.data >= inicio && m.data <= fim)
     .forEach(m => mapa.set(m.fundo_id, (mapa.get(m.fundo_id) || 0) + fpNum(m.valor)));
+
+  for (const fundo of FP.fundos.filter(f => f.ativo && f.conta_open_finance_id)) {
+    const creditos = FP.openFinanceTransacoes
+      .filter(tx => tx.conta_id === fundo.conta_open_finance_id
+        && tx.direcao === 'credit'
+        && String(tx.ocorrido_em || '').slice(0, 10) >= inicio
+        && String(tx.ocorrido_em || '').slice(0, 10) <= fim)
+      .reduce((s, tx) => s + Math.abs(fpNum(tx.valor)), 0);
+    mapa.set(fundo.id, creditos);
+  }
+
   return mapa;
 }
 
@@ -110,9 +149,15 @@ function fpAcertosAReceber() {
 
 function fpResumo() {
   const carteirasAtivas = FP.carteiras.filter(c => c.ativo);
-  const dinheiroBruto = carteirasAtivas
+  const dinheiroManual = carteirasAtivas
     .filter(c => c.considerar_disponivel && ['conta', 'dinheiro', 'outro'].includes(c.tipo))
     .reduce((s, c) => s + Math.max(0, fpNum(c.saldo_atual) - fpNum(c.saldo_reservado)), 0);
+
+  const dinheiroOpenFinance = FP.openFinanceContas
+    .filter(c => c.visivel && c.considerar_disponivel && c.tipo === 'checking')
+    .reduce((s, c) => s + Math.max(0, fpNum(c.saldo_atual)), 0);
+
+  const dinheiroBruto = dinheiroManual + dinheiroOpenFinance;
 
   const vr = carteirasAtivas
     .filter(c => c.tipo === 'vr')
@@ -121,9 +166,9 @@ function fpResumo() {
   const fundosAtivos = FP.fundos.filter(f => f.ativo);
   const fundosDentroDoCaixa = fundosAtivos
     .filter(f => !f.segregado)
-    .reduce((s, f) => s + fpNum(f.saldo_atual), 0);
+    .reduce((s, f) => s + fpSaldoFundo(f), 0);
 
-  const fundosTotal = fundosAtivos.reduce((s, f) => s + fpNum(f.saldo_atual), 0);
+  const fundosTotal = fundosAtivos.reduce((s, f) => s + fpSaldoFundo(f), 0);
   const compromissos = fpCompromissosHorizonte().reduce((s, c) => s + fpNum(c.valor), 0);
   const acertosAPagar = fpAcertosAPagarHorizonte().reduce((s, a) => s + fpSaldoAcerto(a), 0);
   const aportes = fpAportesMes();
@@ -134,9 +179,15 @@ function fpResumo() {
   const margem = fpNum(FP.config?.margem_seguranca);
 
   const pix = Math.max(0, dinheiroBruto - fundosDentroDoCaixa - compromissos - acertosAPagar - aportesPendentes - margem);
-  const limiteCartoes = carteirasAtivas
+  const limiteCartoesManuais = carteirasAtivas
     .filter(c => c.tipo === 'cartao')
     .reduce((s, c) => s + Math.max(0, fpNum(c.limite_credito) - fpNum(c.fatura_atual)), 0);
+  const limiteCartoesOpenFinance = FP.openFinanceContas
+    .filter(c => c.visivel && c.considerar_disponivel && c.tipo === 'credit_card')
+    .reduce((s, c) => s + Math.max(0, c.limite_disponivel != null
+      ? fpNum(c.limite_disponivel)
+      : fpNum(c.limite_credito) - fpNum(c.saldo_atual)), 0);
+  const limiteCartoes = limiteCartoesManuais + limiteCartoesOpenFinance;
   const cartao = Math.max(0, Math.min(limiteCartoes, pix));
   const protegido = fundosTotal + compromissos + acertosAPagar + aportesPendentes + margem;
 
