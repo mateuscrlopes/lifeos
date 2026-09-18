@@ -1021,6 +1021,8 @@ window.addEventListener('lifeos:ready', fpCarregar);
 window.addEventListener('lifeos:financeiro-abrir', fpCarregar);
 window.addEventListener('lifeos:financeiro-pessoal-abrir', fpCarregar);
 window.addEventListener('lifeos:acertos-atualizados', fpCarregar);
+window.addEventListener('lifeos:open-finance-atualizado', () => window.setTimeout(fpCarregar, 60));
+window.addEventListener('lifeos:financeiro-config-atualizada', () => window.setTimeout(fpCarregar, 60));
 window.addEventListener('lifeos:financeiro-pessoal-ir', e => fpIr(e.detail || {}));
 
 if (window.lifeosContext) fpCarregar();
