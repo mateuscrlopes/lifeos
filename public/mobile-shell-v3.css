@@ -808,16 +808,27 @@ html[data-theme="dark"] .metrica {
    v8 — alinhamento, Cardápio visível e proteção contra overflow
 ================================================================ */
 
-/* Uma única régua para os cabeçalhos internos: voltar + bloco de texto. */
+/* Cabeçalhos internos: o retorno fica em uma linha própria e o título
+   mantém a mesma origem horizontal das páginas sem botão de voltar. */
 .lifeos-page-head--with-back {
-  grid-template-columns: 42px minmax(0, 1fr) !important;
-  align-items: center !important;
-  gap: 14px !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 7px !important;
 }
 
 .lifeos-page-head--with-back > .lifeos-icon-action {
-  align-self: center !important;
-  margin: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  align-self: start !important;
+  margin: 0 0 2px !important;
+  border-radius: 10px !important;
+}
+
+.lifeos-page-head--with-back > .lifeos-icon-action svg {
+  width: 15px !important;
+  height: 15px !important;
 }
 
 .lifeos-page-head-copy {
