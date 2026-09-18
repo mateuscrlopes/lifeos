@@ -77,6 +77,7 @@ async function bootstrap() {
   // de primeiro nível e o módulo pessoal controla apenas seu próprio conteúdo.
   await import('./financeiro-shell.js?v=1');
   await import('./financeiro-pessoal.js?v=2');
+  await import('./financeiro-config.js?v=1');
 
   // NFC-e é uma capacidade permanente do modo Mercado, não uma camada legada.
   await import('./nfce.js?v=1');
