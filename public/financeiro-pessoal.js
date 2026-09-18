@@ -16,6 +16,7 @@ const FP = {
   acertos: [],
   openFinanceContas: [],
   openFinanceTransacoes: [],
+  contribuicoesCasa: [],
   openFinanceSyncTentada: false,
   tab: 'visao',
   loading: false,
@@ -147,6 +148,15 @@ function fpAcertosAReceber() {
   return fpAcertosAbertos().filter(a => a.credor_id === FP.profile?.id);
 }
 
+function fpContribuicaoCasaAtual() {
+  const item = FP.contribuicoesCasa.find(c => c.usuario_id === FP.profile?.id);
+  return Math.max(0, fpNum(item?.contribuicao_prevista));
+}
+
+function fpRegraContribuicaoCasaAtual() {
+  return FP.contribuicoesCasa.find(c => c.usuario_id === FP.profile?.id) || null;
+}
+
 function fpResumo() {
   const carteirasAtivas = FP.carteiras.filter(c => c.ativo);
   const dinheiroManual = carteirasAtivas
@@ -171,6 +181,7 @@ function fpResumo() {
   const fundosTotal = fundosAtivos.reduce((s, f) => s + fpSaldoFundo(f), 0);
   const compromissos = fpCompromissosHorizonte().reduce((s, c) => s + fpNum(c.valor), 0);
   const acertosAPagar = fpAcertosAPagarHorizonte().reduce((s, a) => s + fpSaldoAcerto(a), 0);
+  const contribuicaoCasa = fpContribuicaoCasaAtual();
   const aportes = fpAportesMes();
   const aportesPendentes = fundosAtivos.reduce((s, f) => {
     const falta = Math.max(0, fpNum(f.aporte_minimo) - (aportes.get(f.id) || 0));
@@ -178,7 +189,7 @@ function fpResumo() {
   }, 0);
   const margem = fpNum(FP.config?.margem_seguranca);
 
-  const pix = Math.max(0, dinheiroBruto - fundosDentroDoCaixa - compromissos - acertosAPagar - aportesPendentes - margem);
+  const pix = Math.max(0, dinheiroBruto - fundosDentroDoCaixa - compromissos - contribuicaoCasa - acertosAPagar - aportesPendentes - margem);
   const limiteCartoesManuais = carteirasAtivas
     .filter(c => c.tipo === 'cartao')
     .reduce((s, c) => s + Math.max(0, fpNum(c.limite_credito) - fpNum(c.fatura_atual)), 0);
@@ -189,9 +200,9 @@ function fpResumo() {
       : fpNum(c.limite_credito) - fpNum(c.saldo_atual)), 0);
   const limiteCartoes = limiteCartoesManuais + limiteCartoesOpenFinance;
   const cartao = Math.max(0, Math.min(limiteCartoes, pix));
-  const protegido = fundosTotal + compromissos + acertosAPagar + aportesPendentes + margem;
+  const protegido = fundosTotal + compromissos + contribuicaoCasa + acertosAPagar + aportesPendentes + margem;
 
-  return { pix, cartao, vr, protegido, fundosTotal, compromissos, acertosAPagar, aportesPendentes, margem, dinheiroBruto, limiteCartoes };
+  return { pix, cartao, vr, protegido, fundosTotal, compromissos, contribuicaoCasa, acertosAPagar, aportesPendentes, margem, dinheiroBruto, limiteCartoes };
 }
 
 function fpPublicarResumo() {
@@ -202,6 +213,7 @@ function fpPublicarResumo() {
       cartao: resumo.cartao,
       vr: resumo.vr,
       protegido: resumo.protegido,
+      contribuicaoCasa: resumo.contribuicaoCasa,
       acertosAPagar: resumo.acertosAPagar,
       fundos: FP.fundos.filter(f => f.ativo).map(f => ({ nome: f.nome, saldo: fpNum(f.saldo_atual), meta: f.meta_valor == null ? null : fpNum(f.meta_valor) })),
     },
@@ -253,7 +265,7 @@ async function fpCarregar() {
     const inicio = fpInicioMesISO();
     const fim = fpFimMesISO();
     const [
-      configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR,
+      configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR, contribuicoesCasaR,
     ] = await Promise.all([
       FP.client.from('financeiro_pessoal_config').select('*').eq('usuario_id', uid).maybeSingle(),
       FP.client.from('financeiro_carteiras_pessoais').select('*').eq('usuario_id', uid).order('ordem').order('criado_em'),
@@ -264,8 +276,9 @@ async function fpCarregar() {
       FP.client.from('acertos').select('id,titulo,devedor_id,credor_id,valor_devido,valor_pago,vencimento,status,origem').eq('casa_id', FP.profile.casa_id).neq('status', 'cancelado').order('vencimento'),
       FP.client.from('financeiro_open_finance_contas').select('*').eq('usuario_id', uid).order('nome'),
       FP.client.from('financeiro_open_finance_transacoes').select('*').eq('usuario_id', uid).gte('ocorrido_em', new Date(Date.now() - 180 * 86400000).toISOString()).order('ocorrido_em', { ascending: false }).limit(1000),
+      FP.client.rpc('lifeos_contribuicoes_casa_mes', { p_competencia: fpHojeISO() }),
     ]);
-    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR].find(r => r.error);
+    const falha = [configR, carteirasR, fundosR, movR, dividasR, compromissosR, acertosR, openContasR, openTransacoesR, contribuicoesCasaR].find(r => r.error);
     if (falha?.error) throw falha.error;
 
     FP.config = configR.data || {
@@ -284,6 +297,7 @@ async function fpCarregar() {
     FP.acertos = acertosR.data || [];
     FP.openFinanceContas = openContasR.data || [];
     FP.openFinanceTransacoes = openTransacoesR.data || [];
+    FP.contribuicoesCasa = contribuicoesCasaR.data || [];
     fpRender();
     fpPublicarResumo();
   } catch (erro) {
@@ -359,7 +373,8 @@ function fpVisao() {
       <div class="fp-breakdown">
         <div><span>Fundos</span><strong>${fpMoney(r.fundosTotal)}</strong></div>
         <div><span>Compromissos</span><strong>${fpMoney(r.compromissos)}</strong></div>
-        <div><span>Acertos da Casa</span><strong>${fpMoney(r.acertosAPagar)}</strong></div>
+        <div><span>Contribuição da Casa</span><strong>${fpMoney(r.contribuicaoCasa)}</strong></div>
+        <div><span>Acertos pessoais</span><strong>${fpMoney(r.acertosAPagar)}</strong></div>
         <div><span>Aportes mínimos pendentes</span><strong>${fpMoney(r.aportesPendentes)}</strong></div>
         <div><span>Margem de segurança</span><strong>${fpMoney(r.margem)}</strong></div>
       </div>
@@ -531,8 +546,22 @@ function fpPlanejamento() {
       </div>
     </section>
     <section class="fp-card">
-      <header class="fp-card-head"><div><span class="fp-kicker">Acertos da Casa</span><h3>${fpMoney(acertosPagar.reduce((s,a)=>s+fpSaldoAcerto(a),0))} a pagar</h3></div><button type="button" class="fp-link" data-fp-ir-acertos>Ver acertos</button></header>
-      <p class="fp-helper">O Pessoal apenas considera o impacto no seu caixa. Pagamento, comprovante e confirmação continuam sendo controlados em Acertos.</p>
+      <header class="fp-card-head"><div><span class="fp-kicker">Casa</span><h3>Contribuição do mês</h3></div></header>
+      ${(() => {
+        const regra = fpRegraContribuicaoCasaAtual();
+        if (!regra?.regra_id) return '<p class="fp-empty">Nenhuma regra de contribuição configurada para você.</p>';
+        const descricao = regra.tipo === 'fixa'
+          ? `Valor fixo · ${fpMoney(regra.valor_regra)}`
+          : regra.tipo === 'percentual'
+            ? `${fpNum(regra.percentual_regra)}% das contas elegíveis`
+            : 'Restante após as outras contribuições';
+        return `<div class="fp-simple-list"><div><span><strong>${fpEscape(descricao)}</strong><small>Base da Casa: ${fpMoney(regra.base_contas)}</small></span><b>${fpMoney(regra.contribuicao_prevista)}</b></div></div>`;
+      })()}
+      <p class="fp-helper">Esta contribuição pertence às Contas da Casa e não cria acerto pessoal entre vocês.</p>
+    </section>
+    <section class="fp-card">
+      <header class="fp-card-head"><div><span class="fp-kicker">Acertos pessoais</span><h3>${fpMoney(acertosPagar.reduce((s,a)=>s+fpSaldoAcerto(a),0))} a pagar</h3></div><button type="button" class="fp-link" data-fp-ir-acertos>Ver acertos</button></header>
+      <p class="fp-helper">Acertos são pessoais entre vocês. O Pessoal considera o impacto no seu caixa, enquanto pagamento, comprovante e confirmação continuam sendo controlados em Acertos.</p>
       <div class="fp-simple-list">
         ${acertosAbertos.length ? acertosAbertos.slice(0,6).map(a => `<div><span><strong>${fpEscape(a.titulo)}</strong><small>${a.devedor_id === FP.profile?.id ? 'Você deve' : 'Você recebe'} · ${fpDate(a.vencimento)}</small></span><b>${fpMoney(fpSaldoAcerto(a))}</b></div>`).join('') : '<p class="fp-empty">Nenhum acerto em aberto.</p>'}
       </div>
@@ -1023,6 +1052,7 @@ window.addEventListener('lifeos:financeiro-pessoal-abrir', fpCarregar);
 window.addEventListener('lifeos:acertos-atualizados', fpCarregar);
 window.addEventListener('lifeos:open-finance-atualizado', () => window.setTimeout(fpCarregar, 60));
 window.addEventListener('lifeos:financeiro-config-atualizada', () => window.setTimeout(fpCarregar, 60));
+window.addEventListener('lifeos:contribuicoes-casa-atualizadas', () => window.setTimeout(fpCarregar, 60));
 window.addEventListener('lifeos:financeiro-pessoal-ir', e => fpIr(e.detail || {}));
 
 if (window.lifeosContext) fpCarregar();
