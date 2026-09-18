@@ -39,81 +39,62 @@
 .hoje-card-vazio { padding: 12px 0; }
 
 
-/* Resumo financeiro pessoal — Hoje é o único owner desta superfície. */
+/* Resumo financeiro pessoal — segue a mesma hierarquia dos cards do Hoje. */
 .hoje-finance-card {
   width: 100%;
-  display: grid;
+  min-height: 78px;
+  display: grid !important;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
-  padding: 18px;
-  border: 1px solid var(--linha);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 95% 0%, color-mix(in srgb, var(--sage) 11%, transparent) 0 26%, transparent 27%),
-    var(--paper);
+  padding: 13px 14px !important;
   color: var(--texto);
-  box-shadow: var(--shadow-soft);
   text-align: left;
 }
-.hoje-finance-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.hoje-finance-card-top > span:first-child {
-  display: grid;
-  gap: 3px;
-}
-.hoje-finance-card-top small {
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.hoje-finance-card-top strong {
-  font-size: 14px;
-}
-.hoje-finance-card-arrow {
-  width: 32px;
-  height: 32px;
+
+.hoje-finance-icon {
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  background: var(--paper-2);
-  color: var(--muted);
+  border-radius: 12px;
+  background: var(--sage-soft);
+  color: var(--sage);
 }
-.hoje-finance-card-value {
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: -.035em;
-}
-.hoje-finance-card-meios {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.hoje-finance-card-meios > span {
+
+.hoje-finance-copy {
   min-width: 0;
   display: grid;
-  gap: 3px;
-  padding: 9px;
-  border-radius: 11px;
-  background: var(--paper-2);
+  gap: 2px;
 }
-.hoje-finance-card-meios small {
+
+.hoje-finance-title {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
-.hoje-finance-card-meios b {
+
+.hoje-finance-copy strong {
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -.015em;
+}
+
+.hoje-finance-copy small {
   overflow: hidden;
-  font-size: 10px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.hoje-finance-card-footer {
+
+.hoje-finance-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: var(--sage);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 750;
 }
+
