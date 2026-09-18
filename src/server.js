@@ -7,6 +7,7 @@ import { registrarRotasFinanceiroEmail } from './financeiro-email.js';
 import { registrarRotasGumate } from './gumate/index.js';
 import { registrarRotasAcertos } from './acertos.js';
 import { registrarRotasIntegracaoNordestrip } from './integracao-nordestrip.js';
+import { registrarRotasOpenFinance } from './open-finance.js';
 import { registrarRotasRitmo } from './ritmo.js';
 import { registrarRotasExerciciosMidia } from './exercicios-midia.js';
 import { registrarRotasNfce } from './nfce.js';
@@ -73,6 +74,9 @@ registrarRotasAcertos(app);
 
 // Ponte financeira com o Nordestrip.
 registrarRotasIntegracaoNordestrip(app);
+
+// Open Finance pessoal reaproveita as conexões Pluggy do Nordestrip.
+registrarRotasOpenFinance(app);
 
 // Modulo pessoal Ritmo: importacao de planos e recursos privados.
 registrarRotasRitmo(app);
