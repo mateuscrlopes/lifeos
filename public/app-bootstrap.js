@@ -90,7 +90,7 @@ async function bootstrap() {
   await import('./stock-integrity.js?v=1');
 
   // O app é sempre a última unidade funcional a iniciar.
-  await import('./app.js?v=14');
+  await import('./app.js?v=15');
 
   document.documentElement.dataset.lifeosBoot = 'ready';
   window.dispatchEvent(new CustomEvent('lifeos:bootstrap-ready'));
