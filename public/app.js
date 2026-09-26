@@ -1,4 +1,4 @@
-﻿// app.js — LifeOS v0.18.0
+﻿// app.js — LifeOS v0.18.1
 import { calcularStatus, rotuloStatus, descricaoQuantidade, NIVEIS_VISUAL, ROTULO_NIVEL } from './status-estoque.js?v=4';
 import { sincronizarItem, reporEstoque } from './ponte-estoque.js';
 import { calcularStatusConta, rotuloStatusConta, formatarValor } from './status-conta.js';
@@ -66,26 +66,90 @@ async function confirmarLifeOS({title='Confirmar ação',message='',confirmLabel
 function abrirModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.add('aberto');}}
 function fecharModal(id){const m=el(id);if(m){m.dataset.uiDirty='0';m.classList.remove('aberto');}}
 
+const ESPERA_RETRY_PERFIL_MS=1200;
+const esperar=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+function erroJwtDataApi(error){
+  const codigo=String(error?.code||'').toUpperCase();
+  const mensagem=String(error?.message||'').toLowerCase();
+  return codigo==='PGRST303'||(mensagem.includes('jwt')&&(mensagem.includes('valid')||mensagem.includes('claim')));
+}
+
+function mensagemErroLogin(error){
+  if(error?.code==='invalid_credentials')return 'E-mail ou senha incorretos.';
+  if(error?.code==='user_banned')return 'Acesso temporariamente bloqueado. Aguarde um instante e tente novamente.';
+  return 'Não foi possível entrar. Tente novamente.';
+}
+
+function mensagemErroPerfil(error){
+  if(!error)return 'Perfil não encontrado.';
+  if(erroJwtDataApi(error))return 'Login confirmado, mas o acesso aos dados está temporariamente indisponível. Tente novamente em instantes.';
+  if(error?.code==='PGRST116')return 'Perfil não encontrado.';
+  return 'Não foi possível carregar seu perfil. Tente novamente.';
+}
+
+async function buscarPerfilDaSessao(session,{permitirRecuperacao=true}={}){
+  if(!session?.user?.id)return{perfil:null,error:{code:'SESSION_MISSING',message:'Sessão não encontrada.'}};
+  let resultado=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',session.user.id).single();
+  if(!resultado.error||!erroJwtDataApi(resultado.error)||!permitirRecuperacao){
+    return{perfil:resultado.data,error:resultado.error};
+  }
+
+  console.warn('Data API recusou o JWT; tentando renovar a sessão.',resultado.error.code);
+  aviso('avisoLogin','Reconectando sua sessão...');
+  await esperar(ESPERA_RETRY_PERFIL_MS);
+
+  const{data:renovada,error:erroRenovacao}=await supa.auth.refreshSession(session);
+  if(erroRenovacao||!renovada?.session){
+    return{perfil:null,error:erroRenovacao||resultado.error};
+  }
+
+  await esperar(350);
+  resultado=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',renovada.session.user.id).single();
+  return{perfil:resultado.data,error:resultado.error};
+}
+
 async function iniciar(){
   try{const r=await fetch('/config');const c=await r.json();supa=window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
   catch(e){aviso('avisoLogin','Não foi possível carregar a configuração.','erro');return;}
-  const{data}=await supa.auth.getSession();if(data.session)await aoEntrar();
+  const{data,error}=await supa.auth.getSession();
+  if(error){aviso('avisoLogin','Sua sessão não pôde ser recuperada. Entre novamente.','erro');return;}
+  if(data.session)await aoEntrar(data.session);
 }
 
 async function entrar(){
   const email=el('email').value.trim(),senha=el('senha').value;
   if(!email||!senha){aviso('avisoLogin','Preencha e-mail e senha.','erro');return;}
   el('btnEntrar').disabled=true;aviso('avisoLogin','Entrando...');
-  const{error}=await supa.auth.signInWithPassword({email,password:senha});
+  const{data,error}=await supa.auth.signInWithPassword({email,password:senha});
+  if(error){
+    el('btnEntrar').disabled=false;
+    aviso('avisoLogin',mensagemErroLogin(error),'erro');
+    return;
+  }
+  el('senha').value='';
+  await aoEntrar(data.session);
   el('btnEntrar').disabled=false;
-  if(error){aviso('avisoLogin','Não foi possível entrar.','erro');return;}
-  el('senha').value='';await aoEntrar();
 }
 
-async function aoEntrar(){
-  const{data:s}=await supa.auth.getSession();
-  const{data:p,error}=await supa.from('usuarios').select('id,nome,casa_id').eq('auth_id',s.session.user.id).single();
-  if(error||!p){aviso('avisoLogin','Perfil não encontrado.','erro');return;}
+async function aoEntrar(sessaoInicial=null){
+  let session=sessaoInicial;
+  if(!session){
+    const{data,error}=await supa.auth.getSession();
+    if(error||!data.session){
+      aviso('avisoLogin','Sua sessão expirou. Entre novamente.','erro');
+      return false;
+    }
+    session=data.session;
+  }
+
+  const{perfil:p,error}=await buscarPerfilDaSessao(session);
+  if(error||!p){
+    console.warn('Falha ao carregar perfil após autenticação.',error?.code||error?.message||'sem_detalhes');
+    aviso('avisoLogin',mensagemErroPerfil(error),'erro');
+    return false;
+  }
+
   usuario=p;
   window.lifeosContext={supa,usuario};window.dispatchEvent(new CustomEvent('lifeos:ready'));
   // Atualizar header avatar
@@ -100,6 +164,7 @@ async function aoEntrar(){
   if(moduloSolicitado)history.replaceState(null,'',window.location.pathname);
   carregarLocaisEstoque();
   ligarTempoReal();
+  return true;
 }
 
 function ligarTempoReal(){
